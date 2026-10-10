@@ -2,7 +2,7 @@
 //  SUPABASE CONFIG
 // ════════════════════════════════
 var SUPABASE_URL='https://chlxbgbqkusdmudizbmy.supabase.co';
-var SUPABASE_ANON_KEY='sb_publishable_DDA3iGZJldfyhXLAAo8IQQ_BwuGPPY4';
+var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmJlYWhqZWNod3B5dmxkenRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NjYwNjAsImV4cCI6MjEwNzI0MjA2MH0.CdFElIVzjhz6SRF__vypI8v9m3jghjtciWx62YkYCn4';
 var TABLE='frakce_kv';
 var sb=null;
 var rtChannel=null;
