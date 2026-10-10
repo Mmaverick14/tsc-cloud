@@ -990,7 +990,7 @@ function renderMemberGrid(){
         '<div class="mc-info">'+
           '<div class="mc-name">'+esc(m.displayName)+'</div>'+
           '<div class="mc-pos '+(vedeni?'vedeni':'other')+'">'+esc(m.position)+'</div>'+
-          '<div class="mc-id" style="font-family:\'Share Tech Mono\',monospace;font-size:.6rem;color:var(--muted);">ID: '+esc(m.id)+'</div>'+
+          '<div class="mc-id" style="font-family:\'Share Tech Mono\',monospace;font-size:.6rem;color:var(--muted);">'+esc(m.email||('ID: '+m.id))+'</div>'+
         '</div>'+
         '<div class="mc-badges">'+
           (m.adminAccess?'<span class="badge-admin">ADMIN</span>':'')+
@@ -1000,6 +1000,7 @@ function renderMemberGrid(){
       '<div class="mc-meta">'+
         (m.note?'<div class="mc-note">'+esc(m.note)+'</div>':'')+
         '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;">'+
+          '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:0;" id="nm2-'+m.id+'" value="'+esc(m.displayName)+'" placeholder="IC jméno"/><button class="btn-acc small" onclick="changeName(\''+m.id+'\')">JMÉNO</button></div>'+
           '<select class="mc-pos-sel" id="pos-'+m.id+'">'+POSITIONS.map(function(p){return '<option value="'+p+'"'+(m.position===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+
           '<button class="btn-acc small" onclick="changePosition(\''+m.id+'\')">POZICE</button>'+
           '<button class="btn-acc small" onclick="toggleAdminAccess(\''+m.id+'\')">'+(!m.adminAccess?'DÁT ADMIN':'ODEBRAT ADMIN')+'</button>'+
@@ -1074,6 +1075,14 @@ async function createMember(){
   ['nm-email','nm-name','nm-pass','nm-note'].forEach(function(i){document.getElementById(i).value='';});
   document.getElementById('nm-admin').checked=false;
   toast(name+' registrován','success');renderMemberGrid();populatePwMember();
+}
+function changeName(id){
+  var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
+  var el=document.getElementById('nm2-'+id);var name=el?el.value.trim():'';
+  if(!name){toast('Zadejte IC jméno','error');return;}
+  var old=m.displayName;m.displayName=name;DB.set('members',members);
+  addLog('member','Admin změnil jméno "'+old+'" na "'+name+'".');
+  toast('Jméno změněno','success');renderMemberGrid();populatePwMember();
 }
 function changePosition(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
