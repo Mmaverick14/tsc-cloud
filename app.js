@@ -2,7 +2,7 @@
 //  SUPABASE CONFIG
 // ════════════════════════════════
 var SUPABASE_URL='https://chlxbgbqkusdmudizbmy.supabase.co';
-var SUPABASE_ANON_KEY='VLOŽ_SEM_ANON_PUBLIC_KEY';
+var SUPABASE_ANON_KEY='sb_publishable_DDA3iGZJldfyhXLAAo8IQQ_BwuGPPY4';
 var TABLE='frakce_kv';
 var sb=null;
 var rtChannel=null;
