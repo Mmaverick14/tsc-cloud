@@ -213,11 +213,18 @@ async function doLogin(){
   setText('loginErr','');btn.disabled=true;
   try{
     var r=await sb.auth.signInWithPassword({email:email,password:pass});
-    if(r.error){setText('loginErr','// NESPRÁVNÝ E-MAIL NEBO HESLO');btn.disabled=false;return;}
+    if(r.error){
+      var em=String(r.error.message||'');
+      var msg='// '+em.toUpperCase();
+      if(/invalid login/i.test(em))msg='// NESPRÁVNÝ E-MAIL NEBO HESLO (nebo účet neexistuje v TOMTO projektu)';
+      else if(/not confirmed/i.test(em))msg='// E-MAIL NENÍ POTVRZEN — v Supabase u účtu zvol Confirm user nebo ho vytvoř s Auto Confirm';
+      else if(/invalid api key|apikey/i.test(em))msg='// ŠPATNÝ SUPABASE_ANON_KEY V app.js';
+      setText('loginErr',msg);console.error('Login error',r.error);btn.disabled=false;return;
+    }
     var ok=await enterPortal(r.data.session,true);
     if(!ok)btn.disabled=false;
   }catch(e){
-    console.error(e);setText('loginErr','// CHYBA PŘIPOJENÍ');btn.disabled=false;
+    console.error(e);setText('loginErr','// CHYBA: '+(e.message||e)+' (zkontroluj SUPABASE_URL a klíč v app.js)');btn.disabled=false;
   }
 }
 
