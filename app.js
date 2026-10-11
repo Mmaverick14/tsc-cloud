@@ -62,6 +62,13 @@ var pendingLoginId=null;
 
 function getMember(id){var members=DB.get('members')||[];return members.find(function(m){return m.id===(id||currentMemberId);})||null;}
 function isAdmin(){var m=getMember();return m&&m.adminAccess;}
+function isBossPos(m){return !!m&&m.position==='Boss';}
+// Bosse smí spravovat jen Boss; ostatní (i Right hand) ne
+function canManage(target){
+  if(!target)return false;
+  if(target.position!=='Boss')return true;
+  var me=getMember();return !!me&&me.position==='Boss';
+}
 function isVedeni(pos){return VEDENI_POS.indexOf(pos)!==-1;}
 function getWeekKey(){var d=new Date();var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
 
@@ -125,6 +132,7 @@ function addLog(type,text,opts){
   log.unshift({time:nowFull(),type:type,actor:actor,text:text,cat:(opts&&opts.pingCat)||''});
   if(log.length>500)log=log.slice(0,500);
   DB.set('syslog',log);
+  if(opts&&opts.embedTitle){sendToDiscord(type,opts.discordText||text,opts);return;}
   sendToDiscord(type,'['+sectionLabel(type).toUpperCase()+((opts&&opts.pingCat)?' / '+(CAT[opts.pingCat]||opts.pingCat):'')+'] ['+actor+'] '+text,opts);
 }
 function sendToDiscord(type,msg,opts){
@@ -145,7 +153,12 @@ function sendToDiscord(type,msg,opts){
   var text='`'+nowStr()+'` '+msg;
   var body={username:s.webhookName||'Frakce LOG',allowed_mentions:{parse:['roles','everyone']}};
   var img=opts.img?absImg(opts.img):'';
-  if(img){
+  if(opts.embedTitle){
+    if(ping)body.content=ping;
+    var em={title:opts.embedTitle,description:msg,color:0xc49a14,footer:{text:nowStr()}};
+    if(img)em.image={url:img};
+    body.embeds=[em];
+  }else if(img){
     if(ping)body.content=ping;
     body.embeds=[{description:text,color:0xc49a14,image:{url:img}}];
   }else{
@@ -857,7 +870,28 @@ function renderAdminFinance(){
       }).join('')+
     '</div>';
   }).join('');
-  el.innerHTML=summary+expenses+payments+optSections;
+  var hist='<div class="fa-member-payments"><div class="fa-exp-title">// HISTORIE PLATEB (lze smazat)</div>'+
+    (fin.payments.length?fin.payments.slice().reverse().map(function(p){
+      return '<div class="fa-pay-row paid"><span class="fa-pay-name">'+esc(p.memberName)+' — '+esc(p.note||'Platba')+'</span>'+
+        '<div style="display:flex;gap:.6rem;align-items:center;"><span class="fa-exp-amt">$'+p.amount+' · '+esc(p.date||'')+' ('+esc(p.weekKey||'')+')</span>'+
+        '<button class="btn-micro del" onclick="delPayment(\''+p.id+'\')">✕</button></div></div>';
+    }).join(''):'<div class="empty-s">// Žádné platby</div>')+'</div>';
+  var incHist='<div class="fa-member-payments"><div class="fa-exp-title">// POTVRZENÉ PŘÍJMY DO KASY (lze smazat)</div>'+
+    (incomes.filter(function(i){return i.status==='confirmed';}).length?incomes.filter(function(i){return i.status==='confirmed';}).slice().reverse().map(function(i){
+      return '<div class="fa-pay-row paid"><span class="fa-pay-name">'+esc(i.memberName)+' — '+esc(i.source)+(i.note?' ('+esc(i.note)+')':'')+'</span>'+
+        '<div style="display:flex;gap:.6rem;align-items:center;"><span class="fa-exp-amt">$'+i.amount+' · '+esc(i.date||'')+'</span>'+
+        '<button class="btn-micro del" onclick="delIncome(\''+i.id+'\')">✕</button></div></div>';
+    }).join(''):'<div class="empty-s">// Žádné příjmy</div>')+'</div>';
+  el.innerHTML=summary+expenses+payments+optSections+hist+incHist;
+}
+function delPayment(id){
+  if(!confirm('Smazat záznam platby?'))return;
+  var fin=DB.get('finance')||{payments:[],expenses:[]};
+  var p=fin.payments.find(function(x){return x.id===id;});
+  fin.payments=fin.payments.filter(function(x){return x.id!==id;});
+  DB.set('finance',fin);
+  addLog('fin','Admin smazal platbu'+(p?' od "'+p.memberName+'" ($'+p.amount+', '+(p.note||'')+')':'')+'.',{noPing:true});
+  toast('Platba smazána','info');renderAdminFinance();
 }
 function recordPayment(memberId,memberName){
   var fs=DB.get('finsettings')||{weeklyFee:5000};
@@ -1153,7 +1187,7 @@ function renderMemberGrid(){
   var el=document.getElementById('memberGrid');if(!el)return;
   if(!members.length){el.innerHTML='<div class="empty-s">// Žádní členové</div>';return;}
   el.innerHTML=members.map(function(m){
-    var vedeni=isVedeni(m.position);
+    var vedeni=isVedeni(m.position);var me0=getMember();var locked=m.position==='Boss'&&!(me0&&me0.position==='Boss');
     return '<div class="member-card '+(m.panic?'panic-card':'')+'">'+
       '<div class="mc-top">'+
         '<div class="mc-hex">'+esc(m.displayName.charAt(0).toUpperCase())+'</div>'+
@@ -1169,13 +1203,14 @@ function renderMemberGrid(){
       '</div>'+
       '<div class="mc-meta">'+
         (m.note?'<div class="mc-note">'+esc(m.note)+'</div>':'')+
-        '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;">'+
+        (m.position==='Boss'?'<div class="mc-note">🔒 Chráněný účet — Bosse nelze odebrat</div>':'')+
+        (locked?'<div style="display:none">':'<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;">')+
           '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:0;" id="nm2-'+m.id+'" value="'+esc(m.displayName)+'" placeholder="IC jméno"/><button class="btn-acc small" onclick="changeName(\''+m.id+'\')">JMÉNO</button></div>'+
           '<select class="mc-pos-sel" id="pos-'+m.id+'">'+POSITIONS.map(function(p){return '<option value="'+p+'"'+(m.position===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+
           '<button class="btn-acc small" onclick="changePosition(\''+m.id+'\')">POZICE</button>'+
-          '<button class="btn-acc small" onclick="toggleAdminAccess(\''+m.id+'\')">'+(!m.adminAccess?'DÁT ADMIN':'ODEBRAT ADMIN')+'</button>'+
+          (m.position==='Boss'?'':'<button class="btn-acc small" onclick="toggleAdminAccess(\''+m.id+'\')">'+(!m.adminAccess?'DÁT ADMIN':'ODEBRAT ADMIN')+'</button>')+
           (m.panic?'<button class="btn-acc small" onclick="liftPanic(\''+m.id+'\')">ODEMKNOUT</button>':'')+
-          '<button class="btn-danger small" onclick="deleteMember(\''+m.id+'\')">✕ SMAZAT</button>'+
+          (m.position==='Boss'?'':'<button class="btn-danger small" onclick="deleteMember(\''+m.id+'\')">✕ SMAZAT</button>')+
         '</div>'+
       '</div>'+
     '</div>';
@@ -1208,6 +1243,7 @@ async function changePassword(){
   var members=DB.get('members')||[];
   var m=members.find(function(x){return x.id===memberId;});
   if(!m){st.textContent='// ČLEN NENALEZEN';st.style.color='#e05555';return;}
+  if(!canManage(m)){st.textContent='// HESLO BOSSE MŮŽE MĚNIT JEN BOSS';st.style.color='#e05555';return;}
   if(!m.authId){st.textContent='// ČLEN NEMÁ PROPOJENÝ ÚČET';st.style.color='#e05555';return;}
   st.style.color='var(--acc)';st.textContent='// UKLÁDÁM...';
   try{await adminApi({action:'setPassword',authId:m.authId,password:newPass});}
@@ -1231,6 +1267,8 @@ async function createMember(){
   if(email.indexOf('@')<1){st.textContent='// NEPLATNÝ E-MAIL';return;}
   if(pass.length<6){st.textContent='// HESLO MIN. 6 ZNAKŮ';return;}
   var members=DB.get('members')||[];
+  var me1=getMember();
+  if(pos==='Boss'&&!(me1&&me1.position==='Boss')){st.textContent='// POZICI BOSS MŮŽE PŘIDĚLIT JEN BOSS';return;}
   if(members.find(function(m){return (m.email||'').toLowerCase()===email;})){st.textContent='// E-MAIL JIŽ EXISTUJE';return;}
   st.textContent='// VYTVÁŘÍM ÚČET...';
   var res;
@@ -1250,6 +1288,7 @@ function changeName(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
   var el=document.getElementById('nm2-'+id);var name=el?el.value.trim():'';
   if(!name){toast('Zadejte IC jméno','error');return;}
+  if(!canManage(m)){toast('Bosse může spravovat jen Boss','error');return;}
   var old=m.displayName;m.displayName=name;DB.set('members',members);
   addLog('member','Admin změnil jméno "'+old+'" na "'+name+'".');
   toast('Jméno změněno','success');renderMemberGrid();populatePwMember();
@@ -1257,12 +1296,18 @@ function changeName(id){
 function changePosition(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
   var sel=document.getElementById('pos-'+id);if(!sel)return;
+  var me=getMember();
+  if(!canManage(m)){toast('Bosse může spravovat jen Boss','error');return;}
+  if(sel.value==='Boss'&&!(me&&me.position==='Boss')){toast('Pozici Boss může přidělit jen Boss','error');return;}
+  if(m.position==='Boss'&&sel.value!=='Boss'&&!members.some(function(x){return x.id!==m.id&&x.position==='Boss';})){toast('Musí zůstat alespoň jeden Boss','error');return;}
   m.position=sel.value;DB.set('members',members);
   addLog('member','Admin změnil pozici "'+m.displayName+'" na "'+m.position+'".');
   toast('Pozice aktualizována','success');renderMemberGrid();
 }
 function toggleAdminAccess(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
+  if(!canManage(m)){toast('Bosse může spravovat jen Boss','error');return;}
+  if(m.position==='Boss'&&m.adminAccess){toast('Bossovi nelze odebrat admin','error');return;}
   m.adminAccess=!m.adminAccess;DB.set('members',members);
   addLog('member','Admin '+(m.adminAccess?'přidělil':'odebral')+' admin přístup "'+m.displayName+'".');
   toast('Admin přístup '+(m.adminAccess?'přidělen':'odebrán'),'info');renderMemberGrid();
@@ -1271,6 +1316,7 @@ async function deleteMember(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});
   if(!m)return;
   if(id===currentMemberId){toast('Nemůžeš smazat sám sebe','error');return;}
+  if(m.position==='Boss'){toast('Bosse nelze smazat','error');return;}
   if(!confirm('Smazat člena "'+m.displayName+'"? Smaže se i jeho přihlašovací účet.'))return;
   if(m.authId){
     try{await adminApi({action:'delete',authId:m.authId});}
@@ -1616,14 +1662,21 @@ function submitExcuse(){
   var date=document.getElementById('excDate').value;
   var event=document.getElementById('excEvent').value.trim();
   var reason=document.getElementById('excReason').value.trim();
+  var length=document.getElementById('excLength').value.trim();
   var note=document.getElementById('excNote').value.trim();
   var st=document.getElementById('excStatus');
   if(!date||!event||!reason){st.textContent='// VYPLŇTE POVINNÁ POLE';return;}
   var excuses=DB.get('excuses')||[];
-  excuses.push({id:uid(),memberId:m.id,memberName:m.displayName,date:date,event:event,reason:reason,note:note,status:'pending',submitted:nowStr()});
+  excuses.push({id:uid(),memberId:m.id,memberName:m.displayName,date:date,event:event,reason:reason,length:length,note:note,status:'pending',submitted:nowStr()});
   DB.set('excuses',excuses);
-  addLog('excuse','Člen "'+m.displayName+'" odeslal omluvenku na "'+event+'".');
-  ['excDate','excEvent','excReason','excNote'].forEach(function(i){document.getElementById(i).value='';});
+  var dp=date.split('-');var dstr=dp.length===3?dp[2]+'. '+dp[1]+'. '+dp[0]:date;
+  var tmpl='Dobrý den,\n\noznamuji, že se dne **'+dstr+'** nemohu zúčastnit **'+event+'**.\n\n'+
+    'Důvod: **'+reason+'**\n\n'+
+    'Předpokládaná délka nepřítomnosti: **'+(length||'neuvedena')+'**\n\n'+
+    (note?'Poznámka: '+note+'\n\n':'')+
+    'S pozdravem,\n**'+m.displayName+'**';
+  addLog('excuse','Člen "'+m.displayName+'" odeslal omluvenku na "'+event+'".',{embedTitle:'✉ OMLUVENKA — '+m.displayName,discordText:tmpl});
+  ['excDate','excEvent','excReason','excLength','excNote'].forEach(function(i){document.getElementById(i).value='';});
   st.textContent='// ODESLÁNO';setTimeout(function(){st.textContent='';},2500);
   toast('Omluvenka odeslána','success');renderMyExcuses();renderAdminExcuses();
 }
