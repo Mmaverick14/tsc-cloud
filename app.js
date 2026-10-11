@@ -138,6 +138,7 @@ function addLog(type,text,opts){
   log.unshift({time:nowFull(),type:type,actor:actor,text:text,cat:(opts&&opts.pingCat)||''});
   if(log.length>500)log=log.slice(0,500);
   DB.set('syslog',log);
+  if(opts&&opts.noDiscord)return;
   if(opts&&opts.embedTitle){sendToDiscord(type,opts.discordText||text,opts);return;}
   // Lehký zápis pro všechno ostatní: ikona + věta (bez [SEKCE] [jméno] prefixu a bez uvozovek kolem jmen)
   var o=opts||{};
@@ -274,7 +275,9 @@ function triggerPanic(){
   var pList=DB.get('panicList')||[];
   if(pList.indexOf(currentMemberId)===-1)pList.push(currentMemberId);
   DB.set('panicList',pList);
-  addLog('panic','Člen "'+m.displayName+'" aktivoval PANIC.');
+  var pf=genNewRadios();
+  addLog('radio','Frekvence změněny kvůli PANICu ('+m.displayName+') — Primární: '+pf.primary+', Sekundární: '+pf.secondary+', Akce: '+pf.action+'.',{noDiscord:true});
+  addLog('panic',m.displayName+' aktivoval PANIC. Proběhla změna frekvence — zjisti informaci, co se děje.');
   currentMemberId=null;
   stopRealtime();
   document.getElementById('panicBtn').classList.add('hidden');
@@ -1063,10 +1066,8 @@ function saveRadios(){
   if(cfg.on)radioTick();
 }
 
-function regenRadios(){
-  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Boss, Right hand, Counselor, Devil\'s Advocate a Chief of Arms','error');return;}
-  if(!confirm('Vygenerovat nové frekvence hned teď? Staré přestanou platit.'))return;
-  var m=getMember();var who=m?m.displayName:'Admin';
+// Vygeneruje a uloží nové frekvence (vrací objekt s frekvencemi)
+function genNewRadios(){
   var cfg=DB.get('radioauto')||{};
   var f;
   if(cfg.on){
@@ -1080,6 +1081,13 @@ function regenRadios(){
     f={primary:out[0],secondary:out[1],action:out[2],vedeni:out[3]};
     DB.set('radios',f);
   }
+  return f;
+}
+function regenRadios(){
+  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Boss, Right hand, Counselor, Devil\'s Advocate a Chief of Arms','error');return;}
+  if(!confirm('Vygenerovat nové frekvence hned teď? Staré přestanou platit.'))return;
+  var m=getMember();var who=m?m.displayName:'Admin';
+  var f=genNewRadios();
   addLog('radio','Nové frekvence (vygeneroval '+who+') — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.');
   toast('Nové frekvence vygenerovány','success');
   renderAdminRadio();
@@ -1618,7 +1626,7 @@ function saveBoost(p){
   if(!name){st.textContent='// ZADEJTE NÁZEV AUTA';return;}
   var list=DB.get('boosting')||[];
   var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena')+' — Backup: '+(backup?'POTŘEBA':'ne')+(note?' — Poznámka: '+note:'');
-  var short=name+' (Tier '+tier+(speed?', '+speed+' MP/H':'')+')'+(loc?' · '+loc:'')+(backup?' · backup':'');
+  var short=name+' (Tier '+tier+(speed?', '+speed+' MP/H':'')+') · Lokace: '+(loc||'neuvedena')+'; Backup: '+(backup?'POTŘEBA':'NE')+(note?'; Poznámka: '+note:'');
   if(editBoostId){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
