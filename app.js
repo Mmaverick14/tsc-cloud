@@ -1691,6 +1691,13 @@ function heistCard(h,admin){
       (admin?' <button class="btn-micro del" style="float:right" onclick="delHeist(\''+h.id+'\')">✕ SMAZAT</button>':'')+'</div>'+
   '</div>';
 }
+// zkrátí text na max n znaků (nejraději na mezeře) a přidá „…“
+function cut(s,n){
+  s=String(s);if(s.length<=n)return s;
+  var c=s.slice(0,n),sp=c.lastIndexOf(' ');
+  if(sp>n*0.6)c=c.slice(0,sp);
+  return c.replace(/\s+$/,'')+'…';
+}
 function submitHeist(){
   var m=getMember();if(!m)return;
   var t=document.getElementById('hs-target').value;
@@ -1707,17 +1714,22 @@ function submitHeist(){
   var target=(t==='Jiné')?detail:(detail?(t+' — '+detail):t);
   var h={id:uid(),memberId:m.id,memberName:m.displayName,target:target,people:people,loot:loot,escaped:escaped,desc:desc,date:nowStr()};
   var list=DB.get('heists')||[];list.push(h);DB.set('heists',list);
+  // Discord embed: nahoře kompaktní přehled (lidé / ujeli / kdo vedl), pod ním loot a zkrácený průběh.
+  // Celý text zůstává v reportu na webu — Discord je jen přehled, ne zeď textu.
+  var story=cut(desc,850);
+  if(story.length<desc.length)story+='\n*… zkráceno — celý report je na webu (Admin → Heisty)*';
   var em={
-    title:((escaped?'✅ ':'❌ ')+'Heist — '+target).slice(0,250),
+    title:cut((escaped?'✅ ':'❌ ')+'Heist: '+target,250),
     color:escaped?0x27ae60:0xc0392b,
-    description:('**Průběh:**\n'+desc).slice(0,3900),
     fields:[
-      {name:'🎯 Co se vykrádalo',value:target.slice(0,1000),inline:true},
-      {name:'👥 Počet lidí',value:String(people),inline:true},
-      {name:'🏃 Ujeli?',value:escaped?'Ano':'Ne',inline:true},
-      {name:'💰 Loot',value:loot.slice(0,1000),inline:false}
+      {name:'👥 Lidí',value:String(people),inline:true},
+      {name:'🏃 Ujeli?',value:escaped?'**Ano**':'**Ne**',inline:true},
+      {name:'🧑 Vedl',value:cut(m.displayName,200),inline:true},
+      {name:'💰 Loot',value:cut(loot,1000),inline:false},
+      {name:'📝 Průběh',value:'>>> '+story,inline:false}
     ],
-    footer:{text:'Report: '+m.displayName+' • '+nowStr()}
+    footer:{text:'Heist report'},
+    timestamp:new Date().toISOString()
   };
   addLog('heist',m.displayName+' nahlásil heist: '+target+' — '+(escaped?'ujeli':'neujeli')+', lidí: '+people+', loot: '+loot+'.',{embed:em,icon:'💎'});
   ['hs-detail','hs-people','hs-loot','hs-desc'].forEach(function(i){document.getElementById(i).value='';});
