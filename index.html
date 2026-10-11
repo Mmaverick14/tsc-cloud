@@ -51,6 +51,7 @@
         <button class="nb" onclick="mTab('messages',this)"><span class="ni">◉</span><span class="nl">ZPRÁVY</span><span class="nbadge" id="msgBadge"></span></button>
         <button class="nb" onclick="mTab('warehouse',this)"><span class="ni">⬡</span><span class="nl">SKLAD</span></button>
         <button class="nb" onclick="mTab('boosting',this)"><span class="ni">🏎</span><span class="nl">BOOSTING</span></button>
+        <button class="nb" onclick="mTab('heist',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
         <button class="nb" onclick="mTab('clothing',this)"><span class="ni">◧</span><span class="nl">OBLEČENÍ</span></button>
         <button class="nb" onclick="mTab('finance',this)"><span class="ni">$</span><span class="nl">FINANCE</span><span class="nbadge red" id="financeBadge"></span></button>
         <button class="nb" onclick="mTab('excuse',this)"><span class="ni">✉</span><span class="nl">OMLUVENKY</span></button>
@@ -144,6 +145,27 @@
           <button class="wf" onclick="mBoostFilter('S+',this)">S+</button>
         </div>
         <div id="mBoostGrid" class="wh-grid boost-grid"></div>
+      </div>
+
+      <!-- HEISTY -->
+      <div id="mt-heist" class="mt">
+        <div class="ph"><div class="pt">💎 // HEISTY — PROVEDENÉ PRÁCE</div></div>
+        <div class="form-panel" style="margin:1.2rem;">
+          <div class="fp-title">// NOVÝ REPORT (píše ten, kdo akci vedl)</div>
+          <div class="form-grid">
+            <div class="field-group"><label class="fl">CO SE VYKRÁDALO *</label><div class="iw"><span class="ip">&gt;_</span>
+              <select id="hs-target"><option>Banka</option><option>Klenotnictví</option><option>Obchod</option><option>Bobcat</option><option>Jiné</option></select></div></div>
+            <div class="field-group"><label class="fl">UPŘESNĚNÍ (lokace / která banka / u „Jiné“ povinné)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="hs-detail" placeholder="např. Fleeca Vinewood, Pacific Standard..."/></div></div>
+            <div class="field-group"><label class="fl">POČET LIDÍ *</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="hs-people" min="1" placeholder="4"/></div></div>
+            <div class="field-group"><label class="fl">UJELI? *</label><div class="iw"><span class="ip">&gt;_</span>
+              <select id="hs-escaped"><option value="yes">Ano — ujeli</option><option value="no">Ne — neujeli</option></select></div></div>
+            <div class="field-group fg-full"><label class="fl">LOOT *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="hs-loot" placeholder="např. $85 000 + 12× zlatý slitek (nebo „nic“)"/></div></div>
+            <div class="field-group fg-full"><label class="fl">POPIS PRŮBĚHU *</label><textarea id="hs-desc" class="adm-ta" style="min-height:110px;" placeholder="Jak akce probíhala, co se povedlo / nepovedlo, zásah policie..."></textarea></div>
+          </div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="submitHeist()">💎 ODESLAT REPORT</button><span id="hsStatus" class="smsg"></span></div>
+        </div>
+        <div class="sh">// MOJE REPORTY</div>
+        <div id="myHeists" class="stream"></div>
       </div>
 
       <!-- OBLEČENÍ -->
@@ -260,6 +282,7 @@
         <button class="nb" onclick="aTab('messages',this)"><span class="ni">◉</span><span class="nl">ZPRÁVY</span></button>
         <button class="nb" onclick="aTab('warehouse',this)"><span class="ni">⬡</span><span class="nl">SKLAD</span></button>
         <button class="nb" onclick="aTab('boosting',this)"><span class="ni">🏎</span><span class="nl">BOOSTING</span></button>
+        <button class="nb" onclick="aTab('heists',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
         <button class="nb" onclick="aTab('clothing',this)"><span class="ni">◧</span><span class="nl">OBLEČENÍ</span></button>
         <button class="nb" onclick="aTab('finance',this)"><span class="ni">$</span><span class="nl">FINANCE</span></button>
         <button class="nb" onclick="aTab('excuses',this)"><span class="ni">✉</span><span class="nl">OMLUVENKY</span></button>
@@ -407,6 +430,12 @@
           <button class="wf" onclick="aBoostFilter('S+',this)">S+</button>
         </div>
         <div id="aBoostGrid" class="wh-grid boost-grid adm-wh"></div>
+      </div>
+
+      <!-- HEISTY ADMIN -->
+      <div id="at-heists" class="at">
+        <div class="ph"><div class="pt">💎 // HEISTY — VŠECHNY REPORTY</div></div>
+        <div id="aHeists" class="stream" style="padding-top:1rem;"></div>
       </div>
 
       <!-- CLOTHING ADMIN -->

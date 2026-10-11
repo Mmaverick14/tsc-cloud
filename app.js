@@ -106,6 +106,7 @@ var SECTIONS=[
   {key:'wh',label:'Sklad (vkládání, správa)'},
   {key:'ev',label:'Sklad (výdej)'},
   {key:'boost',label:'Boosting'},
+  {key:'heist',label:'Heisty (reporty o provedených pracích)'},
   {key:'cloth',label:'Oblečení'},
   {key:'fin',label:'Finance a příjmy'},
   {key:'excuse',label:'Omluvenky'},
@@ -131,7 +132,7 @@ function pingTag(v){
 // opts: {img:'url/soubor', pingCat:'weapons', noPing:true}
 // jméno zadané ve formuláři; pokud se liší od přihlášeného člena, přidá se v závorce
 function whoName(jmeno,m){return String(jmeno).toLowerCase()===String(m.displayName).toLowerCase()?jmeno:jmeno+' ('+m.displayName+')';}
-var LOG_ICONS={sys:'🔑',board:'📌',task:'✅',msg:'💬',wh:'📦',ev:'📤',boost:'🚗',cloth:'👕',fin:'💰',excuse:'📝',excuse_dec:'📝',report:'📄',radio:'📻',member:'👤',panic:'🚨'};
+var LOG_ICONS={sys:'🔑',board:'📌',task:'✅',msg:'💬',wh:'📦',ev:'📤',boost:'🚗',heist:'💎',cloth:'👕',fin:'💰',excuse:'📝',excuse_dec:'📝',report:'📄',radio:'📻',member:'👤',panic:'🚨'};
 function addLog(type,text,opts){
   var m=getMember();var actor=m?m.displayName:'Systém';
   var log=DB.get('syslog')||[];
@@ -139,7 +140,7 @@ function addLog(type,text,opts){
   if(log.length>500)log=log.slice(0,500);
   DB.set('syslog',log);
   if(opts&&opts.noDiscord)return;
-  if(opts&&opts.embedTitle){sendToDiscord(type,opts.discordText||text,opts);return;}
+  if(opts&&(opts.embedTitle||opts.embed)){sendToDiscord(type,opts.discordText||text,opts);return;}
   // Lehký zápis pro všechno ostatní: ikona + věta (bez [SEKCE] [jméno] prefixu a bez uvozovek kolem jmen)
   var o=opts||{};
   var ic=o.icon||LOG_ICONS[type]||'';
@@ -165,7 +166,10 @@ function sendToDiscord(type,msg,opts){
   var text='`'+nowStr()+'` '+msg;
   var body={username:s.webhookName||'Frakce LOG',allowed_mentions:{parse:['roles','everyone']}};
   var img=opts.img?absImg(opts.img):'';
-  if(opts.embedTitle){
+  if(opts.embed){
+    if(ping)body.content=ping;
+    body.embeds=[opts.embed];
+  }else if(opts.embedTitle){
     if(ping)body.content=ping;
     var em={title:opts.embedTitle,description:msg,color:0xc49a14,footer:{text:nowStr()}};
     if(img)em.image={url:img};
@@ -187,6 +191,7 @@ function initData(){
   DB.setDefault('reports',[]);
   DB.setDefault('warehouse',defaultWarehouse());
   DB.setDefault('boosting',[]);
+  DB.setDefault('heists',[]);
   DB.setDefault('clothing',[]);
   DB.setDefault('board',[]);
   DB.setDefault('boardConfirmed',{});
@@ -381,11 +386,11 @@ var M_RENDER={
   board:function(){renderBoard();},tasks:function(){renderMemberTasks();},messages:function(){renderMemberMessages();},
   warehouse:function(){renderMemberWarehouse();},boosting:function(){renderMemberBoosting();},clothing:function(){renderClothing();},
   finance:function(){renderMyFinance();renderMyIncomes();},excuse:function(){renderMyExcuses();},
-  report:function(){renderSentReports();},radio:function(){renderMyRadio();},contacts:function(){renderContacts();}
+  report:function(){renderSentReports();},heist:function(){renderMyHeists();},radio:function(){renderMyRadio();},contacts:function(){renderContacts();}
 };
 var A_RENDER={
   members:function(){renderMemberGrid();},tasks:function(){renderAdminTasks();},messages:function(){renderAdminMessages();},board:function(){renderAdminBoard();},warehouse:function(){renderAdminWarehouse();},
-  boosting:function(){renderAdminBoosting();},
+  boosting:function(){renderAdminBoosting();},heists:function(){renderAdminHeists();},
   clothing:function(){renderAdminClothing();},finance:function(){renderAdminFinance();},excuses:function(){renderAdminExcuses();},
   reports:function(){renderAdminReports();},incomes:function(){renderAdminIncomes();},log:function(){renderLog();}
 };
@@ -448,6 +453,7 @@ function aTab(tab,btn){
   if(tab==='messages')   {populateMsgTarget();renderAdminMessages();}
   if(tab==='warehouse')  renderAdminWarehouse();
   if(tab==='boosting')   renderAdminBoosting();
+  if(tab==='heists')     renderAdminHeists();
   if(tab==='clothing')   renderAdminClothing();
   if(tab==='finance')    renderAdminFinance();
   if(tab==='excuses')    renderAdminExcuses();
@@ -473,6 +479,7 @@ function mTab(tab,btn){
   if(tab==='messages')  renderMemberMessages();
   if(tab==='warehouse'){renderMemberWarehouse();populateDepositSelect();}
   if(tab==='boosting')  renderMemberBoosting();
+  if(tab==='heist')     renderMyHeists();
   if(tab==='clothing')  renderClothing();
   if(tab==='finance')   {renderMyFinance();populateIncSource();}
   if(tab==='excuse')    renderMyExcuses();
@@ -1670,8 +1677,81 @@ function delBoost(id){
   renderAdminBoosting();renderMemberBoosting();
 }
 
+// ── HEISTY (reporty o provedených nelegálních pracích) ──
+// Report píše ten, kdo akci vedl. Do logu jde krátký záznam, na Discord (sekce "heist") hezký embed.
+function heistCard(h,admin){
+  var ok=!!h.escaped;
+  return '<div class="heist-card '+(ok?'ok':'fail')+'">'+
+    '<div class="heist-top"><span class="heist-target">'+esc(h.target)+'</span>'+
+      '<span class="heist-chip '+(ok?'ok':'fail')+'">'+(ok?'✓ UJELI':'✗ NEUJELI')+'</span></div>'+
+    '<div class="heist-meta"><span>👥 Lidí: <b>'+esc(h.people)+'</b></span><span>💰 Loot: <b>'+esc(h.loot)+'</b></span></div>'+
+    '<div class="heist-desc">'+esc(h.desc)+'</div>'+
+    '<div class="heist-by">// '+esc(h.memberName)+' — '+esc(h.date)+
+      (admin?' <button class="btn-micro del" style="float:right" onclick="delHeist(\''+h.id+'\')">✕ SMAZAT</button>':'')+'</div>'+
+  '</div>';
+}
+function submitHeist(){
+  var m=getMember();if(!m)return;
+  var t=document.getElementById('hs-target').value;
+  var detail=document.getElementById('hs-detail').value.trim();
+  var people=parseInt(document.getElementById('hs-people').value)||0;
+  var loot=document.getElementById('hs-loot').value.trim();
+  var escaped=document.getElementById('hs-escaped').value==='yes';
+  var desc=document.getElementById('hs-desc').value.trim();
+  var st=document.getElementById('hsStatus');
+  if(t==='Jiné'&&!detail){st.style.color='var(--red)';st.textContent='// UPŘESNĚTE, CO SE VYKRÁDALO';return;}
+  if(people<1){st.style.color='var(--red)';st.textContent='// ZADEJTE POČET LIDÍ';return;}
+  if(!loot){st.style.color='var(--red)';st.textContent='// ZADEJTE LOOT (nebo napište „nic“)';return;}
+  if(!desc){st.style.color='var(--red)';st.textContent='// NAPIŠTE POPIS PRŮBĚHU';return;}
+  var target=detail?(t+' — '+detail):t;
+  var h={id:uid(),memberId:m.id,memberName:m.displayName,target:target,people:people,loot:loot,escaped:escaped,desc:desc,date:nowStr()};
+  var list=DB.get('heists')||[];list.push(h);DB.set('heists',list);
+  var em={
+    title:((escaped?'✅ ':'❌ ')+'Heist — '+target).slice(0,250),
+    color:escaped?0x27ae60:0xc0392b,
+    description:('**Průběh:**\n'+desc).slice(0,3900),
+    fields:[
+      {name:'🎯 Co se vykrádalo',value:target.slice(0,1000),inline:true},
+      {name:'👥 Počet lidí',value:String(people),inline:true},
+      {name:'🏃 Ujeli?',value:escaped?'Ano':'Ne',inline:true},
+      {name:'💰 Loot',value:loot.slice(0,1000),inline:false}
+    ],
+    footer:{text:'Report: '+m.displayName+' • '+nowStr()}
+  };
+  addLog('heist',m.displayName+' nahlásil heist: '+target+' — '+(escaped?'ujeli':'neujeli')+', lidí: '+people+', loot: '+loot+'.',{embed:em,icon:'💎'});
+  ['hs-detail','hs-people','hs-loot','hs-desc'].forEach(function(i){document.getElementById(i).value='';});
+  document.getElementById('hs-target').value='Banka';document.getElementById('hs-escaped').value='yes';
+  st.style.color='';st.textContent='// REPORT ODESLÁN';setTimeout(function(){st.textContent='';},3000);
+  toast('Heist report odeslán ✓','success');
+  renderMyHeists();renderAdminHeists();
+}
+function renderMyHeists(){
+  var m=getMember();if(!m)return;
+  var el=document.getElementById('myHeists');if(!el)return;
+  var list=(DB.get('heists')||[]).filter(function(h){return h.memberId===m.id;});
+  el.innerHTML=list.length?list.slice().reverse().map(function(h){return heistCard(h,false);}).join(''):'<div class="empty-s">// Zatím jste nenahlásili žádný heist</div>';
+}
+function renderAdminHeists(){
+  var el=document.getElementById('aHeists');if(!el)return;
+  var list=DB.get('heists')||[];
+  var ok=list.filter(function(h){return h.escaped;}).length;
+  var stats='<div class="heist-stats">'+
+    '<div class="inc-sum-card"><div class="inc-sum-title">CELKEM HEISTŮ</div><div class="inc-sum-val acc">'+list.length+'</div></div>'+
+    '<div class="inc-sum-card"><div class="inc-sum-title">UJELI</div><div class="inc-sum-val green">'+ok+'</div></div>'+
+    '<div class="inc-sum-card"><div class="inc-sum-title">NEUJELI</div><div class="inc-sum-val" style="color:var(--red)">'+(list.length-ok)+'</div></div>'+
+  '</div>';
+  el.innerHTML=stats+(list.length?list.slice().reverse().map(function(h){return heistCard(h,true);}).join(''):'<div class="empty-s">// Žádné reporty</div>');
+}
+function delHeist(id){
+  var list=DB.get('heists')||[];var h=list.find(function(x){return x.id===id;});
+  if(!h||!confirm('Smazat report "'+h.target+'" od '+h.memberName+'?'))return;
+  DB.set('heists',list.filter(function(x){return x.id!==id;}));
+  addLog('heist','Admin smazal heist report: '+h.target+' ('+h.memberName+').',{noDiscord:true});
+  toast('Report smazán','info');renderAdminHeists();renderMyHeists();
+}
+
 // ── LOG ──────────────────────────────────────
-var LOG_LABELS={ev:'VÝDEJ',wh:'SKLAD',task:'ÚKOL',msg:'ZPRÁVA',member:'ČLEN',board:'NÁSTĚNKA',sys:'SYSTÉM',fin:'FINANCE',panic:'PANIC',boost:'BOOSTING',cloth:'OBLEČENÍ',excuse:'OMLUVENKA',report:'HLÁŠENÍ',radio:'VYSÍLAČKA'};
+var LOG_LABELS={ev:'VÝDEJ',wh:'SKLAD',task:'ÚKOL',msg:'ZPRÁVA',member:'ČLEN',board:'NÁSTĚNKA',sys:'SYSTÉM',fin:'FINANCE',panic:'PANIC',boost:'BOOSTING',heist:'HEIST',cloth:'OBLEČENÍ',excuse:'OMLUVENKA',report:'HLÁŠENÍ',radio:'VYSÍLAČKA'};
 var logCat='all';
 function logFilter(cat,btn){
   logCat=cat;document.querySelectorAll('#logFilters .wf').forEach(function(b){b.classList.remove('active');});
