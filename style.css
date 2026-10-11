@@ -447,3 +447,31 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .inc-rank-val{font-family:'Share Tech Mono',monospace;font-size:.75rem;color:var(--green);font-weight:700;}
 
 .inc-pending{background:var(--card);border:1px solid var(--border);padding:.7rem 1rem;border-radius:2px;}
+
+/* ── BOOSTING ───────────────────────────── */
+.boost-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));}
+.boost-item .wh-img{height:110px;}
+.boost-item .wh-img img{max-height:104px;}
+.boost-tier{position:absolute;top:.5rem;right:.5rem;z-index:2;font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:900;padding:.12rem .45rem;border:1px solid;background:var(--bg);}
+.t-D{color:#8a8a8a;border-color:#8a8a8a;}
+.t-C{color:#6ab04c;border-color:#6ab04c;}
+.t-B{color:#4a90d9;border-color:#4a90d9;}
+.t-A{color:#9b59b6;border-color:#9b59b6;}
+.t-Ap{color:#e056fd;border-color:#e056fd;}
+.t-S{color:var(--acc);border-color:var(--acc);}
+.t-Sp{color:var(--red);border-color:var(--red);box-shadow:0 0 8px rgba(192,57,43,.4);}
+.boost-stat{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.28rem 0;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--muted);letter-spacing:.06em;}
+.boost-stat b{font-family:'Orbitron',sans-serif;font-size:.78rem;color:var(--textb);font-weight:700;text-align:right;}
+
+/* ── DISCORD PO SEKCÍCH ─────────────────── */
+.sec-hook-row{display:grid;grid-template-columns:210px 1fr auto;gap:.6rem;align-items:center;margin-bottom:.5rem;}
+.sec-hook-on{display:flex;align-items:center;gap:.5rem;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--textb);}
+.sec-hook-on input{accent-color:var(--acc);}
+@media(max-width:700px){.sec-hook-row{grid-template-columns:1fr;}}
+
+/* nové typy logu */
+.log-type.boost{background:rgba(196,154,20,.08);color:var(--acc);border:1px solid var(--acc-dim);}
+.log-type.cloth{background:rgba(155,89,182,.1);color:#b07cc6;border:1px solid #4a3060;}
+.log-type.excuse{background:var(--surf);color:#c9a227;border:1px solid var(--border);}
+.log-type.report{background:var(--surf);color:#4a90d9;border:1px solid var(--border);}
+.log-type.radio{background:var(--surf);color:#27ae60;border:1px solid var(--border);}

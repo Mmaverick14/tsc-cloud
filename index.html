@@ -50,6 +50,7 @@
         <button class="nb" onclick="mTab('tasks',this)"><span class="ni">▣</span><span class="nl">ÚKOLY</span><span class="nbadge" id="taskBadge"></span></button>
         <button class="nb" onclick="mTab('messages',this)"><span class="ni">◉</span><span class="nl">ZPRÁVY</span><span class="nbadge" id="msgBadge"></span></button>
         <button class="nb" onclick="mTab('warehouse',this)"><span class="ni">⬡</span><span class="nl">SKLAD</span></button>
+        <button class="nb" onclick="mTab('boosting',this)"><span class="ni">🏎</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="mTab('clothing',this)"><span class="ni">◧</span><span class="nl">OBLEČENÍ</span></button>
         <button class="nb" onclick="mTab('finance',this)"><span class="ni">$</span><span class="nl">FINANCE</span><span class="nbadge red" id="financeBadge"></span></button>
         <button class="nb" onclick="mTab('excuse',this)"><span class="ni">✉</span><span class="nl">OMLUVENKY</span></button>
@@ -110,6 +111,22 @@
             <div class="dep-ftr"><button class="btn-acc small" onclick="depositItem()">+ VLOŽIT DO SKLADU</button><span id="depStatus" class="smsg"></span></div>
           </div>
         </div>
+      </div>
+
+      <!-- BOOSTING -->
+      <div id="mt-boosting" class="mt">
+        <div class="ph"><div class="pt">🏎 // BOOSTING</div></div>
+        <div class="wh-filters">
+          <button class="wf active" onclick="mBoostFilter('all',this)">VŠE</button>
+          <button class="wf" onclick="mBoostFilter('D',this)">D</button>
+          <button class="wf" onclick="mBoostFilter('C',this)">C</button>
+          <button class="wf" onclick="mBoostFilter('B',this)">B</button>
+          <button class="wf" onclick="mBoostFilter('A',this)">A</button>
+          <button class="wf" onclick="mBoostFilter('A+',this)">A+</button>
+          <button class="wf" onclick="mBoostFilter('S',this)">S</button>
+          <button class="wf" onclick="mBoostFilter('S+',this)">S+</button>
+        </div>
+        <div id="mBoostGrid" class="wh-grid boost-grid"></div>
       </div>
 
       <!-- OBLEČENÍ -->
@@ -217,7 +234,7 @@
 <div id="adminScreen" class="screen hidden">
   <div class="layout">
     <aside class="sidebar admin-sb">
-      <div class="sb-logo">TSC<span class="acc-r">//</span></div>
+      <div class="sb-logo">NX<span class="acc-r">//</span></div>
       <div class="admin-badge">VEDENÍ</div>
       <nav class="sb-nav">
         <button class="nb active" onclick="aTab('members',this)"><span class="ni">◈</span><span class="nl">ČLENOVÉ</span></button>
@@ -225,6 +242,7 @@
         <button class="nb" onclick="aTab('tasks',this)"><span class="ni">▣</span><span class="nl">ÚKOLY</span></button>
         <button class="nb" onclick="aTab('messages',this)"><span class="ni">◉</span><span class="nl">ZPRÁVY</span></button>
         <button class="nb" onclick="aTab('warehouse',this)"><span class="ni">⬡</span><span class="nl">SKLAD</span></button>
+        <button class="nb" onclick="aTab('boosting',this)"><span class="ni">🏎</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="aTab('clothing',this)"><span class="ni">◧</span><span class="nl">OBLEČENÍ</span></button>
         <button class="nb" onclick="aTab('finance',this)"><span class="ni">$</span><span class="nl">FINANCE</span></button>
         <button class="nb" onclick="aTab('excuses',this)"><span class="ni">✉</span><span class="nl">OMLUVENKY</span></button>
@@ -316,10 +334,10 @@
         <div id="addItemPanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
           <div class="form-grid">
             <div class="field-group"><label class="fl">NÁZEV</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-name"/></div></div>
-            <div class="field-group"><label class="fl">KATEGORIE</label><div class="iw"><span class="ip">&gt;_</span><select id="wi-cat"><option value="weapons">Zbraně</option><option value="ammo">Munice</option><option value="vehicles">Vozidla</option><option value="equipment">Vybavení</option><option value="other">Ostatní</option></select></div></div>
+            <div class="field-group"><label class="fl">KATEGORIE</label><div class="iw"><span class="ip">&gt;_</span><select id="wi-cat"><option value="weapons">Zbraně</option><option value="ammo">Munice</option><option value="drugs">Drogy</option><option value="vehicles">Vozidla</option><option value="equipment">Vybavení</option><option value="other">Ostatní</option></select></div></div>
             <div class="field-group"><label class="fl">MNOŽSTVÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="wi-qty" value="1" min="0"/></div></div>
             <div class="field-group"><label class="fl">MIN. ZÁSOBA</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="wi-min" value="0" min="0"/></div></div>
-            <div class="field-group"><label class="fl">OBRÁZEK</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-img" placeholder="pistole.png" oninput="previewImg(this.value)"/></div></div>
+            <div class="field-group"><label class="fl">FOTO — URL (Fivemanage) nebo název souboru</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-img" placeholder="https://r2.fivemanage.com/... nebo pistole.png" oninput="previewImg(this.value)"/></div></div>
             <div class="field-group"><label class="fl">NÁHLED</label><div id="wi-preview" class="img-prev">—</div></div>
             <div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-note"/></div></div>
           </div>
@@ -334,6 +352,35 @@
           <button class="wf" onclick="aWhFilter('other',this)">OSTATNÍ</button>
         </div>
         <div id="aWhGrid" class="wh-grid adm-wh"></div>
+      </div>
+
+      <!-- BOOSTING ADMIN -->
+      <div id="at-boosting" class="at">
+        <div class="ph"><div class="pt">🏎 // BOOSTING</div><button class="btn-acc small" onclick="toggleBoostForm()">+ PŘIDAT VOZIDLO</button></div>
+        <div id="boostFormPanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
+          <div class="fp-title" id="boostFormTitle">// NOVÉ VOZIDLO</div>
+          <div class="form-grid">
+            <div class="field-group"><label class="fl">NÁZEV AUTA *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-name" placeholder="např. Pfister Comet S2"/></div></div>
+            <div class="field-group"><label class="fl">TIER BOOSTINGU *</label><div class="iw"><span class="ip">&gt;_</span>
+              <select id="bo-tier"><option>D</option><option>C</option><option>B</option><option>A</option><option>A+</option><option>S</option><option>S+</option></select></div></div>
+            <div class="field-group"><label class="fl">MAX RYCHLOST (MP/H)</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="bo-speed" min="0" placeholder="180"/></div></div>
+            <div class="field-group"><label class="fl">HANDLING</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-handling" placeholder="např. 8.5 / Výborný"/></div></div>
+            <div class="field-group fg-full"><label class="fl">FOTO — URL z Fivemanage</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value)"/></div></div>
+            <div class="field-group"><label class="fl">NÁHLED</label><div id="bo-preview" class="img-prev" style="width:140px;height:80px;">—</div></div>
+          </div>
+          <div class="fp-ftr"><button class="btn-acc small" id="boostSaveBtn" onclick="saveBoost()">PŘIDAT</button><button class="btn-ghost small" onclick="resetBoostForm()">ZRUŠIT</button><span id="boostStatus" class="smsg"></span></div>
+        </div>
+        <div class="wh-filters">
+          <button class="wf active" onclick="aBoostFilter('all',this)">VŠE</button>
+          <button class="wf" onclick="aBoostFilter('D',this)">D</button>
+          <button class="wf" onclick="aBoostFilter('C',this)">C</button>
+          <button class="wf" onclick="aBoostFilter('B',this)">B</button>
+          <button class="wf" onclick="aBoostFilter('A',this)">A</button>
+          <button class="wf" onclick="aBoostFilter('A+',this)">A+</button>
+          <button class="wf" onclick="aBoostFilter('S',this)">S</button>
+          <button class="wf" onclick="aBoostFilter('S+',this)">S+</button>
+        </div>
+        <div id="aBoostGrid" class="wh-grid boost-grid adm-wh"></div>
       </div>
 
       <!-- CLOTHING ADMIN -->
@@ -419,12 +466,18 @@
       <div id="at-settings" class="at">
         <div class="ph"><div class="pt">⚙ // NASTAVENÍ</div></div>
         <div class="form-panel" style="margin:1.2rem;">
-          <div class="fp-title">// DISCORD WEBHOOK</div>
+          <div class="fp-title">// DISCORD WEBHOOK (HLAVNÍ)</div>
           <div class="form-grid">
             <div class="field-group fg-full"><label class="fl">WEBHOOK URL</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="discordWebhook" placeholder="https://discord.com/api/webhooks/..."/></div></div>
             <div class="field-group fg-full"><label class="fl">NÁZEV BOTA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="discordName" value="Frakce LOG"/></div></div>
           </div>
           <div class="fp-ftr"><button class="btn-acc small" onclick="saveWebhook()">ULOŽIT</button><button class="btn-ghost small" onclick="testWebhook()" style="margin-left:.5rem">TEST</button><span id="webhookStatus" class="smsg"></span></div>
+        </div>
+        <div class="form-panel" style="margin:0 1.2rem 1rem;">
+          <div class="fp-title">// DISCORD PO SEKCÍCH</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--muted);margin-bottom:.8rem;">Prázdná URL = použije se hlavní webhook výše. Odškrtnutím sekci vypneš.</div>
+          <div id="sectionHooks"></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="saveSectionHooks()">ULOŽIT</button><span id="sectionHooksStatus" class="smsg"></span></div>
         </div>
         <div class="form-panel" style="margin:0 1.2rem 1rem;">
           <div class="fp-title">// TÝDENNÍ PŘÍSPĚVEK</div>
