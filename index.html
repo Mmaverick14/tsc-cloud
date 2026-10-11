@@ -99,6 +99,7 @@
           <button class="wf" onclick="mWhFilter('ammo',this)">MUNICE</button>
           <button class="wf" onclick="mWhFilter('drugs',this)">DROGY</button>
           <button class="wf" onclick="mWhFilter('equipment',this)">VYBAVENÍ</button>
+          <button class="wf" onclick="mWhFilter('vehicles',this)">VOZIDLA</button>
           <button class="wf" onclick="mWhFilter('other',this)">OSTATNÍ</button>
         </div>
         <div id="mWhGrid" class="wh-grid"></div>
@@ -115,7 +116,21 @@
 
       <!-- BOOSTING -->
       <div id="mt-boosting" class="mt">
-        <div class="ph"><div class="pt">🏎 // BOOSTING</div></div>
+        <div class="ph"><div class="pt">🏎 // BOOSTING</div><button class="btn-acc small" onclick="toggleBoostForm('m')">+ PŘIDAT VOZIDLO</button></div>
+        <div id="mboostFormPanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
+          <div class="fp-title" id="mboostFormTitle">// NOVÉ VOZIDLO</div>
+          <div class="form-grid">
+            <div class="field-group"><label class="fl">NÁZEV AUTA *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-name" placeholder="např. Pfister Comet S2"/></div></div>
+            <div class="field-group"><label class="fl">TIER BOOSTINGU *</label><div class="iw"><span class="ip">&gt;_</span>
+              <select id="mbo-tier"><option>D</option><option>C</option><option>B</option><option>A</option><option>A+</option><option>S</option><option>S+</option></select></div></div>
+            <div class="field-group"><label class="fl">MAX RYCHLOST (MP/H)</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="mbo-speed" min="0" placeholder="180"/></div></div>
+            <div class="field-group"><label class="fl">HANDLING</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-handling" placeholder="např. 8.5 / Výborný"/></div></div>
+            <div class="field-group fg-full"><label class="fl">LOKACE (kde auto stojí / kde ho najdu)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-loc" placeholder="např. Garáž u přístavu, Sandy Shores..."/></div></div>
+            <div class="field-group fg-full"><label class="fl">FOTO — URL z Fivemanage</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'m')"/></div></div>
+            <div class="field-group"><label class="fl">NÁHLED</label><div id="mbo-preview" class="img-prev" style="width:140px;height:80px;">—</div></div>
+          </div>
+          <div class="fp-ftr"><button class="btn-acc small" id="mboostSaveBtn" onclick="saveBoost('m')">PŘIDAT</button><button class="btn-ghost small" onclick="resetBoostForm('m')">ZRUŠIT</button><span id="mboostStatus" class="smsg"></span></div>
+        </div>
         <div class="wh-filters">
           <button class="wf active" onclick="mBoostFilter('all',this)">VŠE</button>
           <button class="wf" onclick="mBoostFilter('D',this)">D</button>
@@ -353,6 +368,7 @@
           <button class="wf" onclick="aWhFilter('ammo',this)">MUNICE</button>
           <button class="wf" onclick="aWhFilter('drugs',this)">DROGY</button>
           <button class="wf" onclick="aWhFilter('equipment',this)">VYBAVENÍ</button>
+          <button class="wf" onclick="aWhFilter('vehicles',this)">VOZIDLA</button>
           <button class="wf" onclick="aWhFilter('other',this)">OSTATNÍ</button>
         </div>
         <div id="aWhGrid" class="wh-grid adm-wh"></div>
@@ -369,7 +385,8 @@
               <select id="bo-tier"><option>D</option><option>C</option><option>B</option><option>A</option><option>A+</option><option>S</option><option>S+</option></select></div></div>
             <div class="field-group"><label class="fl">MAX RYCHLOST (MP/H)</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="bo-speed" min="0" placeholder="180"/></div></div>
             <div class="field-group"><label class="fl">HANDLING</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-handling" placeholder="např. 8.5 / Výborný"/></div></div>
-            <div class="field-group fg-full"><label class="fl">FOTO — URL z Fivemanage</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value)"/></div></div>
+            <div class="field-group fg-full"><label class="fl">LOKACE (kde auto stojí / kde ho najdu)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-loc" placeholder="např. Garáž u přístavu, Sandy Shores..."/></div></div>
+            <div class="field-group fg-full"><label class="fl">FOTO — URL z Fivemanage</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'')"/></div></div>
             <div class="field-group"><label class="fl">NÁHLED</label><div id="bo-preview" class="img-prev" style="width:140px;height:80px;">—</div></div>
           </div>
           <div class="fp-ftr"><button class="btn-acc small" id="boostSaveBtn" onclick="saveBoost()">PŘIDAT</button><button class="btn-ghost small" onclick="resetBoostForm()">ZRUŠIT</button><span id="boostStatus" class="smsg"></span></div>
@@ -482,7 +499,7 @@
           <div class="fp-title">// DISCORD PO SEKCÍCH</div>
           <div style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--muted);margin-bottom:.8rem;">Prázdná URL = použije se hlavní webhook výše. Odškrtnutím sekci vypneš. PING = ID Discord role (Discord → pravý klik na roli → Kopírovat ID, je třeba zapnout Vývojářský režim), nebo napiš everyone / here.</div>
           <div id="sectionHooks"></div>
-          <div class="fp-title" style="margin-top:1rem;">// PING PODLE KATEGORIE SKLADU (vkládání, výdej, správa)</div>
+          <div class="fp-title" style="margin-top:1rem;">// SKLAD PO KATEGORIÍCH — vlastní Discord log a ping pro Zbraně, Munici, Drogy, Vybavení, Vozidla, Ostatní</div>
           <div id="catPings"></div>
           <div class="fp-ftr"><button class="btn-acc small" onclick="saveSectionHooks()">ULOŽIT</button><span id="sectionHooksStatus" class="smsg"></span></div>
         </div>
@@ -509,6 +526,15 @@
       <!-- LOG -->
       <div id="at-log" class="at">
         <div class="ph"><div class="pt">▪ // LOG</div><button class="btn-ghost small" onclick="clearLog()">VYMAZAT</button></div>
+        <div id="logFilters" class="wh-filters">
+          <button class="wf active" onclick="logFilter('all',this)">VŠE</button>
+          <button class="wf" onclick="logFilter('weapons',this)">SKLAD: ZBRANĚ</button>
+          <button class="wf" onclick="logFilter('ammo',this)">SKLAD: MUNICE</button>
+          <button class="wf" onclick="logFilter('drugs',this)">SKLAD: DROGY</button>
+          <button class="wf" onclick="logFilter('equipment',this)">SKLAD: VYBAVENÍ</button>
+          <button class="wf" onclick="logFilter('vehicles',this)">SKLAD: VOZIDLA</button>
+          <button class="wf" onclick="logFilter('other',this)">SKLAD: OSTATNÍ</button>
+        </div>
         <div id="aLog" class="log-stream"></div>
       </div>
 

@@ -122,10 +122,10 @@ function pingTag(v){
 function addLog(type,text,opts){
   var m=getMember();var actor=m?m.displayName:'Systém';
   var log=DB.get('syslog')||[];
-  log.unshift({time:nowFull(),type:type,actor:actor,text:text});
+  log.unshift({time:nowFull(),type:type,actor:actor,text:text,cat:(opts&&opts.pingCat)||''});
   if(log.length>500)log=log.slice(0,500);
   DB.set('syslog',log);
-  sendToDiscord(type,'['+sectionLabel(type).toUpperCase()+'] ['+actor+'] '+text,opts);
+  sendToDiscord(type,'['+sectionLabel(type).toUpperCase()+((opts&&opts.pingCat)?' / '+(CAT[opts.pingCat]||opts.pingCat):'')+'] ['+actor+'] '+text,opts);
 }
 function sendToDiscord(type,msg,opts){
   opts=opts||{};
@@ -133,7 +133,9 @@ function sendToDiscord(type,msg,opts){
   var secs=s.sections||{};
   var sec=secs[type]||{};
   if(sec.on===false)return;
-  var url=(sec.url||'').trim()||s.webhook;
+  var csec=opts.pingCat?(secs['cat_'+opts.pingCat]||{}):{};
+  if(csec.on===false)return;
+  var url=(csec.url||'').trim()||(sec.url||'').trim()||s.webhook;
   if(!url)return;
   var ping='';
   if(!opts.noPing){
@@ -172,7 +174,7 @@ function initData(){
   DB.setDefault('radios',{primary:'',secondary:'',action:'',vedeni:''});
   DB.setDefault('contacts',{});
   DB.setDefault('incomes',[]);
-  DB.setDefault('radioauto',{on:false,salt:uid()+uid(),lastSlot:''});
+  DB.setDefault('radioauto',{on:true,salt:uid()+uid(),lastSlot:''});
 }
 
 function defaultWarehouse(){
@@ -1101,8 +1103,11 @@ function renderSectionHooks(){
   var cp=document.getElementById('catPings');
   if(cp)cp.innerHTML=CAT_PINGS.map(function(x){
     var c=secs['cat_'+x.key]||{};
-    return '<div class="sec-hook-row cat"><span class="sec-hook-on"><span>'+esc(x.label)+'</span></span>'+
-      '<div class="iw"><span class="ip">@</span><input type="text" id="sh-ping-cat_'+x.key+'" value="'+esc(c.ping||'')+'" placeholder="Ping role (prázdné = ping sekce Sklad výše)"/></div></div>';
+    return '<div class="sec-hook-row cat">'+
+      '<label class="sec-hook-on"><input type="checkbox" id="sh-on-cat_'+x.key+'"'+(c.on===false?'':' checked')+'/><span>'+esc(x.label)+'</span></label>'+
+      '<div class="iw"><span class="ip">&gt;_</span><input type="text" id="sh-url-cat_'+x.key+'" value="'+esc(c.url||'')+'" placeholder="Webhook kategorie (prázdné = webhook Skladu)"/></div>'+
+      '<div class="iw"><span class="ip">@</span><input type="text" id="sh-ping-cat_'+x.key+'" value="'+esc(c.ping||'')+'" placeholder="Ping: ID role"/></div>'+
+      '<button class="btn-ghost small" onclick="testSectionHook(\'cat_'+x.key+'\')">TEST</button></div>';
   }).join('');
 }
 function saveSectionHooks(){
@@ -1111,7 +1116,7 @@ function saveSectionHooks(){
     s.sections[x.key]={url:document.getElementById('sh-url-'+x.key).value.trim(),on:document.getElementById('sh-on-'+x.key).checked,ping:document.getElementById('sh-ping-'+x.key).value.trim()};
   });
   CAT_PINGS.forEach(function(x){
-    s.sections['cat_'+x.key]={ping:document.getElementById('sh-ping-cat_'+x.key).value.trim()};
+    s.sections['cat_'+x.key]={url:document.getElementById('sh-url-cat_'+x.key).value.trim(),on:document.getElementById('sh-on-cat_'+x.key).checked,ping:document.getElementById('sh-ping-cat_'+x.key).value.trim()};
   });
   DB.set('settings',s);
   addLog('sys','Admin upravil Discord nastavení sekcí.',{noPing:true});
@@ -1466,6 +1471,8 @@ function boostList(tier){
 }
 function boostCard(b,admin){
   var src=imgSrc(b.img);
+  var own=!admin&&b.ownerId&&b.ownerId===currentMemberId;
+  var sc=admin?'':'m';
   var imgH='<div class="wh-img">'+(src?'<img src="'+esc(src)+'" onerror="this.parentElement.innerHTML=\'<span class=wh-icon>?</span>\'"/>':'<span class="wh-icon">?</span>')+'</div>';
   return '<div class="wh-item boost-item">'+
     '<span class="boost-tier t-'+String(b.tier).replace('+','p')+'">'+esc(b.tier)+'</span>'+
@@ -1473,8 +1480,10 @@ function boostCard(b,admin){
     '<div class="wh-name">'+esc(b.name)+'</div>'+
     '<div class="boost-stat"><span>MAX RYCHLOST</span><b>'+(b.speed?esc(b.speed)+' MP/H':'—')+'</b></div>'+
     '<div class="boost-stat"><span>HANDLING</span><b>'+(b.handling?esc(b.handling):'—')+'</b></div>'+
-    (admin?'<div style="display:flex;gap:.4rem;margin-top:.5rem;">'+
-      '<button class="btn-pickup" onclick="editBoost(\''+b.id+'\')">✎ UPRAVIT</button>'+
+    '<div class="boost-stat"><span>LOKACE</span><b class="boost-loc">'+(b.loc?esc(b.loc):'—')+'</b></div>'+
+    (b.addedBy?'<div class="boost-by">// PŘIDAL: '+esc(b.addedBy)+'</div>':'')+
+    ((admin||own)?'<div style="display:flex;gap:.4rem;margin-top:.5rem;">'+
+      '<button class="btn-pickup" onclick="editBoost(\''+b.id+'\',\''+sc+'\')">✎ UPRAVIT</button>'+
       '<button class="btn-micro del" onclick="delBoost(\''+b.id+'\')">✕</button></div>':'')+
   '</div>';
 }
@@ -1494,82 +1503,101 @@ function renderAdminBoosting(){
   var list=boostList(aBoostTier);
   el.innerHTML=list.length?list.map(function(b){return boostCard(b,true);}).join(''):'<div class="empty-s" style="grid-column:1/-1">// Žádná vozidla</div>';
 }
-function previewBoostImg(val){
-  var el=document.getElementById('bo-preview');if(!el)return;
+function bEl(p,n){return document.getElementById((p||'')+n);}
+function canEditBoost(b){return !!b&&(isAdmin()||(b.ownerId&&b.ownerId===currentMemberId));}
+function previewBoostImg(val,p){
+  var el=bEl(p,'bo-preview');if(!el)return;
   var src=imgSrc(val);
   el.innerHTML=src?'<img src="'+esc(src)+'" style="max-height:76px;max-width:136px;object-fit:contain;" onerror="this.parentElement.innerHTML=\'nenalezeno\'"/>':'—';
 }
-function toggleBoostForm(){
-  var p=document.getElementById('boostFormPanel');
-  if(p.classList.contains('hidden')){p.classList.remove('hidden');}
-  else resetBoostForm();
+function toggleBoostForm(p){
+  var pn=bEl(p,'boostFormPanel');
+  if(pn.classList.contains('hidden')){pn.classList.remove('hidden');}
+  else resetBoostForm(p);
 }
-function resetBoostForm(){
+function resetBoostForm(p){
   editBoostId=null;
-  ['bo-name','bo-speed','bo-handling','bo-img'].forEach(function(i){document.getElementById(i).value='';});
-  document.getElementById('bo-tier').value='D';
-  document.getElementById('bo-preview').innerHTML='—';
-  setText('boostFormTitle','// NOVÉ VOZIDLO');
-  setText('boostSaveBtn','PŘIDAT');
-  document.getElementById('boostFormPanel').classList.add('hidden');
+  ['bo-name','bo-speed','bo-handling','bo-loc','bo-img'].forEach(function(i){bEl(p,i).value='';});
+  bEl(p,'bo-tier').value='D';
+  bEl(p,'bo-preview').innerHTML='—';
+  setText((p||'')+'boostFormTitle','// NOVÉ VOZIDLO');
+  setText((p||'')+'boostSaveBtn','PŘIDAT');
+  bEl(p,'boostFormPanel').classList.add('hidden');
 }
-function saveBoost(){
-  var name=document.getElementById('bo-name').value.trim();
-  var tier=document.getElementById('bo-tier').value;
-  var speed=document.getElementById('bo-speed').value.trim();
-  var handling=document.getElementById('bo-handling').value.trim();
-  var img=document.getElementById('bo-img').value.trim();
-  var st=document.getElementById('boostStatus');
+function saveBoost(p){
+  var m=getMember();if(!m)return;
+  var name=bEl(p,'bo-name').value.trim();
+  var tier=bEl(p,'bo-tier').value;
+  var speed=bEl(p,'bo-speed').value.trim();
+  var handling=bEl(p,'bo-handling').value.trim();
+  var loc=bEl(p,'bo-loc').value.trim();
+  var img=bEl(p,'bo-img').value.trim();
+  var st=bEl(p,'boostStatus');
   if(!name){st.textContent='// ZADEJTE NÁZEV AUTA';return;}
   var list=DB.get('boosting')||[];
+  var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena');
   if(editBoostId){
     var b=list.find(function(x){return x.id===editBoostId;});
-    if(b){b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.img=img;}
-    addLog('boost','Admin upravil vozidlo "'+name+'" (Tier '+tier+').',{img:img});
+    if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
+    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.img=img;
+    addLog('boost','Upravil vozidlo '+info+'.',{img:img});
     toast('Vozidlo upraveno','success');
   }else{
-    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,img:img});
-    addLog('boost','Admin přidal vozidlo "'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H).',{img:img});
+    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,img:img,ownerId:m.id,addedBy:m.displayName});
+    addLog('boost','Přidal vozidlo '+info+'.',{img:img});
     toast(name+' přidáno','success');
   }
   DB.set('boosting',list);
-  resetBoostForm();
+  resetBoostForm(p);
   renderAdminBoosting();renderMemberBoosting();
 }
-function editBoost(id){
-  var b=(DB.get('boosting')||[]).find(function(x){return x.id===id;});if(!b)return;
-  editBoostId=id;
-  document.getElementById('boostFormPanel').classList.remove('hidden');
-  document.getElementById('bo-name').value=b.name||'';
-  document.getElementById('bo-tier').value=b.tier||'D';
-  document.getElementById('bo-speed').value=b.speed||'';
-  document.getElementById('bo-handling').value=b.handling||'';
-  document.getElementById('bo-img').value=b.img||'';
-  previewBoostImg(b.img||'');
-  setText('boostFormTitle','// UPRAVIT VOZIDLO');
-  setText('boostSaveBtn','ULOŽIT ZMĚNY');
-  document.getElementById('boostFormPanel').scrollIntoView({behavior:'smooth',block:'center'});
+function editBoost(id,p){
+  var b=(DB.get('boosting')||[]).find(function(x){return x.id===id;});
+  if(!canEditBoost(b))return;
+  p=p||'';editBoostId=id;
+  bEl(p,'boostFormPanel').classList.remove('hidden');
+  bEl(p,'bo-name').value=b.name||'';
+  bEl(p,'bo-tier').value=b.tier||'D';
+  bEl(p,'bo-speed').value=b.speed||'';
+  bEl(p,'bo-handling').value=b.handling||'';
+  bEl(p,'bo-loc').value=b.loc||'';
+  bEl(p,'bo-img').value=b.img||'';
+  previewBoostImg(b.img||'',p);
+  setText(p+'boostFormTitle','// UPRAVIT VOZIDLO');
+  setText(p+'boostSaveBtn','ULOŽIT ZMĚNY');
+  bEl(p,'boostFormPanel').scrollIntoView({behavior:'smooth',block:'center'});
 }
 function delBoost(id){
   var list=DB.get('boosting')||[];var b=list.find(function(x){return x.id===id;});
-  if(!b||!confirm('Smazat vozidlo "'+b.name+'"?'))return;
+  if(!canEditBoost(b)||!confirm('Smazat vozidlo "'+b.name+'"?'))return;
   DB.set('boosting',list.filter(function(x){return x.id!==id;}));
-  addLog('boost','Admin smazal vozidlo "'+b.name+'".',{img:b.img});
+  addLog('boost','Smazal vozidlo "'+b.name+'".',{img:b.img});
   toast('Vozidlo smazáno','info');
   renderAdminBoosting();renderMemberBoosting();
 }
 
 // ── LOG ──────────────────────────────────────
 var LOG_LABELS={ev:'VÝDEJ',wh:'SKLAD',task:'ÚKOL',msg:'ZPRÁVA',member:'ČLEN',board:'NÁSTĚNKA',sys:'SYSTÉM',fin:'FINANCE',panic:'PANIC',boost:'BOOSTING',cloth:'OBLEČENÍ',excuse:'OMLUVENKA',report:'HLÁŠENÍ',radio:'VYSÍLAČKA'};
+var logCat='all';
+function logFilter(cat,btn){
+  logCat=cat;document.querySelectorAll('#logFilters .wf').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');renderLog();
+}
 function renderLog(){
   var log=DB.get('syslog')||[];var el=document.getElementById('aLog');
-  if(!log.length){el.innerHTML='<div class="empty-s">// Log je prázdný</div>';return;}
-  el.innerHTML=log.map(function(e,idx){
+  var rows=[];
+  log.forEach(function(e,idx){
+    if(logCat==='all'||e.cat===logCat)rows.push({e:e,idx:idx});
+  });
+  if(!rows.length){el.innerHTML='<div class="empty-s">// Log je prázdný</div>';return;}
+  el.innerHTML=rows.map(function(r){
+    var e=r.e;
     return '<div class="log-entry">'+
       '<span class="log-time">'+e.time+'</span>'+
       '<span class="log-type '+e.type+'">'+(LOG_LABELS[e.type]||e.type)+'</span>'+
+      (e.cat?'<span class="log-type cat">'+esc(CAT[e.cat]||e.cat)+'</span>':'')+
       '<span class="log-actor">'+esc(e.actor||'?')+'</span>'+
-      '<span class="log-text">'+esc(e.text)+'</span><button class="btn-micro del" onclick="delLogEntry('+idx+')">✕</button></div>';
+      '<span class="log-text">'+esc(e.text)+'</span><button class="btn-micro del" onclick="delLogEntry('+r.idx+')">✕</button></div>';
   }).join('');
 }
 function clearLog(){if(!confirm('Vymazat celý log?'))return;DB.set('syslog',[]);renderLog();toast('Log vymazán','info');}
@@ -1633,6 +1661,11 @@ function renderSentReports(){
 }
 
 // ── RÁDIO (MEMBER) ───────────────────────────
+function radioInfoHtml(){
+  var n=new Date(),h=n.getHours(),next;
+  if(h<15)next='dnes v 15:00';else if(h<17)next='dnes v 17:00';else next='zítra v 15:00';
+  return '<div class="radio-info"><b>⚠ ZMĚNA VYSÍLAČEK</b> Každý den v <b>15:00</b> a v <b>17:00</b> proběhne změna vysílaček (kanály 100–999). Nové frekvence se zobrazí tady.<div class="radio-info-next">// PŘÍŠTÍ ZMĚNA: '+next+'</div></div>';
+}
 function renderMyRadio(){
   var radios=currentRadios();
   var m=getMember();
@@ -1644,13 +1677,13 @@ function renderMyRadio(){
     {label:'AKCE',val:radios.action,color:'var(--green)'}
   ];
   if(vedeni)rows.push({label:'VEDENÍ',val:radios.vedeni,color:'var(--red)'});
-  el.innerHTML='<div class="radio-grid">'+rows.map(function(r){
+  el.innerHTML=radioInfoHtml()+'<div class="radio-grid">'+rows.map(function(r){
     return '<div class="radio-card">'+
       '<div class="radio-label">'+r.label+'</div>'+
       '<div class="radio-freq" style="color:'+r.color+';">'+(r.val||'—')+'</div>'+
       (r.desc?'<div class="radio-desc">'+r.desc+'</div>':'')+
     '</div>';
-  }).join('')+'</div>'+((DB.get('radioauto')||{}).on?'<div class="radio-desc" style="padding:.8rem 0">// AUTO — frekvence se mění v 15:00 a 17:00</div>':'');
+  }).join('')+'</div>';
 }
 function renderContacts(){
   var m=getMember();if(!m)return;

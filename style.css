@@ -476,4 +476,17 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .log-type.report{background:var(--surf);color:#4a90d9;border:1px solid var(--border);}
 .log-type.radio{background:var(--surf);color:#27ae60;border:1px solid var(--border);}
 
-.sec-hook-row.cat{grid-template-columns:210px 1fr;}
+.sec-hook-row.cat{grid-template-columns:210px 1fr 1fr auto;}
+
+/* čitelnější filtry */
+.wf{color:var(--text);border-color:var(--brite);}
+.wf:hover,.wf.active{color:var(--acc);}
+/* boosting – lokace */
+.boost-loc{font-family:'Rajdhani',sans-serif!important;font-size:.85rem!important;}
+.boost-by{font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:.06em;margin-top:.3rem;}
+/* vysílačka – info */
+.radio-info{background:var(--card);border:1px solid var(--acc-dim);border-left:3px solid var(--acc);padding:.8rem 1rem;margin-bottom:1rem;font-size:.9rem;color:var(--textb);line-height:1.5;}
+.radio-info b{color:var(--acc);}
+.radio-info-next{font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--text);margin-top:.3rem;letter-spacing:.08em;}
+.log-type.cat{background:rgba(196,154,20,.08);color:var(--acc);border:1px solid var(--acc-dim);}
+@media(max-width:700px){.sec-hook-row.cat{grid-template-columns:1fr;}}
