@@ -485,7 +485,7 @@
             <div class="field-group"><label class="fl">VEDENÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rVedeni" placeholder="např. 103.0"/></div></div>
             <div class="field-group fg-full"><label class="fl">AUTOMATICKÁ ZMĚNA</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="rAuto" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Každý den v 15:00 a 17:00 nové náhodné frekvence (100–999)</span></label></div><div id="rAutoInfo" class="smsg" style="color:var(--muted);margin-top:.3rem;"></div></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="saveRadios()">ULOŽIT</button><span id="radioSaveStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="saveRadios()">ULOŽIT</button> <button id="rRegenBtn" class="btn-acc small" onclick="regenRadios()">🎲 VYGENEROVAT NOVÉ FREKVENCE</button><span id="radioSaveStatus" class="smsg"></span></div>
         </div>
       </div>
 

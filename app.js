@@ -69,6 +69,8 @@ function canManage(target){
   if(target.position!=='Boss')return true;
   var me=getMember();return !!me&&me.position==='Boss';
 }
+var RADIO_GEN_POS=['Boss','Right hand','Counselor',"Devil's Advocate",'Chief of Arms'];
+function canRegenRadios(){var m=getMember();return !!m&&RADIO_GEN_POS.indexOf(m.position)!==-1;}
 function isVedeni(pos){return VEDENI_POS.indexOf(pos)!==-1;}
 function getWeekKey(){var d=new Date();var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
 
@@ -1032,6 +1034,7 @@ function renderAdminRadio(){
   document.getElementById('rSecondary').value=radios.secondary||'';
   document.getElementById('rAction').value=radios.action||'';
   document.getElementById('rVedeni').value=radios.vedeni||'';
+  var rb=document.getElementById('rRegenBtn');if(rb)rb.style.display=canRegenRadios()?'':'none';
   var a=document.getElementById('rAuto');if(a)a.checked=!!cfg.on;
   var info=document.getElementById('rAutoInfo');
   if(info){
@@ -1058,6 +1061,30 @@ function saveRadios(){
   toast('Frekvence uloženy','success');
   renderAdminRadio();
   if(cfg.on)radioTick();
+}
+
+function regenRadios(){
+  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Boss, Right hand, Counselor, Devil\'s Advocate a Chief of Arms','error');return;}
+  if(!confirm('Vygenerovat nové frekvence hned teď? Staré přestanou platit.'))return;
+  var m=getMember();var who=m?m.displayName:'Admin';
+  var cfg=DB.get('radioauto')||{};
+  var f;
+  if(cfg.on){
+    // nová sůl = okamžitě nové frekvence; automatická změna v 15:00 a 17:00 běží dál
+    cfg.salt=uid()+uid();cfg.lastSlot=radioSlot();
+    DB.set('radioauto',cfg);
+    f=autoRadios(cfg,cfg.lastSlot);
+  }else{
+    var used={},out=[];
+    while(out.length<4){var n=100+Math.floor(Math.random()*900);if(!used[n]){used[n]=1;out.push(String(n));}}
+    f={primary:out[0],secondary:out[1],action:out[2],vedeni:out[3]};
+    DB.set('radios',f);
+  }
+  addLog('radio','Nové frekvence (vygeneroval '+who+') — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.');
+  toast('Nové frekvence vygenerovány','success');
+  renderAdminRadio();
+  var act=document.querySelector('#memberScreen.active .mt.active');
+  if(act&&act.id==='mt-radio')renderMyRadio();
 }
 
 // ── AUTOMATICKÁ ZMĚNA FREKVENCÍ (15:00 a 17:00, kanály 100–999) ──
@@ -1596,11 +1623,11 @@ function saveBoost(p){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
     b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.backup=backup;b.note=note;b.img=img;
-    addLog('boost',m.displayName+' upravil vozidlo '+short,{plain:true,icon:'🚗'});
+    addLog('boost',m.displayName+' upravil vozidlo '+short,{plain:true,icon:'🚗',img:img});
     toast('Vozidlo upraveno','success');
   }else{
     list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,backup:backup,note:note,img:img,ownerId:m.id,addedBy:m.displayName});
-    addLog('boost',m.displayName+' přidal vozidlo '+short,{plain:true,icon:'🚗'});
+    addLog('boost',m.displayName+' přidal vozidlo '+short,{plain:true,icon:'🚗',img:img});
     toast(name+' přidáno','success');
   }
   DB.set('boosting',list);
@@ -1748,7 +1775,7 @@ function renderMyRadio(){
       '<div class="radio-freq" style="color:'+r.color+';">'+(r.val||'—')+'</div>'+
       (r.desc?'<div class="radio-desc">'+r.desc+'</div>':'')+
     '</div>';
-  }).join('')+'</div>';
+  }).join('')+'</div>'+(canRegenRadios()?'<div style="margin-top:1rem;"><button class="btn-acc small" onclick="regenRadios()">🎲 VYGENEROVAT NOVÉ FREKVENCE</button></div>':'');
 }
 function renderContacts(){
   var m=getMember();if(!m)return;
