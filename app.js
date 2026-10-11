@@ -107,6 +107,7 @@ var SECTIONS=[
   {key:'cloth',label:'Oblečení'},
   {key:'fin',label:'Finance a příjmy'},
   {key:'excuse',label:'Omluvenky'},
+  {key:'excuse_dec',label:'Omluvenky — rozhodnutí (jen vedení, bez webhooku se neposílá)'},
   {key:'report',label:'Hlášení'},
   {key:'radio',label:'Vysílačka'},
   {key:'member',label:'Členové'},
@@ -133,7 +134,7 @@ function addLog(type,text,opts){
   if(log.length>500)log=log.slice(0,500);
   DB.set('syslog',log);
   if(opts&&opts.embedTitle){sendToDiscord(type,opts.discordText||text,opts);return;}
-  sendToDiscord(type,'['+sectionLabel(type).toUpperCase()+((opts&&opts.pingCat)?' / '+(CAT[opts.pingCat]||opts.pingCat):'')+'] ['+actor+'] '+text,opts);
+  sendToDiscord(opts&&opts.hook?opts.hook:type,'['+sectionLabel(type).toUpperCase()+((opts&&opts.pingCat)?' / '+(CAT[opts.pingCat]||opts.pingCat):'')+'] ['+actor+'] '+text,opts);
 }
 function sendToDiscord(type,msg,opts){
   opts=opts||{};
@@ -144,6 +145,7 @@ function sendToDiscord(type,msg,opts){
   var csec=opts.pingCat?(secs['cat_'+opts.pingCat]||{}):{};
   if(csec.on===false)return;
   var url=(csec.url||'').trim()||(sec.url||'').trim()||s.webhook;
+  if(opts.private)url=(sec.url||'').trim();
   if(!url)return;
   var ping='';
   if(!opts.noPing){
@@ -1001,7 +1003,7 @@ function renderAdminExcuses(){
 function resolveExcuse(id,decision){
   var excuses=DB.get('excuses')||[];var e=excuses.find(function(x){return x.id===id;});
   if(!e)return;e.status=decision;DB.set('excuses',excuses);
-  addLog('excuse','Admin '+(decision==='accepted'?'přijal':'zamítl')+' omluvenku od "'+e.memberName+'".');
+  addLog('excuse','Admin '+(decision==='accepted'?'přijal':'zamítl')+' omluvenku od "'+e.memberName+'".',{hook:'excuse_dec',private:true});
   toast('Omluvenka '+(decision==='accepted'?'přijata':'zamítnuta'),'success');renderAdminExcuses();
 }
 
