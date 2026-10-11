@@ -490,3 +490,34 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .radio-info-next{font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--text);margin-top:.3rem;letter-spacing:.08em;}
 .log-type.cat{background:rgba(196,154,20,.08);color:var(--acc);border:1px solid var(--acc-dim);}
 @media(max-width:700px){.sec-hook-row.cat{grid-template-columns:1fr;}}
+
+/* ── POSTRANNÍ PANEL – čitelný text ── */
+.nb{color:#c8b988;}
+.nb .ni{color:var(--acc-dim);}
+.nb:hover,.nb.active{color:var(--acc);}
+.nb:hover .ni,.nb.active .ni{color:var(--acc);}
+.sb-name{color:var(--textb);font-size:.65rem;}
+.sb-pos{color:var(--acc);font-size:.58rem;}
+.btn-back{color:#c8b988;border-color:var(--acc-dim);}
+.btn-back:hover{color:var(--acc);border-color:var(--acc);}
+.admin-badge{color:var(--red);font-size:.55rem;}
+
+/* ── ČLENOVÉ – karty ve stylu Boostingu, žádné bílé prvky ── */
+.member-grid{background:var(--border);}
+.member-card{background:var(--card);padding:.9rem;transition:background .18s;}
+.member-card:hover{background:var(--surf);}
+.member-card.panic-card{box-shadow:inset 3px 0 0 var(--red);}
+.mc-top{display:flex;align-items:flex-start;gap:.7rem;margin-bottom:.6rem;}
+.mc-hex{width:34px;height:34px;background:var(--border);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;color:var(--acc);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0;}
+.mc-info{flex:1;min-width:0;}
+.mc-info .mc-name{overflow:hidden;text-overflow:ellipsis;}
+.mc-meta{border-top:1px solid var(--border);padding-top:.55rem;}
+.mc-pos-sel,.member-card input[type="text"],.member-card select{background:var(--surf);border:1px solid var(--border);color:var(--textb);font-family:'Share Tech Mono',monospace;font-size:.65rem;padding:.32rem .45rem;outline:none;color-scheme:dark;caret-color:var(--acc);border-radius:0;transition:border-color .18s;}
+.mc-pos-sel:focus,.member-card input[type="text"]:focus,.member-card select:focus{border-color:var(--acc-dim);}
+.member-card select option{background:var(--surf);color:var(--textb);}
+.member-card .btn-acc.small,.member-card .btn-danger.small{padding:.3rem .55rem;}
+
+/* ── BOOSTING – backup + poznámka ── */
+.boost-stat b.bk-yes{color:var(--red);font-family:'Share Tech Mono',monospace;font-size:.62rem;}
+.boost-stat b.bk-no{color:var(--green);font-family:'Share Tech Mono',monospace;font-size:.62rem;}
+.boost-note{font-size:.78rem;color:var(--text);font-style:italic;line-height:1.35;padding:.3rem 0;border-top:1px solid var(--border);word-break:break-word;}

@@ -126,6 +126,8 @@
             <div class="field-group"><label class="fl">MAX RYCHLOST (MP/H)</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="mbo-speed" min="0" placeholder="180"/></div></div>
             <div class="field-group"><label class="fl">HANDLING</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-handling" placeholder="např. 8.5 / Výborný"/></div></div>
             <div class="field-group fg-full"><label class="fl">LOKACE (kde auto stojí / kde ho najdu)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-loc" placeholder="např. Garáž u přístavu, Sandy Shores..."/></div></div>
+            <div class="field-group"><label class="fl">BACKUP OD FRAKCE</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="mbo-backup" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Potřebuji backup</span></label></div></div>
+            <div class="field-group"><label class="fl">POZNÁMKA K VOZIDLU</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-note" placeholder="např. hlídá policie, tuning, stav..."/></div></div>
             <div class="field-group fg-full"><label class="fl">FOTO — URL z Fivemanage</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'m')"/></div></div>
             <div class="field-group"><label class="fl">NÁHLED</label><div id="mbo-preview" class="img-prev" style="width:140px;height:80px;">—</div></div>
           </div>
@@ -249,11 +251,10 @@
 <div id="adminScreen" class="screen hidden">
   <div class="layout">
     <aside class="sidebar admin-sb">
-      <div class="sb-logo">NX<span class="acc-r">//</span></div>
+      <div class="sb-logo">T<span class="acc">S</span>C</div>
       <div class="admin-badge">VEDENÍ</div>
       <nav class="sb-nav">
-        <button class="nb active" onclick="aTab('members',this)"><span class="ni">◈</span><span class="nl">ČLENOVÉ</span></button>
-        <button class="nb" onclick="aTab('board',this)"><span class="ni">📌</span><span class="nl">NÁSTĚNKA</span></button>
+        <button class="nb active" onclick="aTab('board',this)"><span class="ni">📌</span><span class="nl">NÁSTĚNKA</span></button>
         <button class="nb" onclick="aTab('tasks',this)"><span class="ni">▣</span><span class="nl">ÚKOLY</span></button>
         <button class="nb" onclick="aTab('messages',this)"><span class="ni">◉</span><span class="nl">ZPRÁVY</span></button>
         <button class="nb" onclick="aTab('warehouse',this)"><span class="ni">⬡</span><span class="nl">SKLAD</span></button>
@@ -266,6 +267,7 @@
         <button class="nb" onclick="aTab('settings',this)"><span class="ni">⚙</span><span class="nl">NASTAVENÍ</span></button>
         <button class="nb" onclick="aTab('incomes',this)"><span class="ni">💰</span><span class="nl">PŘÍJMY</span></button>
         <button class="nb" onclick="aTab('log',this)"><span class="ni">▪</span><span class="nl">LOG</span></button>
+        <button class="nb" onclick="aTab('members',this)"><span class="ni">◈</span><span class="nl">ČLENOVÉ</span></button>
       </nav>
       <div class="sb-foot">
         <button class="btn-back" onclick="goBackToMember()">← ZPĚT</button>
@@ -274,7 +276,7 @@
     <main class="main">
 
       <!-- MEMBERS -->
-      <div id="at-members" class="at active">
+      <div id="at-members" class="at">
         <div class="ph"><div class="pt">◈ // SPRÁVA ČLENŮ</div><div style="display:flex;gap:.5rem;"><button class="btn-acc small" onclick="toggleNewMember()">+ NOVÝ ČLEN</button><button class="btn-acc small" onclick="togglePwPanel()" style="background:rgba(192,57,43,.15);border-color:var(--red);color:var(--red);">🔑 HESLO</button></div></div>
         <div id="newMemberPanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
           <div class="fp-title">// REGISTRACE ČLENA</div>
@@ -302,7 +304,7 @@
       </div>
 
       <!-- BOARD ADMIN -->
-      <div id="at-board" class="at">
+      <div id="at-board" class="at active">
         <div class="ph"><div class="pt">📌 // NÁSTĚNKA</div></div>
         <div class="form-panel" style="margin:1.2rem;">
           <div class="form-grid">
@@ -386,6 +388,8 @@
             <div class="field-group"><label class="fl">MAX RYCHLOST (MP/H)</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="bo-speed" min="0" placeholder="180"/></div></div>
             <div class="field-group"><label class="fl">HANDLING</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-handling" placeholder="např. 8.5 / Výborný"/></div></div>
             <div class="field-group fg-full"><label class="fl">LOKACE (kde auto stojí / kde ho najdu)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-loc" placeholder="např. Garáž u přístavu, Sandy Shores..."/></div></div>
+            <div class="field-group"><label class="fl">BACKUP OD FRAKCE</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="bo-backup" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Potřebuji backup</span></label></div></div>
+            <div class="field-group"><label class="fl">POZNÁMKA K VOZIDLU</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-note" placeholder="např. hlídá policie, tuning, stav..."/></div></div>
             <div class="field-group fg-full"><label class="fl">FOTO — URL z Fivemanage</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'')"/></div></div>
             <div class="field-group"><label class="fl">NÁHLED</label><div id="bo-preview" class="img-prev" style="width:140px;height:80px;">—</div></div>
           </div>

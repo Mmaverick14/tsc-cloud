@@ -404,7 +404,7 @@ function goToAdmin(){
   if(!m||!m.adminAccess)return;
   addLog('sys','Člen "'+m.displayName+'" vstoupil do Administrace.');
   showScreen('adminScreen');
-  aTab('members',document.querySelector('#adminScreen .nb'));
+  aTab('board',document.querySelector('#adminScreen .nb'));
 }
 
 // ════════════════════════════════
@@ -1481,6 +1481,8 @@ function boostCard(b,admin){
     '<div class="boost-stat"><span>MAX RYCHLOST</span><b>'+(b.speed?esc(b.speed)+' MP/H':'—')+'</b></div>'+
     '<div class="boost-stat"><span>HANDLING</span><b>'+(b.handling?esc(b.handling):'—')+'</b></div>'+
     '<div class="boost-stat"><span>LOKACE</span><b class="boost-loc">'+(b.loc?esc(b.loc):'—')+'</b></div>'+
+    '<div class="boost-stat"><span>BACKUP</span><b class="'+(b.backup?'bk-yes':'bk-no')+'">'+(b.backup?'POTŘEBA':'NE')+'</b></div>'+
+    (b.note?'<div class="boost-note">'+esc(b.note)+'</div>':'')+
     (b.addedBy?'<div class="boost-by">// PŘIDAL: '+esc(b.addedBy)+'</div>':'')+
     ((admin||own)?'<div style="display:flex;gap:.4rem;margin-top:.5rem;">'+
       '<button class="btn-pickup" onclick="editBoost(\''+b.id+'\',\''+sc+'\')">✎ UPRAVIT</button>'+
@@ -1517,7 +1519,8 @@ function toggleBoostForm(p){
 }
 function resetBoostForm(p){
   editBoostId=null;
-  ['bo-name','bo-speed','bo-handling','bo-loc','bo-img'].forEach(function(i){bEl(p,i).value='';});
+  ['bo-name','bo-speed','bo-handling','bo-loc','bo-note','bo-img'].forEach(function(i){bEl(p,i).value='';});
+  bEl(p,'bo-backup').checked=false;
   bEl(p,'bo-tier').value='D';
   bEl(p,'bo-preview').innerHTML='—';
   setText((p||'')+'boostFormTitle','// NOVÉ VOZIDLO');
@@ -1531,19 +1534,21 @@ function saveBoost(p){
   var speed=bEl(p,'bo-speed').value.trim();
   var handling=bEl(p,'bo-handling').value.trim();
   var loc=bEl(p,'bo-loc').value.trim();
+  var backup=bEl(p,'bo-backup').checked;
+  var note=bEl(p,'bo-note').value.trim();
   var img=bEl(p,'bo-img').value.trim();
   var st=bEl(p,'boostStatus');
   if(!name){st.textContent='// ZADEJTE NÁZEV AUTA';return;}
   var list=DB.get('boosting')||[];
-  var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena');
+  var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena')+' — Backup: '+(backup?'POTŘEBA':'ne')+(note?' — Poznámka: '+note:'');
   if(editBoostId){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
-    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.img=img;
+    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.backup=backup;b.note=note;b.img=img;
     addLog('boost','Upravil vozidlo '+info+'.',{img:img});
     toast('Vozidlo upraveno','success');
   }else{
-    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,img:img,ownerId:m.id,addedBy:m.displayName});
+    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,backup:backup,note:note,img:img,ownerId:m.id,addedBy:m.displayName});
     addLog('boost','Přidal vozidlo '+info+'.',{img:img});
     toast(name+' přidáno','success');
   }
@@ -1561,6 +1566,8 @@ function editBoost(id,p){
   bEl(p,'bo-speed').value=b.speed||'';
   bEl(p,'bo-handling').value=b.handling||'';
   bEl(p,'bo-loc').value=b.loc||'';
+  bEl(p,'bo-backup').checked=!!b.backup;
+  bEl(p,'bo-note').value=b.note||'';
   bEl(p,'bo-img').value=b.img||'';
   previewBoostImg(b.img||'',p);
   setText(p+'boostFormTitle','// UPRAVIT VOZIDLO');
