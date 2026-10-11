@@ -192,6 +192,7 @@ function initData(){
   DB.setDefault('warehouse',defaultWarehouse());
   DB.setDefault('boosting',[]);
   DB.setDefault('heists',[]);
+  DB.setDefault('heistTargets',['Banka','Klenotnictví','Obchod','Bobcat']);
   DB.setDefault('clothing',[]);
   DB.setDefault('board',[]);
   DB.setDefault('boardConfirmed',{});
@@ -1703,7 +1704,7 @@ function submitHeist(){
   if(people<1){st.style.color='var(--red)';st.textContent='// ZADEJTE POČET LIDÍ';return;}
   if(!loot){st.style.color='var(--red)';st.textContent='// ZADEJTE LOOT (nebo napište „nic“)';return;}
   if(!desc){st.style.color='var(--red)';st.textContent='// NAPIŠTE POPIS PRŮBĚHU';return;}
-  var target=detail?(t+' — '+detail):t;
+  var target=(t==='Jiné')?detail:(detail?(t+' — '+detail):t);
   var h={id:uid(),memberId:m.id,memberName:m.displayName,target:target,people:people,loot:loot,escaped:escaped,desc:desc,date:nowStr()};
   var list=DB.get('heists')||[];list.push(h);DB.set('heists',list);
   var em={
@@ -1720,18 +1721,20 @@ function submitHeist(){
   };
   addLog('heist',m.displayName+' nahlásil heist: '+target+' — '+(escaped?'ujeli':'neujeli')+', lidí: '+people+', loot: '+loot+'.',{embed:em,icon:'💎'});
   ['hs-detail','hs-people','hs-loot','hs-desc'].forEach(function(i){document.getElementById(i).value='';});
-  document.getElementById('hs-target').value='Banka';document.getElementById('hs-escaped').value='yes';
+  document.getElementById('hs-target').selectedIndex=0;document.getElementById('hs-escaped').value='yes';
   st.style.color='';st.textContent='// REPORT ODESLÁN';setTimeout(function(){st.textContent='';},3000);
   toast('Heist report odeslán ✓','success');
   renderMyHeists();renderAdminHeists();
 }
 function renderMyHeists(){
   var m=getMember();if(!m)return;
+  populateHeistTargets();
   var el=document.getElementById('myHeists');if(!el)return;
   var list=(DB.get('heists')||[]).filter(function(h){return h.memberId===m.id;});
   el.innerHTML=list.length?list.slice().reverse().map(function(h){return heistCard(h,false);}).join(''):'<div class="empty-s">// Zatím jste nenahlásili žádný heist</div>';
 }
 function renderAdminHeists(){
+  renderHeistTargets();
   var el=document.getElementById('aHeists');if(!el)return;
   var list=DB.get('heists')||[];
   var ok=list.filter(function(h){return h.escaped;}).length;
@@ -1741,6 +1744,47 @@ function renderAdminHeists(){
     '<div class="inc-sum-card"><div class="inc-sum-title">NEUJELI</div><div class="inc-sum-val" style="color:var(--red)">'+(list.length-ok)+'</div></div>'+
   '</div>';
   el.innerHTML=stats+(list.length?list.slice().reverse().map(function(h){return heistCard(h,true);}).join(''):'<div class="empty-s">// Žádné reporty</div>');
+}
+// Kategorie „Co se vykrádalo“ — spravuje Vedení (Admin → Heisty). „Jiné“ je u členů vždy poslední volba.
+function getHeistTargets(){
+  var l=DB.get('heistTargets');
+  return Array.isArray(l)?l:['Banka','Klenotnictví','Obchod','Bobcat'];
+}
+function populateHeistTargets(){
+  var sel=document.getElementById('hs-target');if(!sel)return;
+  var cur=sel.value;
+  var opts=getHeistTargets().concat(['Jiné']);
+  sel.innerHTML=opts.map(function(t){return '<option>'+esc(t)+'</option>';}).join('');
+  if(opts.indexOf(cur)!==-1)sel.value=cur;
+}
+function renderHeistTargets(){
+  var el=document.getElementById('heistTargetList');if(!el)return;
+  var l=getHeistTargets();
+  el.innerHTML=l.map(function(t,i){
+    return '<span class="ht-chip">'+esc(t)+'<button title="Odebrat" onclick="delHeistTarget('+i+')">✕</button></span>';
+  }).join('')+'<span class="ht-chip fixed">Jiné (vždy)</span>';
+}
+function addHeistTarget(){
+  var inp=document.getElementById('ht-new');var st=document.getElementById('htStatus');
+  var v=inp.value.trim();
+  function err(m){st.style.color='var(--red)';st.textContent=m;}
+  if(!v){err('// ZADEJTE NÁZEV');return;}
+  if(v.length>40){err('// MAX. 40 ZNAKŮ');return;}
+  var l=getHeistTargets();
+  if(v.toLowerCase()==='jiné'||l.some(function(x){return x.toLowerCase()===v.toLowerCase();})){err('// TAKOVÁ KATEGORIE JIŽ EXISTUJE');return;}
+  l.push(v);DB.set('heistTargets',l);
+  addLog('heist','Admin přidal kategorii heistu: "'+v+'".',{noDiscord:true});
+  inp.value='';st.style.color='';st.textContent='// PŘIDÁNO';setTimeout(function(){st.textContent='';},2000);
+  toast('Kategorie přidána','success');
+  renderHeistTargets();populateHeistTargets();
+}
+function delHeistTarget(i){
+  var l=getHeistTargets();var v=l[i];if(v===undefined)return;
+  if(!confirm('Odebrat kategorii "'+v+'"? Staré reporty zůstanou beze změny.'))return;
+  l.splice(i,1);DB.set('heistTargets',l);
+  addLog('heist','Admin odebral kategorii heistu: "'+v+'".',{noDiscord:true});
+  toast('Kategorie odebrána','info');
+  renderHeistTargets();populateHeistTargets();
 }
 function delHeist(id){
   var list=DB.get('heists')||[];var h=list.find(function(x){return x.id===id;});

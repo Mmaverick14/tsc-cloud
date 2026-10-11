@@ -539,3 +539,8 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .heist-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:0 0 1rem;}
 .log-type.heist{background:rgba(39,174,96,.08);color:#4fd18b;border:1px solid var(--gdim);}
 @media(max-width:700px){.heist-stats{grid-template-columns:1fr;}}
+.ht-list{display:flex;flex-wrap:wrap;gap:.4rem;}
+.ht-chip{display:inline-flex;align-items:center;gap:.5rem;font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--textb);background:var(--surf);border:1px solid var(--acc-dim);padding:.28rem .35rem .28rem .6rem;}
+.ht-chip button{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:0 .2rem;transition:color .18s;}
+.ht-chip button:hover{color:var(--red);}
+.ht-chip.fixed{border-style:dashed;border-color:var(--brite);color:var(--muted);padding-right:.6rem;}
