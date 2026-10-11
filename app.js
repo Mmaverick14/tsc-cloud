@@ -791,7 +791,6 @@ function delCloth(id){
   DB.set('clothing',(DB.get('clothing')||[]).filter(function(i){return i.id!==id;}));
   renderAdminClothing();
   renderClothing();
-  addLog('cloth','Admin smazal outfit set.');
   toast('Set smazán','info');
 }
 
@@ -819,7 +818,7 @@ function delExpense(id){
   if(!confirm('Smazat položku?'))return;
   var fin=DB.get('finance')||{payments:[],expenses:[]};
   fin.expenses=fin.expenses.filter(function(e){return e.id!==id;});DB.set('finance',fin);
-  addLog('fin','Admin smazal výdajovou položku.');renderAdminFinance();
+  renderAdminFinance();
 }
 function renderAdminFinance(){
   var fin=DB.get('finance')||{payments:[],expenses:[]};
@@ -890,7 +889,6 @@ function delPayment(id){
   var p=fin.payments.find(function(x){return x.id===id;});
   fin.payments=fin.payments.filter(function(x){return x.id!==id;});
   DB.set('finance',fin);
-  addLog('fin','Admin smazal platbu'+(p?' od "'+p.memberName+'" ($'+p.amount+', '+(p.note||'')+')':'')+'.',{noPing:true});
   toast('Platba smazána','info');renderAdminFinance();
 }
 function recordPayment(memberId,memberName){
@@ -1323,7 +1321,6 @@ async function deleteMember(id){
     catch(e){toast('Chyba mazání účtu: '+e.message,'error',5000);return;}
   }
   DB.set('members',(DB.get('members')||[]).filter(function(x){return x.id!==id;}));
-  addLog('member','Admin smazal člena "'+m.displayName+'".');
   toast('Člen smazán','info');renderMemberGrid();populatePwMember();
 }
 function liftPanic(id){
@@ -1373,7 +1370,6 @@ function delPost(id){
   if(!confirm('Smazat příspěvek?'))return;
   DB.set('board',(DB.get('board')||[]).filter(function(p){return p.id!==id;}));
   var conf=DB.get('boardConfirmed')||{};delete conf[id];DB.set('boardConfirmed',conf);
-  addLog('board','Admin smazal příspěvek z nástěnky.');
   toast('Příspěvek smazán','info');renderAdminBoard();renderBoard();
 }
 
@@ -1500,7 +1496,6 @@ function deleteItem(id){
   var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});
   if(!item||!confirm('Smazat položku "'+item.name+'"?'))return;
   DB.set('warehouse',items.filter(function(i){return i.id!==id;}));
-  addLog('wh','Admin smazal položku "'+item.name+'" ze skladu.',{img:item.img,pingCat:item.cat});
   toast('Položka smazána','info');renderAdminWarehouse();renderMemberWarehouse();
 }
 
@@ -1624,7 +1619,6 @@ function delBoost(id){
   var list=DB.get('boosting')||[];var b=list.find(function(x){return x.id===id;});
   if(!canEditBoost(b)||!confirm('Smazat vozidlo "'+b.name+'"?'))return;
   DB.set('boosting',list.filter(function(x){return x.id!==id;}));
-  addLog('boost','Smazal vozidlo "'+b.name+'".',{img:b.img});
   toast('Vozidlo smazáno','info');
   renderAdminBoosting();renderMemberBoosting();
 }
@@ -1976,7 +1970,6 @@ function delTaskAdmin(mid,tid){
   var tasks=DB.get('tasks')||{};
   tasks[mid]=(tasks[mid]||[]).filter(function(t){return t.id!==tid;});
   DB.set('tasks',tasks);
-  addLog('task','Admin smazal úkol.',{noPing:true});
   toast('Úkol smazán','info');renderAdminTasks();
 }
 function renderAdminMessages(){
@@ -2003,25 +1996,21 @@ function delMsgAdmin(id){
   var msgs=DB.get('messages')||{};
   Object.keys(msgs).forEach(function(mid){msgs[mid]=(msgs[mid]||[]).filter(function(m){return m.id!==id;});});
   DB.set('messages',msgs);
-  addLog('msg','Admin smazal zprávu.',{noPing:true});
   toast('Zpráva smazána','info');renderAdminMessages();
 }
 function delExcuse(id){
   if(!confirm('Smazat omluvenku?'))return;
   DB.set('excuses',(DB.get('excuses')||[]).filter(function(e){return e.id!==id;}));
-  addLog('excuse','Admin smazal omluvenku.',{noPing:true});
   toast('Omluvenka smazána','info');renderAdminExcuses();
 }
 function delReport(id){
   if(!confirm('Smazat hlášení?'))return;
   DB.set('reports',(DB.get('reports')||[]).filter(function(r){return r.id!==id;}));
-  addLog('report','Admin smazal hlášení.',{noPing:true});
   toast('Hlášení smazáno','info');renderAdminReports();
 }
 function delIncome(id){
   if(!confirm('Smazat záznam příjmu?'))return;
   DB.set('incomes',(DB.get('incomes')||[]).filter(function(i){return i.id!==id;}));
-  addLog('fin','Admin smazal záznam příjmu.',{noPing:true});
   toast('Záznam smazán','info');renderAdminIncomes();renderAdminFinance();
 }
 function delLogEntry(idx){
