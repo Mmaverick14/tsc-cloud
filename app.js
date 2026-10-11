@@ -1077,7 +1077,7 @@ function genNewRadios(){
     f=autoRadios(cfg,cfg.lastSlot);
   }else{
     var used={},out=[];
-    while(out.length<4){var n=100+Math.floor(Math.random()*900);if(!used[n]){used[n]=1;out.push(String(n));}}
+    while(out.length<4){var n=((1000+Math.floor(Math.random()*8991))/10).toFixed(1).replace('.',',');if(!used[n]){used[n]=1;out.push(n);}}
     f={primary:out[0],secondary:out[1],action:out[2],vedeni:out[3]};
     DB.set('radios',f);
   }
@@ -1108,7 +1108,7 @@ function hashStr(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){
 function rngFrom(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 function autoRadios(cfg,slot){
   var r=rngFrom(hashStr((cfg.salt||'x')+'|'+slot));var used={},out=[];
-  while(out.length<4){var n=100+Math.floor(r()*900);if(!used[n]){used[n]=1;out.push(String(n));}}
+  while(out.length<4){var n=((1000+Math.floor(r()*8991))/10).toFixed(1).replace('.',',');if(!used[n]){used[n]=1;out.push(n);}}
   return {primary:out[0],secondary:out[1],action:out[2],vedeni:out[3]};
 }
 function currentRadios(){
@@ -1765,7 +1765,7 @@ function renderSentReports(){
 function radioInfoHtml(){
   var n=new Date(),h=n.getHours(),next;
   if(h<15)next='dnes v 15:00';else if(h<17)next='dnes v 17:00';else next='zítra v 15:00';
-  return '<div class="radio-info"><b>⚠ ZMĚNA VYSÍLAČEK</b> Každý den v <b>15:00</b> a v <b>17:00</b> proběhne změna vysílaček (kanály 100–999). Nové frekvence se zobrazí tady.<div class="radio-info-next">// PŘÍŠTÍ ZMĚNA: '+next+'</div></div>';
+  return '<div class="radio-info"><b>⚠ ZMĚNA VYSÍLAČEK</b> Každý den v <b>15:00</b> a v <b>17:00</b> proběhne změna vysílaček (frekvence 100,0–999,0). Nové frekvence se zobrazí tady.<div class="radio-info-next">// PŘÍŠTÍ ZMĚNA: '+next+'</div></div>';
 }
 function renderMyRadio(){
   var radios=currentRadios();
