@@ -127,12 +127,15 @@ function pingTag(v){
   var m=v.match(/\d{5,}/);return m?'<@&'+m[0]+'>':'';
 }
 // opts: {img:'url/soubor', pingCat:'weapons', noPing:true}
+// jméno zadané ve formuláři; pokud se liší od přihlášeného člena, přidá se v závorce
+function whoName(jmeno,m){return String(jmeno).toLowerCase()===String(m.displayName).toLowerCase()?jmeno:jmeno+' ('+m.displayName+')';}
 function addLog(type,text,opts){
   var m=getMember();var actor=m?m.displayName:'Systém';
   var log=DB.get('syslog')||[];
   log.unshift({time:nowFull(),type:type,actor:actor,text:text,cat:(opts&&opts.pingCat)||''});
   if(log.length>500)log=log.slice(0,500);
   DB.set('syslog',log);
+  if(opts&&opts.plain){sendToDiscord(type,(opts.icon?opts.icon+' ':'')+(opts.pingCat?(CAT[opts.pingCat]||opts.pingCat)+' · ':'')+text,opts);return;}
   if(opts&&opts.embedTitle){sendToDiscord(type,opts.discordText||text,opts);return;}
   sendToDiscord(opts&&opts.hook?opts.hook:type,'['+sectionLabel(type).toUpperCase()+((opts&&opts.pingCat)?' / '+(CAT[opts.pingCat]||opts.pingCat):'')+'] ['+actor+'] '+text,opts);
 }
@@ -614,7 +617,7 @@ function pickupItem(itemId){
   if(!item)return;
   if(amt>item.qty){amtEl.style.borderColor='var(--red)';setTimeout(function(){amtEl.style.borderColor='';},2000);toast('Nedostatek zásoby!','error');return;}
   var before=item.qty;item.qty=Math.max(0,item.qty-amt);DB.set('warehouse',items);
-  addLog('ev','VÝDEJ: "'+jmeno+'" vyzvedl '+amt+'x "'+item.name+'" — zásoba: '+before+' → '+item.qty+' ks. Člen: '+m.displayName+'.',{img:item.img,pingCat:item.cat});
+  addLog('ev',whoName(jmeno,m)+' vyzvedl '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤'});
   nameEl.value='';amtEl.value='1';toast(amt+'x '+item.name+' vydáno ✓','success');renderMemberWarehouse();
 }
 
@@ -643,7 +646,7 @@ function depositItem(){
   var before=item.qty;
   item.qty=item.qty+amt;
   DB.set('warehouse',items);
-  addLog('wh','VLOŽENÍ: "'+jmeno+'" vložil '+amt+'x "'+item.name+'" do skladu — zásoba: '+before+' → '+item.qty+' ks. Člen: '+m.displayName+'.',{img:item.img,pingCat:item.cat});
+  addLog('wh',whoName(jmeno,m)+' vložil '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📥'});
   nameEl.value='';amtEl.value='1';
   st.textContent='// ✓ VLOŽENO DO SKLADU';
   setTimeout(function(){st.textContent='';},3000);
@@ -1458,7 +1461,7 @@ function changeItemImg(id){
   var v=prompt('URL fotky z Fivemanage (nebo název souboru v images/):',item.img||'');
   if(v===null)return;
   item.img=v.trim();DB.set('warehouse',items);
-  addLog('wh','Admin změnil foto položky "'+item.name+'".',{img:item.img,pingCat:item.cat});
+  addLog('wh','Admin změnil foto: '+item.name,{img:item.img,pingCat:item.cat,plain:true,icon:'🖼'});
   toast('Foto změněno','success');renderAdminWarehouse();renderMemberWarehouse();
 }
 function addItem(){
@@ -1473,7 +1476,7 @@ function addItem(){
   var items=DB.get('warehouse')||[];
   items.push({id:uid(),name:name,cat:cat,qty:qty,min:min,img:img,note:note});
   DB.set('warehouse',items);
-  addLog('wh','Admin přidal položku do skladu: "'+name+'" ('+qty+' ks).',{img:img,pingCat:cat});
+  addLog('wh','Admin přidal novou položku: '+name+' ('+qty+' ks)',{img:img,pingCat:cat,plain:true,icon:'🆕'});
   ['wi-name','wi-img','wi-note'].forEach(function(i){document.getElementById(i).value='';});
   document.getElementById('wi-qty').value='1';document.getElementById('wi-min').value='0';
   document.getElementById('wi-preview').innerHTML='—';
@@ -1483,15 +1486,15 @@ function addItem(){
 function adminAddQty(id){
   var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});if(!item)return;
   var el=document.getElementById('aqty-'+id);var amt=parseInt(el?el.value:1)||1;
-  item.qty+=amt;DB.set('warehouse',items);
-  addLog('wh','Admin přidal '+amt+'x "'+item.name+'" do skladu.',{img:item.img,pingCat:item.cat});
+  var before=item.qty;item.qty+=amt;DB.set('warehouse',items);
+  addLog('wh','Admin přidal '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📥'});
   toast('+'+amt+' přidáno','success');renderAdminWarehouse();renderMemberWarehouse();
 }
 function adminSubQty(id){
   var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});if(!item)return;
   var el=document.getElementById('aqty-'+id);var amt=parseInt(el?el.value:1)||1;
-  item.qty=Math.max(0,item.qty-amt);DB.set('warehouse',items);
-  addLog('wh','Admin odebral '+amt+'x "'+item.name+'" ze skladu.',{img:item.img,pingCat:item.cat});
+  var before=item.qty;item.qty=Math.max(0,item.qty-amt);DB.set('warehouse',items);
+  addLog('wh','Admin odebral '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤'});
   toast('-'+amt+' odebráno','info');renderAdminWarehouse();renderMemberWarehouse();
 }
 function deleteItem(id){
