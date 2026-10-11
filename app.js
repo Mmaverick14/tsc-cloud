@@ -1732,7 +1732,6 @@ function renderMyRadio(){
     {label:'SEKUNDÁRNÍ',val:radios.secondary,color:'var(--acc)'},
     {label:'AKCE',val:radios.action,color:'var(--green)'}
   ];
-  if(vedeni)rows.push({label:'VEDENÍ',val:radios.vedeni,color:'var(--red)'});
   el.innerHTML=radioInfoHtml()+'<div class="radio-grid">'+rows.map(function(r){
     return '<div class="radio-card">'+
       '<div class="radio-label">'+r.label+'</div>'+
