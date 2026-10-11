@@ -33,10 +33,22 @@ module.exports = async (req, res) => {
 
   // 2) je admin?
   const mr = await svc('/rest/v1/frakce_kv?key=eq.members&select=value');
-  const rows = mr.ok ? await mr.json() : [];
+  if (!mr.ok) {
+    // čtení databáze selhalo (typicky špatný SUPABASE_SERVICE_ROLE_KEY → 401/403)
+    return res.status(500).json({ error: 'Čtení členů z databáze selhalo (HTTP ' + mr.status + ') — zkontroluj SUPABASE_SERVICE_ROLE_KEY' });
+  }
+  const rows = await mr.json();
   const members = (rows[0] && rows[0].value) || [];
+  if (!members.length) {
+    // prázdný výsledek = klíč nemá přístup k tabulce (RLS) nebo řádek "members" neexistuje
+    return res.status(500).json({ error: 'Seznam členů je prázdný — pravděpodobně je v SUPABASE_SERVICE_ROLE_KEY anon klíč místo service_role' });
+  }
   const me = members.find((m) => m.authId === caller.id);
-  if (!me || !me.adminAccess || me.panic) return res.status(403).json({ error: 'Nemáš admin přístup' });
+  if (!me) {
+    // DOČASNÝ DEBUG: po vyřešení problému nahraď běžnou hláškou
+    return res.status(403).json({ error: 'Nemáš admin přístup — tvoje ID ' + caller.id + ' nenalezeno mezi členy (členů: ' + members.length + ')' });
+  }
+  if (!me.adminAccess || me.panic) return res.status(403).json({ error: 'Nemáš admin přístup' });
 
   const b = req.body || {};
 
