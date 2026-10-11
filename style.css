@@ -464,7 +464,7 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .boost-stat b{font-family:'Orbitron',sans-serif;font-size:.78rem;color:var(--textb);font-weight:700;text-align:right;}
 
 /* ── DISCORD PO SEKCÍCH ─────────────────── */
-.sec-hook-row{display:grid;grid-template-columns:210px 1fr auto;gap:.6rem;align-items:center;margin-bottom:.5rem;}
+.sec-hook-row{display:grid;grid-template-columns:210px 1fr 1fr auto;gap:.6rem;align-items:center;margin-bottom:.5rem;}
 .sec-hook-on{display:flex;align-items:center;gap:.5rem;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--textb);}
 .sec-hook-on input{accent-color:var(--acc);}
 @media(max-width:700px){.sec-hook-row{grid-template-columns:1fr;}}
@@ -475,3 +475,5 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .log-type.excuse{background:var(--surf);color:#c9a227;border:1px solid var(--border);}
 .log-type.report{background:var(--surf);color:#4a90d9;border:1px solid var(--border);}
 .log-type.radio{background:var(--surf);color:#27ae60;border:1px solid var(--border);}
+
+.sec-hook-row.cat{grid-template-columns:210px 1fr;}
