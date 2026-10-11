@@ -544,3 +544,6 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .ht-chip button{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:0 .2rem;transition:color .18s;}
 .ht-chip button:hover{color:var(--red);}
 .ht-chip.fixed{border-style:dashed;border-color:var(--brite);color:var(--muted);padding-right:.6rem;}
+
+/* barevné emoji v menu */
+@media(min-width:701px){.ni{font-size:.85rem;width:18px;}}

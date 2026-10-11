@@ -46,19 +46,19 @@
     <aside class="sidebar">
       <div class="sb-logo">T<span class="acc">S</span>C</div>
       <nav class="sb-nav">
-        <button class="nb active" onclick="mTab('board',this)"><span class="ni">◈</span><span class="nl">NÁSTĚNKA</span></button>
-        <button class="nb" onclick="mTab('tasks',this)"><span class="ni">▣</span><span class="nl">ÚKOLY</span><span class="nbadge" id="taskBadge"></span></button>
-        <button class="nb" onclick="mTab('messages',this)"><span class="ni">◉</span><span class="nl">ZPRÁVY</span><span class="nbadge" id="msgBadge"></span></button>
-        <button class="nb" onclick="mTab('warehouse',this)"><span class="ni">⬡</span><span class="nl">SKLAD</span></button>
+        <button class="nb active" onclick="mTab('board',this)"><span class="ni">📌</span><span class="nl">NÁSTĚNKA</span></button>
+        <button class="nb" onclick="mTab('tasks',this)"><span class="ni">📋</span><span class="nl">ÚKOLY</span><span class="nbadge" id="taskBadge"></span></button>
+        <button class="nb" onclick="mTab('messages',this)"><span class="ni">💬</span><span class="nl">ZPRÁVY</span><span class="nbadge" id="msgBadge"></span></button>
+        <button class="nb" onclick="mTab('warehouse',this)"><span class="ni">📦</span><span class="nl">SKLAD</span></button>
         <button class="nb" onclick="mTab('boosting',this)"><span class="ni">🏎</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="mTab('heist',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
-        <button class="nb" onclick="mTab('clothing',this)"><span class="ni">◧</span><span class="nl">OBLEČENÍ</span></button>
-        <button class="nb" onclick="mTab('finance',this)"><span class="ni">$</span><span class="nl">FINANCE</span><span class="nbadge red" id="financeBadge"></span></button>
-        <button class="nb" onclick="mTab('excuse',this)"><span class="ni">✉</span><span class="nl">OMLUVENKY</span></button>
-        <button class="nb" onclick="mTab('report',this)"><span class="ni">▲</span><span class="nl">HLÁŠENÍ</span></button>
+        <button class="nb" onclick="mTab('clothing',this)"><span class="ni">👕</span><span class="nl">OBLEČENÍ</span></button>
+        <button class="nb" onclick="mTab('finance',this)"><span class="ni">💵</span><span class="nl">FINANCE</span><span class="nbadge red" id="financeBadge"></span></button>
+        <button class="nb" onclick="mTab('excuse',this)"><span class="ni">📝</span><span class="nl">OMLUVENKY</span></button>
+        <button class="nb" onclick="mTab('report',this)"><span class="ni">📢</span><span class="nl">HLÁŠENÍ</span></button>
         <button class="nb" onclick="mTab('radio',this)"><span class="ni">📻</span><span class="nl">VYSÍLAČKA</span></button>
-        <button class="nb" onclick="mTab('contacts',this)"><span class="ni">👤</span><span class="nl">KONTAKTY</span></button>
-        <button class="nb admin-only hidden" id="adminNavBtn" onclick="goToAdmin()"><span class="ni">⚙</span><span class="nl">ADMIN</span></button>
+        <button class="nb" onclick="mTab('contacts',this)"><span class="ni">📱</span><span class="nl">KONTAKTY</span></button>
+        <button class="nb admin-only hidden" id="adminNavBtn" onclick="goToAdmin()"><span class="ni">🛡️</span><span class="nl">ADMIN</span></button>
       </nav>
       <div class="sb-foot">
         <div class="sb-name" id="sbName"></div>
@@ -70,13 +70,13 @@
 
       <!-- NÁSTĚNKA -->
       <div id="mt-board" class="mt active">
-        <div class="ph"><div class="pt">◈ // NÁSTĚNKA VEDENÍ</div><div class="pclock" id="mClock"></div></div>
+        <div class="ph"><div class="pt">📌 // NÁSTĚNKA VEDENÍ</div><div class="pclock" id="mClock"></div></div>
         <div id="boardPosts" class="board-posts"></div>
       </div>
 
       <!-- ÚKOLY -->
       <div id="mt-tasks" class="mt">
-        <div class="ph"><div class="pt">▣ // MÉ ÚKOLY</div></div>
+        <div class="ph"><div class="pt">📋 // MÉ ÚKOLY</div></div>
         <div class="task-tabs">
           <button class="ttab active" onclick="switchTaskTab('active',this)">AKTIVNÍ</button>
           <button class="ttab" onclick="switchTaskTab('archive',this)">ARCHIV</button>
@@ -87,13 +87,13 @@
 
       <!-- ZPRÁVY -->
       <div id="mt-messages" class="mt">
-        <div class="ph"><div class="pt">◉ // ZPRÁVY</div></div>
+        <div class="ph"><div class="pt">💬 // ZPRÁVY</div></div>
         <div id="mMsgList" class="stream"></div>
       </div>
 
       <!-- SKLAD -->
       <div id="mt-warehouse" class="mt">
-        <div class="ph"><div class="pt">⬡ // SKLAD</div></div>
+        <div class="ph"><div class="pt">📦 // SKLAD</div></div>
         <div class="wh-filters">
           <button class="wf active" onclick="mWhFilter('all',this)">VŠE</button>
           <button class="wf" onclick="mWhFilter('weapons',this)">ZBRANĚ</button>
@@ -170,13 +170,13 @@
 
       <!-- OBLEČENÍ -->
       <div id="mt-clothing" class="mt">
-        <div class="ph"><div class="pt">◧ // OBLEČENÍ</div></div>
+        <div class="ph"><div class="pt">👕 // OBLEČENÍ</div></div>
         <div id="clothSets" class="cloth-sets-wrap"></div>
       </div>
 
       <!-- FINANCE -->
       <div id="mt-finance" class="mt">
-        <div class="ph"><div class="pt">$ // FINANCE</div></div>
+        <div class="ph"><div class="pt">💵 // FINANCE</div></div>
         <div id="myFinance" class="finance-wrap"></div>
         <!-- VLOŽIT DO KASY -->
         <div class="ph" style="margin-top:.5rem;"><div class="pt">💰 // VLOŽIT DO KASY</div></div>
@@ -209,7 +209,7 @@
 
       <!-- OMLUVENKY -->
       <div id="mt-excuse" class="mt">
-        <div class="ph"><div class="pt">✉ // OMLUVENKY</div></div>
+        <div class="ph"><div class="pt">📝 // OMLUVENKY</div></div>
         <div class="excuse-template">
           <div class="excuse-tmpl-title">// VZOR OMLUVENKY</div>
           <div class="excuse-tmpl-body">Dobrý den,<br><br>oznamuji, že se dne <strong>[DATUM]</strong> nemohu zúčastnit <strong>[AKCE/SCHŮZKY]</strong>.<br><br>Důvod: <strong>[DŮVOD NEPŘÍTOMNOSTI]</strong><br><br>Předpokládaná délka nepřítomnosti: <strong>[DÉLKA]</strong><br><br>S pozdravem,<br><strong>[VAŠE JMÉNO]</strong></div>
@@ -231,13 +231,13 @@
 
       <!-- HLÁŠENÍ -->
       <div id="mt-report" class="mt">
-        <div class="ph"><div class="pt">▲ // HLÁŠENÍ</div></div>
+        <div class="ph"><div class="pt">📢 // HLÁŠENÍ</div></div>
         <div class="form-panel" style="margin:1.2rem;">
           <div class="field-group">
             <label class="fl">ZPRÁVA PRO VEDENÍ</label>
             <textarea id="reportText" class="adm-ta" style="min-height:120px;" placeholder="Zadejte zprávu..."></textarea>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="submitReport()">▲ ODESLAT</button><span id="reportStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="submitReport()">📢 ODESLAT</button><span id="reportStatus" class="smsg"></span></div>
         </div>
         <div class="sh">// ODESLANÉ</div>
         <div id="mSentReports" class="stream"></div>
@@ -251,7 +251,7 @@
 
       <!-- KONTAKTY -->
       <div id="mt-contacts" class="mt">
-        <div class="ph"><div class="pt">👤 // KONTAKTY</div></div>
+        <div class="ph"><div class="pt">📱 // KONTAKTY</div></div>
         <div class="form-panel" style="margin:1.2rem;">
           <div class="fp-title">// PŘIDAT KONTAKT</div>
           <div class="form-grid">
@@ -278,20 +278,20 @@
       <div class="admin-badge">VEDENÍ</div>
       <nav class="sb-nav">
         <button class="nb active" onclick="aTab('board',this)"><span class="ni">📌</span><span class="nl">NÁSTĚNKA</span></button>
-        <button class="nb" onclick="aTab('tasks',this)"><span class="ni">▣</span><span class="nl">ÚKOLY</span></button>
-        <button class="nb" onclick="aTab('messages',this)"><span class="ni">◉</span><span class="nl">ZPRÁVY</span></button>
-        <button class="nb" onclick="aTab('warehouse',this)"><span class="ni">⬡</span><span class="nl">SKLAD</span></button>
+        <button class="nb" onclick="aTab('tasks',this)"><span class="ni">📋</span><span class="nl">ÚKOLY</span></button>
+        <button class="nb" onclick="aTab('messages',this)"><span class="ni">💬</span><span class="nl">ZPRÁVY</span></button>
+        <button class="nb" onclick="aTab('warehouse',this)"><span class="ni">📦</span><span class="nl">SKLAD</span></button>
         <button class="nb" onclick="aTab('boosting',this)"><span class="ni">🏎</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="aTab('heists',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
-        <button class="nb" onclick="aTab('clothing',this)"><span class="ni">◧</span><span class="nl">OBLEČENÍ</span></button>
-        <button class="nb" onclick="aTab('finance',this)"><span class="ni">$</span><span class="nl">FINANCE</span></button>
-        <button class="nb" onclick="aTab('excuses',this)"><span class="ni">✉</span><span class="nl">OMLUVENKY</span></button>
-        <button class="nb" onclick="aTab('reports',this)"><span class="ni">▲</span><span class="nl">HLÁŠENÍ</span></button>
+        <button class="nb" onclick="aTab('clothing',this)"><span class="ni">👕</span><span class="nl">OBLEČENÍ</span></button>
+        <button class="nb" onclick="aTab('finance',this)"><span class="ni">💵</span><span class="nl">FINANCE</span></button>
+        <button class="nb" onclick="aTab('excuses',this)"><span class="ni">📝</span><span class="nl">OMLUVENKY</span></button>
+        <button class="nb" onclick="aTab('reports',this)"><span class="ni">📢</span><span class="nl">HLÁŠENÍ</span></button>
         <button class="nb" onclick="aTab('radio',this)"><span class="ni">📻</span><span class="nl">VYSÍLAČKA</span></button>
-        <button class="nb" onclick="aTab('settings',this)"><span class="ni">⚙</span><span class="nl">NASTAVENÍ</span></button>
+        <button class="nb" onclick="aTab('settings',this)"><span class="ni">🔧</span><span class="nl">NASTAVENÍ</span></button>
         <button class="nb" onclick="aTab('incomes',this)"><span class="ni">💰</span><span class="nl">PŘÍJMY</span></button>
-        <button class="nb" onclick="aTab('log',this)"><span class="ni">▪</span><span class="nl">LOG</span></button>
-        <button class="nb" onclick="aTab('members',this)"><span class="ni">◈</span><span class="nl">ČLENOVÉ</span></button>
+        <button class="nb" onclick="aTab('log',this)"><span class="ni">📜</span><span class="nl">LOG</span></button>
+        <button class="nb" onclick="aTab('members',this)"><span class="ni">👥</span><span class="nl">ČLENOVÉ</span></button>
       </nav>
       <div class="sb-foot">
         <button class="btn-back" onclick="goBackToMember()">← ZPĚT</button>
@@ -301,7 +301,7 @@
 
       <!-- MEMBERS -->
       <div id="at-members" class="at">
-        <div class="ph"><div class="pt">◈ // SPRÁVA ČLENŮ</div><div style="display:flex;gap:.5rem;"><button class="btn-acc small" onclick="toggleNewMember()">+ NOVÝ ČLEN</button><button class="btn-acc small" onclick="togglePwPanel()" style="background:rgba(192,57,43,.15);border-color:var(--red);color:var(--red);">🔑 HESLO</button></div></div>
+        <div class="ph"><div class="pt">👥 // SPRÁVA ČLENŮ</div><div style="display:flex;gap:.5rem;"><button class="btn-acc small" onclick="toggleNewMember()">+ NOVÝ ČLEN</button><button class="btn-acc small" onclick="togglePwPanel()" style="background:rgba(192,57,43,.15);border-color:var(--red);color:var(--red);">🔑 HESLO</button></div></div>
         <div id="newMemberPanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
           <div class="fp-title">// REGISTRACE ČLENA</div>
           <div class="form-grid">
@@ -344,7 +344,7 @@
 
       <!-- TASKS ADMIN -->
       <div id="at-tasks" class="at">
-        <div class="ph"><div class="pt">▣ // PŘIŘADIT ÚKOL</div></div>
+        <div class="ph"><div class="pt">📋 // PŘIŘADIT ÚKOL</div></div>
         <div class="form-panel" style="margin:1.2rem;">
           <div class="form-grid">
             <div class="field-group"><label class="fl">ČLEN</label><div class="iw"><span class="ip">&gt;_</span><select id="taskTarget" class="fw"></select></div></div>
@@ -360,7 +360,7 @@
 
       <!-- MESSAGES ADMIN -->
       <div id="at-messages" class="at">
-        <div class="ph"><div class="pt">◉ // POSLAT ZPRÁVU</div></div>
+        <div class="ph"><div class="pt">💬 // POSLAT ZPRÁVU</div></div>
         <div class="form-panel" style="margin:1.2rem;">
           <div class="form-grid">
             <div class="field-group"><label class="fl">ČLEN</label><div class="iw"><span class="ip">&gt;_</span><select id="msgTarget" class="fw"></select></div></div>
@@ -375,7 +375,7 @@
 
       <!-- WAREHOUSE ADMIN -->
       <div id="at-warehouse" class="at">
-        <div class="ph"><div class="pt">⬡ // SKLAD</div><button class="btn-acc small" onclick="toggleAddItem()">+ PŘIDAT</button></div>
+        <div class="ph"><div class="pt">📦 // SKLAD</div><button class="btn-acc small" onclick="toggleAddItem()">+ PŘIDAT</button></div>
         <div id="addItemPanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
           <div class="form-grid">
             <div class="field-group"><label class="fl">NÁZEV</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-name"/></div></div>
@@ -448,7 +448,7 @@
 
       <!-- CLOTHING ADMIN -->
       <div id="at-clothing" class="at">
-        <div class="ph"><div class="pt">◧ // OBLEČENÍ — SETY</div><button class="btn-acc small" onclick="toggleAddCloth()">+ NOVÝ SET</button></div>
+        <div class="ph"><div class="pt">👕 // OBLEČENÍ — SETY</div><button class="btn-acc small" onclick="toggleAddCloth()">+ NOVÝ SET</button></div>
         <div id="addClothPanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
           <div class="fp-title">// NOVÝ OUTFIT SET — název, foto a čísla kategorií</div>
           <div class="cloth-add-layout">
@@ -485,7 +485,7 @@
 
       <!-- FINANCE ADMIN -->
       <div id="at-finance" class="at">
-        <div class="ph"><div class="pt">$ // FINANCE</div><button class="btn-acc small" onclick="toggleAddExpense()">+ POLOŽKA</button></div>
+        <div class="ph"><div class="pt">💵 // FINANCE</div><button class="btn-acc small" onclick="toggleAddExpense()">+ POLOŽKA</button></div>
         <div id="addExpensePanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
           <div class="form-grid">
             <div class="field-group"><label class="fl">NÁZEV</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="exp-name"/></div></div>
@@ -501,13 +501,13 @@
 
       <!-- EXCUSES ADMIN -->
       <div id="at-excuses" class="at">
-        <div class="ph"><div class="pt">✉ // OMLUVENKY</div></div>
+        <div class="ph"><div class="pt">📝 // OMLUVENKY</div></div>
         <div id="allExcuses" class="stream"></div>
       </div>
 
       <!-- REPORTS ADMIN -->
       <div id="at-reports" class="at">
-        <div class="ph"><div class="pt">▲ // HLÁŠENÍ</div></div>
+        <div class="ph"><div class="pt">📢 // HLÁŠENÍ</div></div>
         <div id="aReports" class="stream"></div>
       </div>
 
@@ -528,7 +528,7 @@
 
       <!-- SETTINGS -->
       <div id="at-settings" class="at">
-        <div class="ph"><div class="pt">⚙ // NASTAVENÍ</div></div>
+        <div class="ph"><div class="pt">🔧 // NASTAVENÍ</div></div>
         <div class="form-panel" style="margin:1.2rem;">
           <div class="fp-title">// DISCORD WEBHOOK (HLAVNÍ)</div>
           <div class="form-grid">
@@ -567,7 +567,7 @@
 
       <!-- LOG -->
       <div id="at-log" class="at">
-        <div class="ph"><div class="pt">▪ // LOG</div><button class="btn-ghost small" onclick="clearLog()">VYMAZAT</button></div>
+        <div class="ph"><div class="pt">📜 // LOG</div><button class="btn-ghost small" onclick="clearLog()">VYMAZAT</button></div>
         <div id="logFilters" class="wh-filters">
           <button class="wf active" onclick="logFilter('all',this)">VŠE</button>
           <button class="wf" onclick="logFilter('weapons',this)">SKLAD: ZBRANĚ</button>

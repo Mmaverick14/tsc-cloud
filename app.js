@@ -1698,6 +1698,16 @@ function cut(s,n){
   if(sp>n*0.6)c=c.slice(0,sp);
   return c.replace(/\s+$/,'')+'…';
 }
+// rozdělí text na kusy max n znaků (nejraději na novém řádku / mezeře)
+function splitText(s,n){
+  var out=[];s=String(s);
+  while(s.length>n){
+    var c=s.slice(0,n),sp=Math.max(c.lastIndexOf('\n'),c.lastIndexOf(' '));
+    if(sp<n*0.6)sp=n;
+    out.push(s.slice(0,sp));s=s.slice(sp).replace(/^\s+/,'');
+  }
+  out.push(s);return out;
+}
 function submitHeist(){
   var m=getMember();if(!m)return;
   var t=document.getElementById('hs-target').value;
@@ -1716,8 +1726,11 @@ function submitHeist(){
   var list=DB.get('heists')||[];list.push(h);DB.set('heists',list);
   // Discord embed: nahoře kompaktní přehled (lidé / ujeli / kdo vedl), pod ním loot a zkrácený průběh.
   // Celý text zůstává v reportu na webu — Discord je jen přehled, ne zeď textu.
-  var story=cut(desc,850);
-  if(story.length<desc.length)story+='\n*… zkráceno — celý report je na webu (Admin → Heisty)*';
+  var story=cut(desc,1850);
+  if(desc.length>1850)story+='\n*… zkráceno — celý report je na webu (Admin → Heisty)*';
+  var storyFields=splitText(story,1000).map(function(part,i){
+    return {name:i===0?'📝 Průběh':'\u200b',value:'>>> '+part,inline:false};
+  });
   var em={
     title:cut((escaped?'✅ ':'❌ ')+'Heist: '+target,250),
     color:escaped?0x27ae60:0xc0392b,
@@ -1725,9 +1738,8 @@ function submitHeist(){
       {name:'👥 Lidí',value:String(people),inline:true},
       {name:'🏃 Ujeli?',value:escaped?'**Ano**':'**Ne**',inline:true},
       {name:'🧑 Vedl',value:cut(m.displayName,200),inline:true},
-      {name:'💰 Loot',value:cut(loot,1000),inline:false},
-      {name:'📝 Průběh',value:'>>> '+story,inline:false}
-    ],
+      {name:'💰 Loot',value:cut(loot,1000),inline:false}
+    ].concat(storyFields),
     footer:{text:'Heist report'},
     timestamp:new Date().toISOString()
   };
