@@ -283,7 +283,17 @@ function triggerPanic(){
   DB.set('panicList',pList);
   var pf=genNewRadios();
   addLog('radio','Frekvence změněny kvůli PANICu ('+m.displayName+') — Primární: '+pf.primary+', Sekundární: '+pf.secondary+', Akce: '+pf.action+'.',{noDiscord:true});
-  addLog('panic',m.displayName+' aktivoval PANIC. Proběhla změna frekvence — zjisti informaci, co se děje.');
+  addLog('panic',m.displayName+' aktivoval PANIC. Proběhla změna frekvence — zjisti informaci, co se děje.',{embed:{
+    title:'🚨 PANIC aktivován',
+    description:'**'+m.displayName+'** aktivoval PANIC — zjisti informaci, co se děje.',
+    color:0xc0392b,
+    fields:[
+      {name:'🎖️ Pozice',value:String(m.position||'—'),inline:true},
+      {name:'🔒 Přístup',value:'Zablokován do odemčení Vedením',inline:true},
+      {name:'📻 Vysílačka',value:'Frekvence byly změněny — nové najdeš ve Vysílačce.',inline:false}
+    ],
+    footer:{text:'Panic'},timestamp:new Date().toISOString()
+  }});
   currentMemberId=null;
   stopRealtime();
   document.getElementById('panicBtn').classList.add('hidden');
@@ -1067,11 +1077,27 @@ function saveRadios(){
   cfg.on=!!document.getElementById('rAuto').checked;
   if(cfg.on&&!was)cfg.lastSlot='';
   DB.set('radioauto',cfg);
-  addLog('radio','Admin aktualizoval frekvence vysílaček'+(cfg.on?' (automatická změna 15:00 a 17:00 zapnuta).':'.'));
+  var mm=getMember();var who=mm?mm.displayName:'Admin';
+  addLog('radio','Admin aktualizoval frekvence vysílaček'+(cfg.on?' (automatická změna 15:00 a 17:00 zapnuta).':'.'),{embed:
+    cfg.on?{title:'📻 Automatická změna frekvencí zapnuta',description:'Frekvence se budou měnit každý den v **15:00** a **17:00**.\nNastavil: **'+who+'**',color:0xc49a14,footer:{text:'Vysílačka'},timestamp:new Date().toISOString()}
+          :radioEmbed('📻 Frekvence upraveny','Nové frekvence nastavil **'+who+'**.',radios)});
   setText('radioSaveStatus','// ULOŽENO');setTimeout(function(){setText('radioSaveStatus','');},2000);
   toast('Frekvence uloženy','success');
   renderAdminRadio();
   if(cfg.on)radioTick();
+}
+
+// Discord embed pro změnu frekvencí (frekvence Vedení se do kanálu záměrně neposílají)
+function radioEmbed(title,desc,f){
+  return {
+    title:title,description:desc,color:0xc49a14,
+    fields:[
+      {name:'🟡 Primární',value:'`'+f.primary+'`',inline:true},
+      {name:'🔵 Sekundární',value:'`'+f.secondary+'`',inline:true},
+      {name:'🟢 Akce',value:'`'+f.action+'`',inline:true}
+    ],
+    footer:{text:'Vysílačka'},timestamp:new Date().toISOString()
+  };
 }
 
 // Vygeneruje a uloží nové frekvence (vrací objekt s frekvencemi)
@@ -1096,7 +1122,8 @@ function regenRadios(){
   if(!confirm('Vygenerovat nové frekvence hned teď? Staré přestanou platit.'))return;
   var m=getMember();var who=m?m.displayName:'Admin';
   var f=genNewRadios();
-  addLog('radio','Nové frekvence (vygeneroval '+who+') — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.');
+  addLog('radio','Nové frekvence (vygeneroval '+who+') — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.',
+    {embed:radioEmbed('📻 Nové frekvence vysílaček','Vygeneroval: **'+who+'**\nStaré frekvence přestávají platit.',f)});
   toast('Nové frekvence vygenerovány','success');
   renderAdminRadio();
   var act=document.querySelector('#memberScreen.active .mt.active');
@@ -1141,7 +1168,9 @@ async function radioTick(){
     else{
       fresh.lastSlot=slot;DB.set('radioauto',fresh);
       var f=autoRadios(fresh,slot);
-      addLog('radio','Automatická změna frekvencí ('+slot.split('-').pop()+':00) — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.');
+      var hh=slot.split('-').pop();
+      addLog('radio','Automatická změna frekvencí ('+hh+':00) — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.',
+        {embed:radioEmbed('📻 Automatická změna frekvencí','Platí od **'+hh+':00** — předchozí frekvence už nefungují.',f)});
     }
   }catch(e){console.error(e);}
   radioBusy=false;
