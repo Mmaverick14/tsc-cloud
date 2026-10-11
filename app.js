@@ -129,15 +129,19 @@ function pingTag(v){
 // opts: {img:'url/soubor', pingCat:'weapons', noPing:true}
 // jméno zadané ve formuláři; pokud se liší od přihlášeného člena, přidá se v závorce
 function whoName(jmeno,m){return String(jmeno).toLowerCase()===String(m.displayName).toLowerCase()?jmeno:jmeno+' ('+m.displayName+')';}
+var LOG_ICONS={sys:'🔑',board:'📌',task:'✅',msg:'💬',wh:'📦',ev:'📤',boost:'🚗',cloth:'👕',fin:'💰',excuse:'📝',excuse_dec:'📝',report:'📄',radio:'📻',member:'👤',panic:'🚨'};
 function addLog(type,text,opts){
   var m=getMember();var actor=m?m.displayName:'Systém';
   var log=DB.get('syslog')||[];
   log.unshift({time:nowFull(),type:type,actor:actor,text:text,cat:(opts&&opts.pingCat)||''});
   if(log.length>500)log=log.slice(0,500);
   DB.set('syslog',log);
-  if(opts&&opts.plain){sendToDiscord(type,(opts.icon?opts.icon+' ':'')+(opts.pingCat?(CAT[opts.pingCat]||opts.pingCat)+' · ':'')+text,opts);return;}
   if(opts&&opts.embedTitle){sendToDiscord(type,opts.discordText||text,opts);return;}
-  sendToDiscord(opts&&opts.hook?opts.hook:type,'['+sectionLabel(type).toUpperCase()+((opts&&opts.pingCat)?' / '+(CAT[opts.pingCat]||opts.pingCat):'')+'] ['+actor+'] '+text,opts);
+  // Lehký zápis pro všechno ostatní: ikona + věta (bez [SEKCE] [jméno] prefixu a bez uvozovek kolem jmen)
+  var o=opts||{};
+  var ic=o.icon||LOG_ICONS[type]||'';
+  var clean=String(text).replace(/Člen "([^"]+)"/g,'$1');
+  sendToDiscord(o.hook?o.hook:type,(ic?ic+' ':'')+(o.pingCat?(CAT[o.pingCat]||o.pingCat)+' · ':'')+clean,o);
 }
 function sendToDiscord(type,msg,opts){
   opts=opts||{};
@@ -1587,15 +1591,16 @@ function saveBoost(p){
   if(!name){st.textContent='// ZADEJTE NÁZEV AUTA';return;}
   var list=DB.get('boosting')||[];
   var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena')+' — Backup: '+(backup?'POTŘEBA':'ne')+(note?' — Poznámka: '+note:'');
+  var short=name+' (Tier '+tier+(speed?', '+speed+' MP/H':'')+')'+(loc?' · '+loc:'')+(backup?' · backup':'');
   if(editBoostId){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
     b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.backup=backup;b.note=note;b.img=img;
-    addLog('boost','Upravil vozidlo '+info+'.',{img:img});
+    addLog('boost',m.displayName+' upravil vozidlo '+short,{plain:true,icon:'🚗'});
     toast('Vozidlo upraveno','success');
   }else{
     list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,backup:backup,note:note,img:img,ownerId:m.id,addedBy:m.displayName});
-    addLog('boost','Přidal vozidlo '+info+'.',{img:img});
+    addLog('boost',m.displayName+' přidal vozidlo '+short,{plain:true,icon:'🚗'});
     toast(name+' přidáno','success');
   }
   DB.set('boosting',list);
@@ -1624,6 +1629,8 @@ function delBoost(id){
   var list=DB.get('boosting')||[];var b=list.find(function(x){return x.id===id;});
   if(!canEditBoost(b)||!confirm('Smazat vozidlo "'+b.name+'"?'))return;
   DB.set('boosting',list.filter(function(x){return x.id!==id;}));
+  var dm=getMember();
+  addLog('boost',(dm?dm.displayName:'Někdo')+' smazal vozidlo '+b.name,{plain:true,icon:'🗑'});
   toast('Vozidlo smazáno','info');
   renderAdminBoosting();renderMemberBoosting();
 }

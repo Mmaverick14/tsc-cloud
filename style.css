@@ -98,7 +98,7 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .sb-pos{font-family:'Share Tech Mono',monospace;font-size:.52rem;color:var(--acc-dim);margin-bottom:.4rem;}
 
 /* MAIN */
-.main{flex:1;background:var(--deep);overflow-y:auto;}
+.main{flex:1;min-width:0;background:var(--deep);overflow-y:auto;overflow-x:hidden;}
 .ph{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.3rem;background:var(--surf);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
 .pt{font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;color:var(--acc);letter-spacing:.16em;}
 .pclock{font-family:'Share Tech Mono',monospace;font-size:.56rem;color:var(--muted);}
@@ -395,7 +395,8 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 /* ── WAREHOUSE DEPOSIT ───────────────────── */
 .wh-deposit-panel{margin:.8rem 1.1rem 1.5rem;background:var(--card);border:1px solid var(--border);border-top:2px solid var(--gdim);padding:1rem;}
 .wh-deposit-title{font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--green);letter-spacing:.2em;margin-bottom:.8rem;}
-.wh-deposit-form{display:grid;grid-template-columns:1fr 1fr 100px;gap:.6rem;align-items:end;}
+.wh-deposit-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 100px;gap:.6rem;align-items:end;}
+.wh-deposit-form>*,.wh-deposit-form select,.wh-deposit-form input{min-width:0;max-width:100%;}
 .dep-ftr{grid-column:1/-1;display:flex;align-items:center;gap:.7rem;}
 @media(max-width:700px){
   .wh-deposit-form{grid-template-columns:1fr;}
