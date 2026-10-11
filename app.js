@@ -501,8 +501,42 @@ function mTab(tab,btn){
   updateBadges();
 }
 
+// ── NOVÉ POLOŽKY (červená tečka u záložky) ──
+// Pamatuje se v tomto prohlížeči, co člen už viděl (nástěnka, úkoly, zprávy).
+function seenKey(m){return 'seen_'+m.id;}
+function loadSeen(m){try{return JSON.parse(localStorage.getItem(seenKey(m))||'null');}catch(e){return null;}}
+function saveSeen(m,s){try{localStorage.setItem(seenKey(m),JSON.stringify(s));}catch(e){}}
+function currentIds(m){
+  var tasks=DB.get('tasks')||{},msgs=DB.get('messages')||{};
+  return {
+    board:(DB.get('board')||[]).map(function(p){return p.id;}),
+    tasks:(tasks[m.id]||[]).filter(function(t){return !t.done;}).map(function(t){return t.id;}),
+    messages:(msgs[m.id]||[]).map(function(x){return x.id;})
+  };
+}
+function updateNewDots(){
+  var m=getMember();if(!m)return;
+  var cur=currentIds(m);var s=loadSeen(m);
+  if(!s){s=cur;saveSeen(m,s);} // první spuštění: nic se nepovažuje za nové
+  var active=document.querySelector('#memberScreen .mt.active');
+  var activeTab=active?active.id.slice(3):'';
+  if(cur[activeTab]){s[activeTab]=cur[activeTab];saveSeen(m,s);} // otevřená záložka = viděno
+  var conf=DB.get('boardConfirmed')||{};
+  var needConfirm=(DB.get('board')||[]).some(function(p){return p.type==='confirm'&&!(conf[p.id]&&conf[p.id].indexOf(m.id)!==-1);});
+  var flags={
+    board:cur.board.some(function(id){return (s.board||[]).indexOf(id)===-1;})||(needConfirm&&activeTab!=='board'),
+    tasks:cur.tasks.some(function(id){return (s.tasks||[]).indexOf(id)===-1;}),
+    messages:cur.messages.some(function(id){return (s.messages||[]).indexOf(id)===-1;})
+  };
+  Object.keys(flags).forEach(function(t){
+    var btn=document.querySelector('#memberScreen .nb[onclick*="mTab(\''+t+'\'"]');
+    if(btn)btn.classList.toggle('has-new',!!flags[t]);
+  });
+}
+
 function updateBadges(){
   var m=getMember();if(!m)return;
+  updateNewDots();
   var tasks=DB.get('tasks')||{};
   var myTasks=(tasks[m.id]||[]).filter(function(t){return !t.done;});
   var tb=document.getElementById('taskBadge');
@@ -613,9 +647,23 @@ var mWhCat='all';
 function mWhFilter(cat,btn){
   mWhCat=cat;document.querySelectorAll('#mt-warehouse .wf').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderMemberWarehouse();
 }
+var mWhQ='',mWhSort='default',aWhQ='',aWhSort='default';
+function whView(items,cat,q,sort){
+  var out=items.filter(function(i){return cat==='all'||i.cat===cat;});
+  q=(q||'').trim().toLowerCase();
+  if(q)out=out.filter(function(i){return (i.name||'').toLowerCase().indexOf(q)!==-1||(i.note||'').toLowerCase().indexOf(q)!==-1;});
+  var low=function(i){return i.qty===0?0:(i.min>0&&i.qty<=i.min?1:2);};
+  if(sort==='name')out.sort(function(x,y){return x.name.localeCompare(y.name,'cs');});
+  else if(sort==='qtyAsc')out.sort(function(x,y){return x.qty-y.qty;});
+  else if(sort==='qtyDesc')out.sort(function(x,y){return y.qty-x.qty;});
+  else if(sort==='low')out.sort(function(x,y){return low(x)-low(y)||x.qty-y.qty;});
+  return out;
+}
+function whSearch(scope,v){if(scope==='m'){mWhQ=v;renderMemberWarehouse();}else{aWhQ=v;renderAdminWarehouse();}}
+function whSort(scope,v){if(scope==='m'){mWhSort=v;renderMemberWarehouse();}else{aWhSort=v;renderAdminWarehouse();}}
 function renderMemberWarehouse(){
   var items=DB.get('warehouse')||[];
-  var filtered=mWhCat==='all'?items:items.filter(function(i){return i.cat===mWhCat;});
+  var filtered=whView(items,mWhCat,mWhQ,mWhSort);
   var el=document.getElementById('mWhGrid');
   if(!filtered.length){el.innerHTML='<div class="empty-s" style="grid-column:1/-1">// Žádné položky</div>';return;}
   el.innerHTML=filtered.map(function(item){
@@ -635,6 +683,23 @@ function renderMemberWarehouse(){
   }).join('');
 }
 
+// Upozornění do Discordu při poklesu pod limit (jen při přechodu dolů, ne při každém výdeji)
+function stockAlert(item,before){
+  if(!item||item.qty>=before)return;
+  var min=item.min||0;
+  if(item.qty===0&&before>0){
+    addLog('wh','Došla zásoba: '+item.name+' (0 ks) — je potřeba doplnit.',{img:item.img,pingCat:item.cat,plain:true,icon:'🚨'});
+  }else if(min>0&&item.qty<=min&&before>min){
+    addLog('wh','Nízká zásoba: '+item.name+' ('+item.qty+' ks, limit '+min+') — je potřeba doplnit.',{img:item.img,pingCat:item.cat,plain:true,icon:'⚠️'});
+  }
+}
+function setItemMin(id){
+  var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});if(!item)return;
+  var v=prompt('Limit nízké zásoby pro "'+item.name+'" (0 = bez upozornění):',item.min||0);
+  if(v===null)return;
+  item.min=Math.max(0,parseInt(v)||0);DB.set('warehouse',items);
+  toast('Limit nastaven na '+item.min,'success');renderAdminWarehouse();renderMemberWarehouse();
+}
 function pickupItem(itemId){
   var m=getMember();
   var nameEl=document.getElementById('pn-'+itemId);var amtEl=document.getElementById('pa-'+itemId);
@@ -645,6 +710,7 @@ function pickupItem(itemId){
   if(amt>item.qty){amtEl.style.borderColor='var(--red)';setTimeout(function(){amtEl.style.borderColor='';},2000);toast('Nedostatek zásoby!','error');return;}
   var before=item.qty;item.qty=Math.max(0,item.qty-amt);DB.set('warehouse',items);
   addLog('ev',whoName(jmeno,m)+' vyzvedl '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤'});
+  stockAlert(item,before);
   nameEl.value='';amtEl.value='1';toast(amt+'x '+item.name+' vydáno ✓','success');renderMemberWarehouse();
 }
 
@@ -1504,7 +1570,7 @@ function aWhFilter(cat,btn){
 }
 function renderAdminWarehouse(){
   var items=DB.get('warehouse')||[];
-  var filtered=aWhCat==='all'?items:items.filter(function(i){return i.cat===aWhCat;});
+  var filtered=whView(items,aWhCat,aWhQ,aWhSort);
   var el=document.getElementById('aWhGrid');if(!el)return;
   if(!filtered.length){el.innerHTML='<div class="empty-s" style="grid-column:1/-1">// Žádné položky</div>';return;}
   el.innerHTML=filtered.map(function(item){
@@ -1521,6 +1587,7 @@ function renderAdminWarehouse(){
         '<input class="wh-ev-input small" type="number" value="1" min="1" id="aqty-'+item.id+'"/>'+
         '<button class="btn-pickup" onclick="adminAddQty(\''+item.id+'\')">+ PŘIDAT</button>'+
         '<button class="btn-pickup" onclick="adminSubQty(\''+item.id+'\')" style="background:rgba(220,60,60,.15);border-color:var(--red)">− UBRAT</button>'+
+        '<button class="btn-micro" title="Limit nízké zásoby" onclick="setItemMin(\''+item.id+'\')">🔔</button>'+
         '<button class="btn-micro" title="Změnit foto" onclick="changeItemImg(\''+item.id+'\')">🖼</button>'+
         '<button class="btn-micro del" onclick="deleteItem(\''+item.id+'\')">✕</button>'+
       '</div></div>';
@@ -1571,6 +1638,7 @@ function adminSubQty(id){
   var el=document.getElementById('aqty-'+id);var amt=parseInt(el?el.value:1)||1;
   var before=item.qty;item.qty=Math.max(0,item.qty-amt);DB.set('warehouse',items);
   addLog('wh','Admin odebral '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤'});
+  stockAlert(item,before);
   toast('-'+amt+' odebráno','info');renderAdminWarehouse();renderMemberWarehouse();
 }
 function deleteItem(id){

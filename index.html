@@ -103,6 +103,16 @@
           <button class="wf" onclick="mWhFilter('vehicles',this)">VOZIDLA</button>
           <button class="wf" onclick="mWhFilter('other',this)">OSTATNÍ</button>
         </div>
+        <div class="wh-tools">
+          <input type="text" class="wh-search" placeholder="🔍 Hledat položku..." oninput="whSearch('m',this.value)"/>
+          <select class="wh-sort" onchange="whSort('m',this.value)">
+            <option value="default">Řazení: výchozí</option>
+            <option value="name">Název A–Z</option>
+            <option value="low">Nejdřív docházející</option>
+            <option value="qtyAsc">Množství ↑</option>
+            <option value="qtyDesc">Množství ↓</option>
+          </select>
+        </div>
         <div id="mWhGrid" class="wh-grid"></div>
         <div class="wh-deposit-panel">
           <div class="wh-deposit-title">// VLOŽIT DO SKLADU</div>
@@ -396,6 +406,16 @@
           <button class="wf" onclick="aWhFilter('equipment',this)">VYBAVENÍ</button>
           <button class="wf" onclick="aWhFilter('vehicles',this)">VOZIDLA</button>
           <button class="wf" onclick="aWhFilter('other',this)">OSTATNÍ</button>
+        </div>
+        <div class="wh-tools">
+          <input type="text" class="wh-search" placeholder="🔍 Hledat položku..." oninput="whSearch('a',this.value)"/>
+          <select class="wh-sort" onchange="whSort('a',this.value)">
+            <option value="default">Řazení: výchozí</option>
+            <option value="name">Název A–Z</option>
+            <option value="low">Nejdřív docházející</option>
+            <option value="qtyAsc">Množství ↑</option>
+            <option value="qtyDesc">Množství ↓</option>
+          </select>
         </div>
         <div id="aWhGrid" class="wh-grid adm-wh"></div>
       </div>

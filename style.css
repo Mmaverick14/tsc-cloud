@@ -547,3 +547,12 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 
 /* barevné emoji v menu */
 @media(min-width:701px){.ni{font-size:.85rem;width:18px;}}
+
+/* červená tečka = něco nového v záložce */
+.nb .ni{position:relative;}
+.nb.has-new .ni::after{content:'';position:absolute;top:-3px;right:-4px;width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);animation:newDot 1.6s ease-in-out infinite;}
+@keyframes newDot{0%,100%{opacity:1}50%{opacity:.4}}
+.wh-tools{display:flex;gap:.6rem;margin:.6rem 1.1rem 0;flex-wrap:wrap;}
+.wh-search,.wh-sort{background:var(--deep);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.7rem;padding:.45rem .6rem;outline:none;}
+.wh-search{flex:1;min-width:160px;}
+.wh-search:focus,.wh-sort:focus{border-color:var(--acc);}
