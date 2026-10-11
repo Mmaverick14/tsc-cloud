@@ -1088,19 +1088,34 @@ function renderAdminExcuses(){
   el.innerHTML=excuses.slice().reverse().map(function(e){
     return '<div class="excuse-card excuse-'+e.status+'">'+
       '<div class="excuse-head"><span class="excuse-member">'+esc(e.memberName)+' — '+esc(e.event)+'</span>'+
-      '<span class="excuse-chip '+e.status+'">'+(e.status==='pending'?'ČEKÁ':e.status==='accepted'?'PŘIJATO':'ZAMÍTNUTO')+'</span></div>'+
+      '<span class="excuse-chip '+e.status+'">'+(e.status==='pending'?'ČEKÁ':e.status==='accepted'?'NA VĚDOMÍ':'ZAMÍTNUTO')+'</span></div>'+
       '<div style="text-align:right"><button class="btn-micro del" onclick="delExcuse(\''+e.id+'\')">✕ SMAZAT</button></div>'+'<div class="excuse-detail">Datum: <strong>'+esc(e.date)+'</strong> — '+esc(e.reason)+'</div>'+
       (e.note?'<div class="excuse-detail" style="color:var(--muted)">'+esc(e.note)+'</div>':'')+
       '<div class="excuse-date-info">Odesláno: '+e.submitted+'</div>'+
-      (e.status==='pending'?'<div class="excuse-actions"><button class="btn-acc small" onclick="resolveExcuse(\''+e.id+'\',\'accepted\')">PŘIJMOUT</button><button class="btn-danger" onclick="resolveExcuse(\''+e.id+'\',\'denied\')">ZAMÍTNOUT</button></div>':'')+
+      (e.status==='pending'?'<div class="excuse-actions"><button class="btn-acc small" onclick="resolveExcuse(\''+e.id+'\',\'accepted\')">BERU NA VĚDOMÍ</button><button class="btn-danger" onclick="resolveExcuse(\''+e.id+'\',\'denied\')">ZAMÍTNOUT</button></div>':'')+
     '</div>';
   }).join('');
 }
 function resolveExcuse(id,decision){
   var excuses=DB.get('excuses')||[];var e=excuses.find(function(x){return x.id===id;});
   if(!e)return;e.status=decision;DB.set('excuses',excuses);
-  addLog('excuse','Admin '+(decision==='accepted'?'přijal':'zamítl')+' omluvenku od "'+e.memberName+'".',{hook:'excuse_dec',private:true});
-  toast('Omluvenka '+(decision==='accepted'?'přijata':'zamítnuta'),'success');renderAdminExcuses();
+  var ok=decision==='accepted';
+  var dm=getMember();var who=dm?dm.displayName:'Admin';
+  var dp=String(e.date||'').split('-');var dstr=dp.length===3?dp[2]+'. '+dp[1]+'. '+dp[0]:(e.date||'—');
+  var embed={
+    title:ok?'✅ OMLUVENKA — BERE SE NA VĚDOMÍ':'❌ OMLUVENKA ZAMÍTNUTA',
+    description:'**'+e.memberName+'** — '+e.event,
+    color:ok?0x2ecc71:0xe74c3c,
+    fields:[
+      {name:'👤 Člen',value:e.memberName,inline:true},
+      {name:'📅 Datum',value:dstr,inline:true},
+      {name:'⏳ Délka',value:e.length||'neuvedena',inline:true},
+      {name:'📝 Důvod',value:e.reason||'—',inline:false}
+    ],
+    footer:{text:(ok?'Vzal na vědomí: ':'Zamítl: ')+who+' • '+nowStr()}
+  };
+  addLog('excuse',who+' '+(ok?'bere na vědomí':'zamítl')+' omluvenku od '+e.memberName+'.',{hook:'excuse_dec',private:true,embed:embed});
+  toast('Omluvenka '+(decision==='accepted'?'vzata na vědomí':'zamítnuta'),'success');renderAdminExcuses();
 }
 
 // ── REPORTS ADMIN ────────────────────────────
@@ -1974,7 +1989,7 @@ function renderMyExcuses(){
   el.innerHTML=excuses.slice().reverse().map(function(e){
     return '<div class="excuse-card excuse-'+e.status+'">'+
       '<div class="excuse-head"><span class="excuse-member">'+esc(e.event)+' — '+esc(e.date)+'</span>'+
-      '<span class="excuse-chip '+e.status+'">'+(e.status==='pending'?'ČEKÁ':e.status==='accepted'?'PŘIJATO':'ZAMÍTNUTO')+'</span></div>'+
+      '<span class="excuse-chip '+e.status+'">'+(e.status==='pending'?'ČEKÁ':e.status==='accepted'?'NA VĚDOMÍ':'ZAMÍTNUTO')+'</span></div>'+
       '<div class="excuse-detail">'+esc(e.reason)+'</div>'+
       (e.note?'<div class="excuse-detail" style="color:var(--muted)">'+esc(e.note)+'</div>':'')+
       '<div class="excuse-date-info">Odesláno: '+e.submitted+'</div>'+
