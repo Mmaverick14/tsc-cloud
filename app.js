@@ -51,8 +51,27 @@ var DB={
   }
 };
 
-var POSITIONS=['Mastermid','Overseer','Consul',"Devil's Advocate",'Captain','Enforcer','Associate','Member'];
-var VEDENI_POS=['Mastermid','Overseer','Counselor',];
+var POSITIONS=['Mastermind','Overseer',"Devil's Advocate",'Consul','Captain','Enforcer','Associate'];
+// Mastermind a Overseer mají admin přístup automaticky
+var ADMIN_POS=['Mastermind','Overseer'];
+// převod starých názvů pozic (už uložených u členů) na nové
+var OLD_POS_MAP={'Boss':'Mastermind','Right hand':'Overseer','Counselor':'Consul',"Devil's Advocate":"Devil's Advocate",'Chief of Arms':'Captain','Advisor':'Enforcer','Intelligence Chief':'Enforcer','Keeper of secrets':'Enforcer','Member':'Associate'};
+function migratePositions(){
+  var members=DB.get('members');if(!members)return;
+  var ch=false;
+  members.forEach(function(m){
+    if(OLD_POS_MAP[m.position]&&OLD_POS_MAP[m.position]!==m.position){m.position=OLD_POS_MAP[m.position];ch=true;}
+    if(m.promo&&OLD_POS_MAP[m.promo.to]&&OLD_POS_MAP[m.promo.to]!==m.promo.to){m.promo.to=OLD_POS_MAP[m.promo.to];ch=true;}
+    if(ADMIN_POS.indexOf(m.position)!==-1&&!m.adminAccess){m.adminAccess=true;ch=true;}
+  });
+  if(ch)DB.set('members',members);
+}
+// po změně pozice srovná admin přístup (Mastermind/Overseer = vždy admin; při degradaci z nich se admin odebere)
+function syncAdminForPos(m,oldPos){
+  if(ADMIN_POS.indexOf(m.position)!==-1)m.adminAccess=true;
+  else if(oldPos&&ADMIN_POS.indexOf(oldPos)!==-1)m.adminAccess=false;
+}
+var VEDENI_POS=['Mastermind','Overseer',"Devil's Advocate",'Consul'];
 var CAT={weapons:'ZBRANĚ',ammo:'MUNICE',drugs:'DROGY',equipment:'VYBAVENÍ',vehicles:'VOZIDLA',other:'OSTATNÍ'};
 var PRIO={low:'LOW',normal:'NORMAL',high:'HIGH',urgent:'URGENT'};
 var CLOTH_CAT={masks:'Masky & Vousy',jackets:'Bundy & Trička',pants:'Kalhoty & Boty',acc:'Doplňky',sets:'Sety'};
@@ -62,14 +81,14 @@ var pendingLoginId=null;
 
 function getMember(id){var members=DB.get('members')||[];return members.find(function(m){return m.id===(id||currentMemberId);})||null;}
 function isAdmin(){var m=getMember();return m&&m.adminAccess;}
-function isBossPos(m){return !!m&&m.position==='Mastermid';}
-// Bosse smí spravovat jen Boss; ostatní (i Right hand) ne
+function isBossPos(m){return !!m&&m.position==='Mastermind';}
+// Mastermind smí spravovat jen Mastermind; ostatní (i Overseer) ne
 function canManage(target){
   if(!target)return false;
-  if(target.position!=='Mastermid')return true;
-  var me=getMember();return !!me&&me.position==='Mastermid';
+  if(target.position!=='Mastermind')return true;
+  var me=getMember();return !!me&&me.position==='Mastermind';
 }
-var RADIO_GEN_POS=['Mastermid','Overseer','Consul'];
+var RADIO_GEN_POS=['Mastermind','Overseer',"Devil's Advocate",'Consul','Captain'];
 function canRegenRadios(){var m=getMember();return !!m&&RADIO_GEN_POS.indexOf(m.position)!==-1;}
 function isVedeni(pos){return VEDENI_POS.indexOf(pos)!==-1;}
 function getWeekKey(){var d=new Date();var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
@@ -114,7 +133,7 @@ var SECTIONS=[
   {key:'report',label:'Hlášení'},
   {key:'radio',label:'Vysílačka'},
   {key:'member',label:'Členové'},
-  {key:'roster',label:'Seznam Členů (strike, povýšení)'},
+  {key:'roster',label:'Crew List (strike, povýšení)'},
   {key:'panic',label:'Panic'}
 ];
 function sectionLabel(k){var s=SECTIONS.find(function(x){return x.key===k;});return s?s.label:k;}
@@ -359,6 +378,7 @@ async function enterPortal(session,isFreshLogin){
   }
   if(!(user.app_metadata&&user.app_metadata.frakce))return reject('// ÚČET NENÍ ČLENEM FRAKCE');
   try{await DB.load();}catch(e){console.error(e);return reject('// CHYBA NAČÍTÁNÍ DAT: '+(e.message||e));}
+  migratePositions();
   initData();
   var members=DB.get('members')||[];
   var m=members.find(function(x){return x.authId===user.id;});
@@ -369,10 +389,10 @@ async function enterPortal(session,isFreshLogin){
   }
   if(!m&&members.length===0){
     // úplně první přihlášení — první účet se stává Bossem s admin přístupem
-    m={id:uid(),authId:user.id,email:user.email,displayName:(user.email||'Mastermid').split('@')[0],position:'Mastermid',adminAccess:true,note:'',panic:false};
+    m={id:uid(),authId:user.id,email:user.email,displayName:(user.email||'Mastermind').split('@')[0],position:'Mastermind',adminAccess:true,note:'',panic:false};
     members.push(m);DB.set('members',members);
   }
-  if(!m)return reject('// ÚČET NENÍ PROPOJEN S ČLENEM KONTAKTUJ VEDENÍ');
+  if(!m)return reject('// ÚČET NENÍ PROPOJEN S ČLENEM — KONTAKTUJ VEDENÍ');
   if(m.panic){
     await reject('');
     document.getElementById('panicOverlay').classList.remove('hidden');
@@ -473,7 +493,7 @@ function goToAdmin(){
 
 
 // ════════════════════════════════
-//  ÚPRAVA MENU (pořadí + názvy) — edituje jen Boss
+//  ÚPRAVA MENU (pořadí + názvy) — edituje jen Mastermind
 // ════════════════════════════════
 // DB klíč 'menu_cfg' = {admin:{order:[klíče],names:{klíč:'Nový název'}}, member:{...}}
 var MENU_NAVS={admin:'#adminScreen .sb-nav',member:'#memberScreen .sb-nav'};
@@ -520,7 +540,7 @@ function mnuBuild(nav){
   return items;
 }
 function openMenuEditor(){
-  if(!isBossPos(getMember())){toast('Menu může upravovat jen Mastermid','error');return;}
+  if(!isBossPos(getMember())){toast('Menu může upravovat jen Mastermind','error');return;}
   mnuDraft={admin:mnuBuild('admin'),member:mnuBuild('member')};
   mnuNav='admin';
   var ov=document.createElement('div');ov.className='modal-ov';ov.id='menuEditor';
@@ -557,7 +577,7 @@ function mnuReset(){
   mnuRender();
 }
 function mnuSave(){
-  if(!isBossPos(getMember())){toast('Menu může upravovat jen Mastermid','error');return;}
+  if(!isBossPos(getMember())){toast('Menu může upravovat jen Mastermind','error');return;}
   var cfg={};
   Object.keys(mnuDraft).forEach(function(nav){
     var names={};
@@ -566,7 +586,7 @@ function mnuSave(){
   });
   DB.set('menu_cfg',cfg);
   applyMenuCfg();
-  addLog('sys','Mastermid "'+getMember().displayName+'" upravil pořadí/názvy menu.');
+  addLog('sys','Mastermind "'+getMember().displayName+'" upravil pořadí/názvy menu.');
   toast('Menu uloženo','success');
   mnuClose();
 }
@@ -1337,7 +1357,7 @@ function genNewRadios(){
   return f;
 }
 function regenRadios(){
-  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Mastermid, Overseer, Consul,','error');return;}
+  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Mastermind, Overseer, Devil\'s Advocate, Consul a Captain','error');return;}
   if(!confirm('Vygenerovat nové frekvence hned teď? Staré přestanou platit.'))return;
   var m=getMember();var who=m?m.displayName:'Admin';
   var f=genNewRadios();
@@ -1491,7 +1511,7 @@ function renderMemberGrid(){
   var el=document.getElementById('memberGrid');if(!el)return;
   if(!members.length){el.innerHTML='<div class="empty-s">// Žádní členové</div>';return;}
   el.innerHTML=members.map(function(m){
-    var vedeni=isVedeni(m.position);var me0=getMember();var locked=m.position==='Mastermid'&&!(me0&&me0.position==='Mastermid');
+    var vedeni=isVedeni(m.position);var me0=getMember();var locked=m.position==='Mastermind'&&!(me0&&me0.position==='Mastermind');
     return '<div class="member-card '+(m.panic?'panic-card':'')+'">'+
       '<div class="mc-top">'+
         '<div class="mc-hex">'+esc(m.displayName.charAt(0).toUpperCase())+'</div>'+
@@ -1507,16 +1527,16 @@ function renderMemberGrid(){
       '</div>'+
       '<div class="mc-meta">'+
         (m.note?'<div class="mc-note">'+esc(m.note)+'</div>':'')+
-        (m.position==='Mastermid'?'<div class="mc-note">🔒 Chráněný účet Mastermid nelze odebrat</div>':'')+
+        (m.position==='Mastermind'?'<div class="mc-note">🔒 Chráněný účet — Mastermind nelze odebrat</div>':'')+
         (locked?'<div style="display:none">':'<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;">')+
           '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:0;" id="nm2-'+m.id+'" value="'+esc(m.displayName)+'" placeholder="IC jméno"/><button class="btn-acc small" onclick="changeName(\''+m.id+'\')">JMÉNO</button></div>'+
           '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:0;" id="did-'+m.id+'" value="'+esc(m.discordId||'')+'" placeholder="Discord ID"/><button class="btn-acc small" onclick="changeDiscordId(\''+m.id+'\')">DISCORD</button></div>'+
-          '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;flex-wrap:wrap;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="fn-'+m.id+'" value="'+esc(rosterNames(m).first)+'" placeholder="Jméno"/><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="ln-'+m.id+'" value="'+esc(rosterNames(m).last)+'" placeholder="Příjmení"/><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="nk-'+m.id+'" value="'+esc(m.nick||'')+'" placeholder="Přezdívka"/><button class="btn-acc small" onclick("changeRosterInfo(\''+m.id+'\')">ÚDAJE</button></div>'+
-          '<select class("mc-pos-sel" id="pos-'+m.id+'">'+POSITIONS.map(function(p){return '<option value="'+p+'"'+(m.position===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+
-          '<button class("btn-acc small" onclick="changePosition(\''+m.id+'\')">POZICE</button>'+
-          (m.position==='Mastermid'?'':'<button class("btn-acc small" onclick("toggleAdminAccess(\''+m.id+'\')">'+(!m.adminAccess?'DÁT ADMIN':'ODEBRAT ADMIN')+'</button>')+
-          (m.panic?'<button class("btn-acc small" onclick("liftPanic(\''+m.id+'\')">ODEMKNOUT</button>':'')+
-          (m.position==='Mastermid'?'':'<button class("btn-danger small" onclick("deleteMember(\''+m.id+'\')">✕ SMAZAT</button>')+
+          '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;flex-wrap:wrap;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="fn-'+m.id+'" value="'+esc(rosterNames(m).first)+'" placeholder="Jméno"/><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="ln-'+m.id+'" value="'+esc(rosterNames(m).last)+'" placeholder="Příjmení"/><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="nk-'+m.id+'" value="'+esc(m.nick||'')+'" placeholder="Přezdívka"/><button class="btn-acc small" onclick="changeRosterInfo(\''+m.id+'\')">ÚDAJE</button></div>'+
+          '<select class="mc-pos-sel" id="pos-'+m.id+'">'+POSITIONS.map(function(p){return '<option value="'+p+'"'+(m.position===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+
+          '<button class="btn-acc small" onclick="changePosition(\''+m.id+'\')">POZICE</button>'+
+          (ADMIN_POS.indexOf(m.position)!==-1?'':'<button class="btn-acc small" onclick="toggleAdminAccess(\''+m.id+'\')">'+(!m.adminAccess?'DÁT ADMIN':'ODEBRAT ADMIN')+'</button>')+
+          (m.panic?'<button class="btn-acc small" onclick="liftPanic(\''+m.id+'\')">ODEMKNOUT</button>':'')+
+          (m.position==='Mastermind'?'':'<button class="btn-danger small" onclick="deleteMember(\''+m.id+'\')">✕ SMAZAT</button>')+
         '</div>'+
       '</div>'+
     '</div>';
@@ -1549,7 +1569,7 @@ async function changePassword(){
   var members=DB.get('members')||[];
   var m=members.find(function(x){return x.id===memberId;});
   if(!m){st.textContent='// ČLEN NENALEZEN';st.style.color='#e05555';return;}
-  if(!canManage(m)){st.textContent='// HESLO Mastermid MŮŽE MĚNIT JEN Mastermid';st.style.color='#e05555';return;}
+  if(!canManage(m)){st.textContent='// HESLO MASTERMINDA MŮŽE MĚNIT JEN MASTERMIND';st.style.color='#e05555';return;}
   if(!m.authId){st.textContent='// ČLEN NEMÁ PROPOJENÝ ÚČET';st.style.color='#e05555';return;}
   st.style.color='var(--acc)';st.textContent='// UKLÁDÁM...';
   try{await adminApi({action:'setPassword',authId:m.authId,password:newPass});}
@@ -1578,14 +1598,14 @@ async function createMember(){
   if(pass.length<6){st.textContent='// HESLO MIN. 6 ZNAKŮ';return;}
   var members=DB.get('members')||[];
   var me1=getMember();
-  if(pos==='Mastermid'&&!(me1&&me1.position==='Mastermid')){st.textContent='// POZICI MASTERMID MŮŽE PŘIDĚLIT JEN Mastermid';return;}
+  if(pos==='Mastermind'&&!(me1&&me1.position==='Mastermind')){st.textContent='// POZICI MASTERMIND MŮŽE PŘIDĚLIT JEN MASTERMIND';return;}
   if(members.find(function(m){return (m.email||'').toLowerCase()===email;})){st.textContent='// E-MAIL JIŽ EXISTUJE';return;}
   st.textContent='// VYTVÁŘÍM ÚČET...';
   var res;
   try{res=await adminApi({action:'create',email:email,password:pass});}
   catch(e){st.textContent='// CHYBA: '+e.message;return;}
   members=DB.get('members')||[];
-  members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin,note:note,discordId:discordId,firstName:firstName,lastName:lastName,nick:nick,strikes:0,panic:false});
+  members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin||ADMIN_POS.indexOf(pos)!==-1,note:note,discordId:discordId,firstName:firstName,lastName:lastName,nick:nick,strikes:0,panic:false});
   DB.set('members',members);
   addLog('member','Admin registroval nového člena: "'+name+'" ('+pos+').');
   st.textContent='// ČLEN REGISTROVÁN';
@@ -1596,7 +1616,7 @@ async function createMember(){
 }
 function changeDiscordId(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
-  if(!canManage(m)){toast('Mastermids může spravovat jen Mastermid','error');return;}
+  if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return;}
   var el=document.getElementById('did-'+id);
   var v=(el?el.value:'').replace(/\D/g,'');
   m.discordId=v;DB.set('members',members);
@@ -1607,7 +1627,7 @@ function changeName(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
   var el=document.getElementById('nm2-'+id);var name=el?el.value.trim():'';
   if(!name){toast('Zadejte IC jméno','error');return;}
-  if(!canManage(m)){toast('Mastermids může spravovat jen Mastermid','error');return;}
+  if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return;}
   var old=m.displayName;m.displayName=name;DB.set('members',members);
   addLog('member','Admin změnil jméno "'+old+'" na "'+name+'".');
   toast('Jméno změněno','success');renderMemberGrid();populatePwMember();
@@ -1616,18 +1636,18 @@ function changePosition(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
   var sel=document.getElementById('pos-'+id);if(!sel)return;
   var me=getMember();
-  if(m.position==='Mastermid'){toast('Roli Mastermid nelze měnit','error');return;}
-  if(!canManage(m)){toast('Mastermids může spravovat jen Mastermid','error');return;}
-  if(sel.value==='Mastermid'&&!(me&&me.position==='Mastermid')){toast('Pozici Mastermid může přidělit jen Mastermid','error');return;}
-  if(m.position==='Mastermid'&&sel.value!=='Mastermid'&&!members.some(function(x){return x.id!==m.id&&x.position==='Mastermid';})){toast('Musí zůstat alespoň jeden Mastermid','error');return;}
-  m.position=sel.value;DB.set('members',members);
+  if(m.position==='Mastermind'){toast('Roli Mastermind nelze měnit','error');return;}
+  if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return;}
+  if(sel.value==='Mastermind'&&!(me&&me.position==='Mastermind')){toast('Pozici Mastermind může přidělit jen Mastermind','error');return;}
+  if(m.position==='Mastermind'&&sel.value!=='Mastermind'&&!members.some(function(x){return x.id!==m.id&&x.position==='Mastermind';})){toast('Musí zůstat alespoň jeden Mastermind','error');return;}
+  var oldPos0=m.position;m.position=sel.value;syncAdminForPos(m,oldPos0);DB.set('members',members);
   addLog('member','Admin změnil pozici "'+m.displayName+'" na "'+m.position+'".');
   toast('Pozice aktualizována','success');renderMemberGrid();
 }
 function toggleAdminAccess(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
-  if(!canManage(m)){toast('Mastermids může spravovat jen Mastermid','error');return;}
-  if(m.position==='Mastermid'&&m.adminAccess){toast('Mastermid nelze odebrat admin','error');return;}
+  if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return;}
+  if(ADMIN_POS.indexOf(m.position)!==-1){toast('Mastermind a Overseer mají admin napevno','error');return;}
   m.adminAccess=!m.adminAccess;DB.set('members',members);
   addLog('member','Admin '+(m.adminAccess?'přidělil':'odebral')+' admin přístup "'+m.displayName+'".');
   toast('Admin přístup '+(m.adminAccess?'přidělen':'odebrán'),'info');renderMemberGrid();
@@ -1636,7 +1656,7 @@ async function deleteMember(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});
   if(!m)return;
   if(id===currentMemberId){toast('Nemůžeš smazat sám sebe','error');return;}
-  if(m.position==='Mastermid'){toast('Mastermid nelze smazat','error');return;}
+  if(m.position==='Mastermind'){toast('Mastermind nelze smazat','error');return;}
   if(!confirm('Smazat člena "'+m.displayName+'"? Smaže se i jeho přihlašovací účet.'))return;
   if(m.authId){
     try{await adminApi({action:'delete',authId:m.authId});}
@@ -2201,7 +2221,7 @@ function delHeist(id){
 }
 
 // ── LOG ──────────────────────────────────────
-var LOG_LABELS={roster:'SEZNAM ČLENŮ',ev:'VÝDEJ',wh:'SKLAD',task:'ÚKOL',msg:'ZPRÁVA',member:'ČLEN',board:'NÁSTĚNKA',sys:'SYSTÉM',fin:'FINANCE',panic:'PANIC',boost:'BOOSTING',heist:'HEIST',cloth:'OBLEČENÍ',excuse:'OMLUVENKA',report:'HLÁŠENÍ',radio:'VYSÍLAČKA'};
+var LOG_LABELS={roster:'CREW LIST',ev:'VÝDEJ',wh:'SKLAD',task:'ÚKOL',msg:'ZPRÁVA',member:'ČLEN',board:'NÁSTĚNKA',sys:'SYSTÉM',fin:'FINANCE',panic:'PANIC',boost:'BOOSTING',heist:'HEIST',cloth:'OBLEČENÍ',excuse:'OMLUVENKA',report:'HLÁŠENÍ',radio:'VYSÍLAČKA'};
 var logCat='all';
 function logFilter(cat,btn){
   logCat=cat;document.querySelectorAll('#logFilters .wf').forEach(function(b){b.classList.remove('active');});
@@ -2597,7 +2617,7 @@ function delLogEntry(idx){
   log.splice(idx,1);DB.set('syslog',log);renderLog();
 }
 
-// ── NAŠE ČLENOVÉ (přehled: jméno, příjmení, přezdívka, hodnost, strike, návrh na povýšení) ──
+// ── CREW LIST (přehled: jméno, příjmení, přezdívka, hodnost, strike, návrh na povýšení) ──
 // Jméno/příjmení/přezdívku nastavuje Vedení v Admin → Členové. Když chybí, jméno se odvodí z IC jména.
 function rosterNames(m){
   var f=(m.firstName||'').trim(),l=(m.lastName||'').trim();
@@ -2605,13 +2625,13 @@ function rosterNames(m){
   return {first:f,last:l,nick:(m.nick||'').trim()};
 }
 // Strike a návrhy povýšení smí spravovat jen první tři nejvyšší role
-var ROSTER_POS=['Mastermid','Overseer'];
+var ROSTER_POS=['Mastermind','Overseer','Consul'];
 function canRoster(){var m=getMember();return !!m&&ROSTER_POS.indexOf(m.position)!==-1;}
 function renderRoster(admin){
   var el=document.getElementById(admin?'rosterAdmin':'rosterMember');if(!el)return;
   var ctl=admin&&canRoster();
   var bar=ctl?'<div class="fp-ftr" style="margin-bottom:.8rem;"><button class="btn-acc small" onclick="sendRosterToDiscord()">📤 POSLAT NA DISCORD</button><span id="rosterSendStatus" class="smsg"></span></div>':'';
-  var note=(admin&&!ctl)?'<div class="radio-info" style="margin-bottom:.8rem;">Strike a návrhy povýšení mohou spravovat jen <b>Mastermid, Overseer</b>. Ty ostatní vidí přehled jen pro čtení.</div>':'';
+  var note=(admin&&!ctl)?'<div class="radio-info" style="margin-bottom:.8rem;">Strike a návrhy povýšení mohou spravovat jen <b>Mastermind, Overseer a Consul</b>. Ty ostatní vidí přehled jen pro čtení.</div>':'';
   var members=(DB.get('members')||[]).slice().sort(function(a,b){
     var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);
     return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');
@@ -2623,7 +2643,7 @@ function renderRoster(admin){
     var promo=m.promo?('<div class="rs-promo"><b>→ '+esc(m.promo.to)+'</b>'+(m.promo.note?'<div class="rs-promo-note">'+esc(m.promo.note)+'</div>':'')+(m.promo.by?'<div class="rs-promo-by">// '+esc(m.promo.by)+(m.promo.date?' — '+esc(m.promo.date):'')+'</div>':'')+'</div>'):'<span class="rs-none">—</span>';
     var act='';
     if(ctl){
-      if(m.position==='Mastermid'){act='<td class="rs-act"><span class="rs-none">🔒 Mastermid bez strike a změny role</span></td>';}
+      if(m.position==='Mastermind'){act='<td class="rs-act"><span class="rs-none">🔒 Mastermind — bez strike a změny role</span></td>';}
       else{
         act='<td class="rs-act">'+
           '<div class="rs-act-row"><span class="rs-lbl">STRIKE</span><button class="btn-micro" onclick="setStrike(\''+m.id+'\',-1)"'+(s<=0?' disabled':'')+'>−</button><button class="btn-micro del" onclick="setStrike(\''+m.id+'\',1)"'+(s>=3?' disabled':'')+'>+</button></div>'+
@@ -2647,15 +2667,15 @@ function rosterTarget(id,namesOnly){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});
   if(!m)return null;
   if(!namesOnly){
-    if(!canRoster()){toast('Strike a povýšení spravuje jen Mastermid, Overseer a Counselor','error');return null;}
-    if(m.position==='Mastermid'){toast('Mastermids nelze dát strike ani změnit roli','error');return null;}
+    if(!canRoster()){toast('Strike a povýšení spravuje jen Mastermind, Overseer a Consul','error');return null;}
+    if(m.position==='Mastermind'){toast('Mastermindovi nelze dát strike ani změnit roli','error');return null;}
   }
-  if(!canManage(m)){toast('Mastermids může spravovat jen Mastermid','error');return null;}
+  if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return null;}
   return {members:members,m:m};
 }
 // Pošle aktuální seznam členů (hodnost, jméno, přezdívka, strike, návrh povýšení) na Discord do sekce „Seznam Členů“
 function sendRosterToDiscord(){
-  if(!canRoster()){toast('Odeslat seznam smí jen Mastermid, Overseer','error');return;}
+  if(!canRoster()){toast('Odeslat Crew List smí jen Mastermind, Overseer a Consul','error');return;}
   var members=(DB.get('members')||[]).slice().sort(function(a,b){
     var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);
     return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');
@@ -2675,11 +2695,11 @@ function sendRosterToDiscord(){
   if(cur)chunks.push(cur);
   var who=rosterWho();
   var embeds=chunks.slice(0,10).map(function(c,i){
-    return {title:i===0?'🪪 Crew List ('+members.length+')':'🪪 Crew List — pokračování',description:c,color:C_BLUE,footer:{text:who+' • '+nowStr()}};
+    return {title:i===0?'🪪 CREW LIST ('+members.length+')':'🪪 CREW LIST — pokračování',description:c,color:C_BLUE,footer:{text:who+' • '+nowStr()}};
   });
-  addLog('roster',who+' odeslal Crew list na Discord ('+members.length+' členů).',{embed:embeds[0],extraEmbeds:embeds.slice(1)});
+  addLog('roster',who+' odeslal seznam členů na Discord ('+members.length+' členů).',{embed:embeds[0],extraEmbeds:embeds.slice(1)});
   setText('rosterSendStatus','// ODESLÁNO');setTimeout(function(){setText('rosterSendStatus','');},2500);
-  toast('Crew list odeslán na Discord','success');
+  toast('Crew List odeslán na Discord','success');
 }
 function rosterWho(){var a=getMember();return a?a.displayName:'Admin';}
 function changeRosterInfo(id){
@@ -2723,9 +2743,9 @@ function clearPromo(id){
 function approvePromo(id){
   var t=rosterTarget(id);if(!t||!t.m.promo)return;
   var to=t.m.promo.to;var me=getMember();
-  if(to==='Mastermid'&&!(me&&me.position==='Mastermid')){toast('Pozici Mastermid může přidělit jen Mastermid','error');return;}
+  if(to==='Mastermind'&&!(me&&me.position==='Mastermind')){toast('Pozici Mastermind může přidělit jen Mastermind','error');return;}
   if(!confirm('Povýšit "'+t.m.displayName+'" na "'+to+'"?'))return;
-  var old=t.m.position;t.m.position=to;delete t.m.promo;
+  var old=t.m.position;t.m.position=to;syncAdminForPos(t.m,old);delete t.m.promo;
   DB.set('members',t.members);
   addLog('roster',rosterWho()+' povýšil '+t.m.displayName+' ('+old+' → '+to+').',{embed:rich(C_GREEN,'🏅 POVÝŠENÍ','**'+t.m.displayName+'**',[['🎖️ Původní',old],['➡️ Nová hodnost',to]],{by:rosterWho()})});
   toast('Povýšeno na '+to,'success');renderRoster(true);
