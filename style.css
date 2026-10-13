@@ -577,3 +577,9 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .pick-item input{accent-color:var(--acc);}
 .pick-item.off{opacity:.45;cursor:not-allowed;}
 .pick-item em{font-style:normal;font-size:.6rem;color:var(--muted);}
+
+
+/* ── BOOSTING: galerie 3 fotek ── */
+.boost-thumbs{display:flex;gap:.3rem;margin:-.25rem 0 .55rem;}
+.boost-thumbs img{flex:1;min-width:0;height:42px;object-fit:cover;border:1px solid var(--border);cursor:pointer;transition:border-color .18s;}
+.boost-thumbs img:hover{border-color:var(--acc);}

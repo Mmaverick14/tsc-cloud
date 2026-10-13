@@ -184,7 +184,7 @@ function sendToDiscord(type,msg,opts){
   var img=opts.img?absImg(opts.img):'';
   if(opts.embed){
     if(ping)body.content=ping;
-    body.embeds=[opts.embed];
+    body.embeds=[opts.embed].concat(opts.extraEmbeds||[]);
   }else if(opts.embedTitle){
     if(ping)body.content=ping;
     var em={title:opts.embedTitle,description:msg,color:0xc49a14,footer:{text:nowStr()}};
@@ -1792,7 +1792,9 @@ function boostCard(b,admin){
   var src=imgSrc(b.img);
   var own=!admin&&b.ownerId&&b.ownerId===currentMemberId;
   var sc=admin?'':'m';
-  var imgH='<div class="wh-img">'+(src?'<img src="'+esc(src)+'" onerror="this.parentElement.innerHTML=\'<span class=wh-icon>?</span>\'"/>':'<span class="wh-icon">?</span>')+'</div>';
+  var srcs=[b.img,b.img2,b.img3].map(imgSrc).filter(Boolean);
+  var imgH='<div class="wh-img">'+(srcs.length?'<img class="boost-main" src="'+esc(srcs[0])+'" style="cursor:zoom-in" onclick="boostZoom(this.src)" onerror="this.parentElement.innerHTML=\'<span class=wh-icon>?</span>\'"/>':'<span class="wh-icon">?</span>')+'</div>'+
+    (srcs.length>1?'<div class="boost-thumbs">'+srcs.map(function(s){return '<img src="'+esc(s)+'" onclick="boostSwap(this)"/>';}).join('')+'</div>':'');
   return '<div class="wh-item boost-item">'+
     '<span class="boost-tier t-'+String(b.tier).replace('+','p')+'">'+esc(b.tier)+'</span>'+
     imgH+
@@ -1807,6 +1809,17 @@ function boostCard(b,admin){
       '<button class="btn-pickup" onclick="editBoost(\''+b.id+'\',\''+sc+'\')">✎ UPRAVIT</button>'+
       '<button class="btn-micro del" onclick="delBoost(\''+b.id+'\')">✕</button></div>':'')+
   '</div>';
+}
+// klik na miniaturu = přepne hlavní fotku; klik na hlavní fotku = zvětšení
+function boostSwap(t){
+  var card=t.closest('.boost-item');var m=card&&card.querySelector('.boost-main');
+  if(m)m.src=t.src;
+}
+function boostZoom(src){
+  var o=document.createElement('div');o.className='modal-ov';o.style.cursor='zoom-out';
+  o.innerHTML='<img src="'+esc(src)+'" style="max-width:92vw;max-height:90vh;object-fit:contain;"/>';
+  o.onclick=function(){if(o.parentNode)o.parentNode.removeChild(o);};
+  document.body.appendChild(o);
 }
 function mBoostFilter(t,btn){
   mBoostTier=t;document.querySelectorAll('#mt-boosting .wf').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderMemberBoosting();
@@ -1828,8 +1841,11 @@ function bEl(p,n){return document.getElementById((p||'')+n);}
 function canEditBoost(b){return !!b&&(isAdmin()||(b.ownerId&&b.ownerId===currentMemberId));}
 function previewBoostImg(val,p){
   var el=bEl(p,'bo-preview');if(!el)return;
-  var src=imgSrc(val);
-  el.innerHTML=src?'<img src="'+esc(src)+'" style="max-height:76px;max-width:136px;object-fit:contain;" onerror="this.parentElement.innerHTML=\'nenalezeno\'"/>':'—';
+  var h=['bo-img','bo-img2','bo-img3'].map(function(id){
+    var inp=bEl(p,id);var src=imgSrc(inp?inp.value:'');
+    return src?'<img src="'+esc(src)+'" style="max-height:76px;max-width:120px;object-fit:contain;" onerror="this.style.display=\'none\'"/>':'';
+  }).join('');
+  el.innerHTML=h||'—';
 }
 function toggleBoostForm(p){
   var pn=bEl(p,'boostFormPanel');
@@ -1838,7 +1854,7 @@ function toggleBoostForm(p){
 }
 function resetBoostForm(p){
   editBoostId=null;
-  ['bo-name','bo-speed','bo-handling','bo-loc','bo-note','bo-img'].forEach(function(i){bEl(p,i).value='';});
+  ['bo-name','bo-speed','bo-handling','bo-loc','bo-note','bo-img','bo-img2','bo-img3'].forEach(function(i){bEl(p,i).value='';});
   bEl(p,'bo-backup').checked=false;
   bEl(p,'bo-tier').value='D';
   bEl(p,'bo-preview').innerHTML='—';
@@ -1846,11 +1862,19 @@ function resetBoostForm(p){
   setText((p||'')+'boostSaveBtn','PŘIDAT');
   bEl(p,'boostFormPanel').classList.add('hidden');
 }
-function boostEmbed(title,by,name,tier,speed,loc,backup,note,img){
-  return rich(C_ORANGE,title,'**'+name+'**',[
+var GALLERY_URL=(location.origin&&location.origin!=='null')?location.origin+'/':'https://discord.com/';
+// další fotky jako samostatné embedy se stejným url -> Discord je spojí do galerie
+function boostExtras(imgs){
+  return (imgs||[]).slice(1,4).map(function(i){var u=absImg(i);return u?{url:GALLERY_URL,image:{url:u}}:null;}).filter(Boolean);
+}
+function boostEmbed(title,by,name,tier,speed,loc,backup,note,imgs){
+  imgs=imgs||[];
+  var e=rich(C_ORANGE,title,'**'+name+'**',[
     ['🏁 Tier','Tier '+tier],['⚡ Rychlost',speed?speed+' MP/H':'—'],['🛡 Backup',backup?'POTŘEBA':'NE'],
     ['📍 Lokace',loc||'neuvedena'],['📝 Poznámka',note,false]
-  ],{img:img,big:true,by:by});
+  ],{img:imgs[0],big:true,by:by});
+  if(imgs.length>1)e.url=GALLERY_URL;
+  return e;
 }
 function saveBoost(p){
   var m=getMember();if(!m)return;
@@ -1861,7 +1885,8 @@ function saveBoost(p){
   var loc=bEl(p,'bo-loc').value.trim();
   var backup=bEl(p,'bo-backup').checked;
   var note=bEl(p,'bo-note').value.trim();
-  var img=bEl(p,'bo-img').value.trim();
+  var imgs=['bo-img','bo-img2','bo-img3'].map(function(i){return bEl(p,i).value.trim();}).filter(Boolean);
+  var img=imgs[0]||'',img2=imgs[1]||'',img3=imgs[2]||'';
   var st=bEl(p,'boostStatus');
   if(!name){st.textContent='// ZADEJTE NÁZEV AUTA';return;}
   var exPing=pingBox((p||'')+'ping-boost');
@@ -1871,12 +1896,12 @@ function saveBoost(p){
   if(editBoostId){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
-    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.backup=backup;b.note=note;b.img=img;
-    addLog('boost',m.displayName+' upravil vozidlo '+short,{extraPing:exPing,embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,img)});
+    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.backup=backup;b.note=note;b.img=img;b.img2=img2;b.img3=img3;
+    addLog('boost',m.displayName+' upravil vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,imgs)});
     toast('Vozidlo upraveno','success');
   }else{
-    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,backup:backup,note:note,img:img,ownerId:m.id,addedBy:m.displayName});
-    addLog('boost',m.displayName+' přidal vozidlo '+short,{extraPing:exPing,embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,img)});
+    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,backup:backup,note:note,img:img,img2:img2,img3:img3,ownerId:m.id,addedBy:m.displayName});
+    addLog('boost',m.displayName+' přidal vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,imgs)});
     toast(name+' přidáno','success');
   }
   DB.set('boosting',list);
@@ -1896,7 +1921,9 @@ function editBoost(id,p){
   bEl(p,'bo-backup').checked=!!b.backup;
   bEl(p,'bo-note').value=b.note||'';
   bEl(p,'bo-img').value=b.img||'';
-  previewBoostImg(b.img||'',p);
+  bEl(p,'bo-img2').value=b.img2||'';
+  bEl(p,'bo-img3').value=b.img3||'';
+  previewBoostImg('',p);
   setText(p+'boostFormTitle','// UPRAVIT VOZIDLO');
   setText(p+'boostSaveBtn','ULOŽIT ZMĚNY');
   bEl(p,'boostFormPanel').scrollIntoView({behavior:'smooth',block:'center'});
