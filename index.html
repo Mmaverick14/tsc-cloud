@@ -50,11 +50,11 @@
     <aside class="sidebar">
       <div class="sb-logo">T<span class="acc">S</span>C</div>
       <nav class="sb-nav">
-        <button class="nb active" onclick="mTab('board',this)"><span class="ni">📌</span><span class="nl">NÁSTĚNKA</span></button>
+        <button class="nb active" onclick="mTab('board',this)"><span class="ni">📣</span><span class="nl">OZNÁMENÍ</span></button>
         <button class="nb" onclick="mTab('tasks',this)"><span class="ni">📋</span><span class="nl">ÚKOLY</span><span class="nbadge" id="taskBadge"></span></button>
         <button class="nb" onclick="mTab('messages',this)"><span class="ni">💬</span><span class="nl">ZPRÁVY</span><span class="nbadge" id="msgBadge"></span></button>
         <button class="nb" onclick="mTab('warehouse',this)"><span class="ni">📦</span><span class="nl">SKLAD</span></button>
-        <button class="nb" onclick="mTab('boosting',this)"><span class="ni">🏎</span><span class="nl">BOOSTING</span></button>
+        <button class="nb" onclick="mTab('boosting',this)"><span class="ni">🚗</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="mTab('heist',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
         <button class="nb" onclick="mTab('clothing',this)"><span class="ni">👕</span><span class="nl">OBLEČENÍ</span></button>
         <button class="nb" onclick="mTab('finance',this)"><span class="ni">💵</span><span class="nl">FINANCE</span><span class="nbadge red" id="financeBadge"></span></button>
@@ -74,7 +74,7 @@
 
       <!-- NÁSTĚNKA -->
       <div id="mt-board" class="mt active">
-        <div class="ph"><div class="pt">📌 // NÁSTĚNKA VEDENÍ</div><div class="pclock" id="mClock"></div></div>
+        <div class="ph"><div class="pt">📣 // OZNÁMENÍ VEDENÍ</div><div class="pclock" id="mClock"></div></div>
         <div id="boardPosts" class="board-posts"></div>
       </div>
 
@@ -141,7 +141,7 @@
             <div class="field-group"><label class="fl">MAX RYCHLOST (MP/H)</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="mbo-speed" min="0" placeholder="180"/></div></div>
             <div class="field-group"><label class="fl">HANDLING</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-handling" placeholder="např. 8.5 / Výborný"/></div></div>
             <div class="field-group fg-full"><label class="fl">LOKACE (kde auto stojí / kde ho najdu)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-loc" placeholder="např. Garáž u přístavu, Sandy Shores..."/></div></div>
-            <div class="field-group"><label class="fl">BACKUP OD FRAKCE</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="mbo-backup" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Potřebuji backup</span></label></div></div>
+            <div class="field-group"><label class="fl">BACKUP OD CREW</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="mbo-backup" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Potřebuji backup</span></label></div></div>
             <div class="field-group"><label class="fl">POZNÁMKA K VOZIDLU</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-note" placeholder="např. hlídá policie, tuning, stav..."/></div></div>
             <div class="field-group fg-full"><label class="fl">FOTO 1 — URL z Fivemanage (hlavní)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'m')"/></div></div>
             <div class="field-group fg-full"><label class="fl">FOTO 2 — URL (nepovinné)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-img2" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'m')"/></div></div>
@@ -294,11 +294,11 @@
       <div class="sb-logo">T<span class="acc">S</span>C</div>
       <div class="admin-badge">VEDENÍ</div>
       <nav class="sb-nav">
-        <button class="nb active" onclick="aTab('board',this)"><span class="ni">📌</span><span class="nl">NÁSTĚNKA</span></button>
+        <button class="nb active" onclick="aTab('board',this)"><span class="ni">📣</span><span class="nl">OZNÁMENÍ</span></button>
         <button class="nb" onclick="aTab('tasks',this)"><span class="ni">📋</span><span class="nl">ÚKOLY</span></button>
         <button class="nb" onclick="aTab('messages',this)"><span class="ni">💬</span><span class="nl">ZPRÁVY</span></button>
         <button class="nb" onclick="aTab('warehouse',this)"><span class="ni">📦</span><span class="nl">SKLAD</span></button>
-        <button class="nb" onclick="aTab('boosting',this)"><span class="ni">🏎</span><span class="nl">BOOSTING</span></button>
+        <button class="nb" onclick="aTab('boosting',this)"><span class="ni">🚗</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="aTab('heists',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
         <button class="nb" onclick="aTab('clothing',this)"><span class="ni">👕</span><span class="nl">OBLEČENÍ</span></button>
         <button class="nb" onclick="aTab('finance',this)"><span class="ni">💵</span><span class="nl">FINANCE</span></button>
@@ -347,7 +347,7 @@
 
       <!-- BOARD ADMIN -->
       <div id="at-board" class="at active">
-        <div class="ph"><div class="pt">📌 // NÁSTĚNKA</div></div>
+        <div class="ph"><div class="pt">📣 // OZNÁMENÍ</div></div>
         <div class="form-panel" style="margin:1.2rem;">
           <div class="form-grid">
             <div class="field-group fg-full"><label class="fl">NADPIS</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="boardTitle"/></div></div>
@@ -444,7 +444,7 @@
             <div class="field-group"><label class="fl">MAX RYCHLOST (MP/H)</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="bo-speed" min="0" placeholder="180"/></div></div>
             <div class="field-group"><label class="fl">HANDLING</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-handling" placeholder="např. 8.5 / Výborný"/></div></div>
             <div class="field-group fg-full"><label class="fl">LOKACE (kde auto stojí / kde ho najdu)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-loc" placeholder="např. Garáž u přístavu, Sandy Shores..."/></div></div>
-            <div class="field-group"><label class="fl">BACKUP OD FRAKCE</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="bo-backup" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Potřebuji backup</span></label></div></div>
+            <div class="field-group"><label class="fl">BACKUP OD CREW</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="bo-backup" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Potřebuji backup</span></label></div></div>
             <div class="field-group"><label class="fl">POZNÁMKA K VOZIDLU</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-note" placeholder="např. hlídá policie, tuning, stav..."/></div></div>
             <div class="field-group fg-full"><label class="fl">FOTO 1 — URL z Fivemanage (hlavní)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'')"/></div></div>
             <div class="field-group fg-full"><label class="fl">FOTO 2 — URL (nepovinné)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-img2" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'')"/></div></div>

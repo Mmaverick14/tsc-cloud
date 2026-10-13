@@ -1984,8 +1984,6 @@ function submitHeist(){
   var target=(t==='Jiné')?detail:(detail?(t+' — '+detail):t);
   var h={id:uid(),memberId:m.id,memberName:m.displayName,target:target,people:people,loot:loot,escaped:escaped,desc:desc,date:nowStr()};
   var list=DB.get('heists')||[];list.push(h);DB.set('heists',list);
-  // Discord embed: nahoře kompaktní přehled (lidé / ujeli / kdo vedl), pod ním loot a zkrácený průběh.
-  // Celý text zůstává v reportu na webu — Discord je jen přehled, ne zeď textu.
   var story=cut(desc,1850);
   if(desc.length>1850)story+='\n*… zkráceno — celý report je na webu (Admin → Heisty)*';
   var storyFields=splitText(story,1000).map(function(part,i){
@@ -2397,7 +2395,7 @@ function resolveIncome(id,decision){
   DB.set('incomes',incomes);
   var okI=decision==='confirmed';
   addLog('fin','Admin '+(okI?'potvrdil':'zamítl')+' příjem $'+item.amount+' od "'+item.memberName+'" ('+item.source+').',{embed:rich(okI?C_GREEN:C_RED,okI?'✅ PŘÍJEM POTVRZEN':'❌ PŘÍJEM ZAMÍTNUT',null,[['👤 Člen',item.memberName],['💵 Částka',money(item.amount)],['📦 Zdroj',item.source]],{by:(getMember()?getMember().displayName:'Admin')})});
-  toast(decision==='confirmed'?'Příjem potvrzen ✓':'Zamítnuto','info');
+  toast(decision==='confirmed'?'Příjem potvrzen ✓':'Zamítnuto ✗','info');
   renderAdminIncomes();
   renderAdminFinance();
 }
