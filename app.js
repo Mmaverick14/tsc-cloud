@@ -1148,6 +1148,18 @@ function renderAdminReports(){
 }
 
 // ── RADIO ADMIN ──────────────────────────────
+function radioCardsHtml(f,withVedeni){
+  var rows=[
+    {label:'PRIMÁRNÍ',val:f.primary,color:'var(--acc)'},
+    {label:'SEKUNDÁRNÍ',val:f.secondary,color:'var(--acc)'},
+    {label:'AKCE',val:f.action,color:'var(--green)'}
+  ];
+  if(withVedeni)rows.push({label:'VEDENÍ',val:f.vedeni,color:'var(--red)'});
+  return '<div class="radio-grid">'+rows.map(function(r){
+    return '<div class="radio-card"><div class="radio-label">'+r.label+'</div>'+
+      '<div class="radio-freq" style="color:'+r.color+';">'+(r.val||'—')+'</div></div>';
+  }).join('')+'</div>';
+}
 function renderAdminRadio(){
   var radios=DB.get('radios')||{primary:'',secondary:'',action:'',vedeni:''};
   var cfg=DB.get('radioauto')||{};
@@ -1157,11 +1169,11 @@ function renderAdminRadio(){
   document.getElementById('rVedeni').value=radios.vedeni||'';
   var rb=document.getElementById('rRegenBtn');if(rb)rb.style.display=canRegenRadios()?'':'none';
   var a=document.getElementById('rAuto');if(a)a.checked=!!cfg.on;
+  var cur=currentRadios();
+  var rc=document.getElementById('rCurrent');
+  if(rc)rc.innerHTML='<div class="fa-exp-title">// AKTUÁLNĚ PLATÍ '+(cfg.on?'(AUTOMATICKY — slot '+radioSlot().split('-')[3]+':00)':'(RUČNĚ NASTAVENO)')+'</div>'+radioCardsHtml(cur,true);
   var info=document.getElementById('rAutoInfo');
-  if(info){
-    if(cfg.on){var f=autoRadios(cfg,radioSlot());info.textContent='// AUTO AKTIVNÍ — právě platí: Primární '+f.primary+' · Sekundární '+f.secondary+' · Akce '+f.action+' · Vedení '+f.vedeni+' (ručně zadané hodnoty se nepoužijí)';}
-    else info.textContent='';
-  }
+  if(info)info.textContent=cfg.on?'// AUTO je zapnuté — pole níže se nepoužívají, platí frekvence z přehledu nahoře.':'';
 }
 function saveRadios(){
   var radios={
@@ -2183,6 +2195,7 @@ function renderMyRadio(){
     {label:'SEKUNDÁRNÍ',val:radios.secondary,color:'var(--acc)'},
     {label:'AKCE',val:radios.action,color:'var(--green)'}
   ];
+  if(m&&m.adminAccess)rows.push({label:'VEDENÍ',val:radios.vedeni,color:'var(--red)'});
   el.innerHTML=radioInfoHtml()+'<div class="radio-grid">'+rows.map(function(r){
     return '<div class="radio-card">'+
       '<div class="radio-label">'+r.label+'</div>'+
