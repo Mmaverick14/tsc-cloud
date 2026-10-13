@@ -695,7 +695,7 @@ function renderMemberWarehouse(){
       '<div class="wh-pickup"><input class="wh-ev-input" type="text" placeholder="Vaše jméno..." id="pn-'+item.id+'"/>'+
       '<div class="wh-pickup-row"><input class="wh-ev-input small" type="number" value="1" min="1" max="'+item.qty+'" id="pa-'+item.id+'"/>'+
       '<button class="btn-pickup'+(item.qty===0?' btn-pickup-disabled':'')+'" onclick="pickupItem(\''+item.id+'\')"'+(item.qty===0?' disabled':'')+'>⬇ VYZVEDL</button>'+
-      '</div></div></div>';
+      '</div><label class="ping-chk small"><input type="checkbox" id="pk-'+item.id+'"/><span>🔔 Označit Member</span></label></div></div>';
   }).join('');
 }
 
@@ -726,7 +726,7 @@ function pickupItem(itemId){
   if(!item)return;
   if(amt>item.qty){amtEl.style.borderColor='var(--red)';setTimeout(function(){amtEl.style.borderColor='';},2000);toast('Nedostatek zásoby!','error');return;}
   var before=item.qty;item.qty=Math.max(0,item.qty-amt);DB.set('warehouse',items);
-  addLog('ev',whoName(jmeno,m)+' vyzvedl '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤'});
+  addLog('ev',whoName(jmeno,m)+' vyzvedl '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤',extraPing:pingBox('pk-'+itemId)});
   stockAlert(item,before);
   nameEl.value='';amtEl.value='1';toast(amt+'x '+item.name+' vydáno ✓','success');renderMemberWarehouse();
 }
@@ -756,7 +756,7 @@ function depositItem(){
   var before=item.qty;
   item.qty=item.qty+amt;
   DB.set('warehouse',items);
-  addLog('wh',whoName(jmeno,m)+' vložil '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📥'});
+  addLog('wh',whoName(jmeno,m)+' vložil '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📥',extraPing:pingBox('ping-dep')});
   nameEl.value='';amtEl.value='1';
   st.textContent='// ✓ VLOŽENO DO SKLADU';
   setTimeout(function(){st.textContent='';},3000);
@@ -847,7 +847,7 @@ function addCloth(){
   var items=DB.get('clothing')||[];
   items.push(setData);
   DB.set('clothing',items);
-  addLog('cloth','Admin přidal outfit set: "'+name+'".',{embed:rich(C_PINK,'👕 NOVÝ OUTFIT SET','**'+name+'**'+(desc?'\n'+desc:''),[],{img:img,big:true,by:(getMember()?getMember().displayName:'Admin')})});
+  addLog('cloth','Admin přidal outfit set: "'+name+'".',{extraPing:pingBox('ping-cloth'),embed:rich(C_PINK,'👕 NOVÝ OUTFIT SET','**'+name+'**'+(desc?'\n'+desc:''),[],{img:img,big:true,by:(getMember()?getMember().displayName:'Admin')})});
   st.textContent='// SET PŘIDÁN';
   setTimeout(function(){st.textContent='';},3000);
   document.getElementById('cl-name').value='';
@@ -923,7 +923,7 @@ function addExpense(){
   var fin=DB.get('finance')||{payments:[],expenses:[]};
   fin.expenses.push({id:uid(),name:name,amount:amount,type:type,note:note,optional:optional});
   DB.set('finance',fin);
-  addLog('fin','Admin přidal '+(optional?'nepovinnou ':'')+'výdajovou položku: "'+name+'" $'+amount+'.',{embed:rich(C_YELLOW,'🧾 NOVÁ VÝDAJOVÁ POLOŽKA','**'+name+'**',[['💵 Částka',money(amount)],['Druh',optional?'Nepovinná':'Povinná']],{by:(getMember()?getMember().displayName:'Admin')})});
+  addLog('fin','Admin přidal '+(optional?'nepovinnou ':'')+'výdajovou položku: "'+name+'" $'+amount+'.',{extraPing:pingBox('ping-exp'),embed:rich(C_YELLOW,'🧾 NOVÁ VÝDAJOVÁ POLOŽKA','**'+name+'**',[['💵 Částka',money(amount)],['Druh',optional?'Nepovinná':'Povinná']],{by:(getMember()?getMember().displayName:'Admin')})});
   st.textContent='// PŘIDÁNO';setTimeout(function(){st.textContent='';},3000);
   ['exp-name','exp-note'].forEach(function(i){document.getElementById(i).value='';});document.getElementById('exp-amount').value='';
   if(optEl)optEl.checked=false;
@@ -1547,6 +1547,15 @@ function renderAdminBoard(){
     '</div>';
   }).join('');
 }
+// Zaškrtnutá volba „Označit Member“ -> ping role Member (ID v Nastavení). Po použití se odškrtne.
+function pingBox(id){
+  var b=document.getElementById(id);
+  if(!b||!b.checked)return '';
+  b.checked=false;
+  var s=DB.get('settings')||{};
+  if(!s.memberRoleId){toast('V Nastavení chybí ID role Member','error',4000);return '';}
+  return '<@&'+s.memberRoleId+'>';
+}
 // @jméno člena -> <@DiscordID> (jen členové s vyplněným Discord ID)
 function resolveMentions(t){
   t=String(t||'');
@@ -1621,7 +1630,7 @@ function assignTask(){
   DB.set('tasks',tasks);
   var m=DB.get('members')||[];var tm=m.find(function(x){return x.id===target;});
   var pr={low:['LOW',C_GREY],normal:['NORMAL',C_GREEN],high:['HIGH',C_ORANGE],urgent:['URGENT',C_RED]}[prio]||['NORMAL',C_GREEN];
-  addLog('task','Admin přiřadil úkol "'+title+'" členovi "'+(tm?tm.displayName:target)+'".',{embed:rich(pr[1],'✅ NOVÝ ÚKOL','**'+title+'**',[['👤 Člen',tm?tm.displayName:target],['⚡ Priorita',pr[0]]],{by:(getMember()?getMember().displayName:'Admin')})});
+  addLog('task','Admin přiřadil úkol "'+title+'" členovi "'+(tm?tm.displayName:target)+'".',{extraPing:pingBox('ping-task'),embed:rich(pr[1],'✅ NOVÝ ÚKOL','**'+title+'**',[['👤 Člen',tm?tm.displayName:target],['⚡ Priorita',pr[0]]],{by:(getMember()?getMember().displayName:'Admin')})});
   document.getElementById('taskTitle').value='';document.getElementById('taskDesc').value='';
   st.textContent='// ROZKAZ ODESLÁN';setTimeout(function(){st.textContent='';},2000);
   toast('Úkol přiřazen','success');renderAdminTasks();
@@ -1637,7 +1646,7 @@ function sendMsg(){
   var mid=uid();var targets=target==='all'?members.map(function(m){return m.id;}):[target];
   targets.forEach(function(tid){if(!msgs[tid])msgs[tid]=[];msgs[tid].push({id:mid,subject:subject,body:body,date:nowStr()});});
   DB.set('messages',msgs);
-  addLog('msg','Admin odeslal zprávu "'+subject+'" — '+(target==='all'?'všem':'jednomu členovi')+'.'+(target==='all'?'\n'+body:''),{noPing:target!=='all',embed:rich(C_TEAL,'💬 NOVÁ ZPRÁVA','**'+subject+'**'+(target==='all'?'\n'+body:''),[['Komu',target==='all'?'Všichni členové':'Jeden člen']],{by:(getMember()?getMember().displayName:'Admin')})});
+  addLog('msg','Admin odeslal zprávu "'+subject+'" — '+(target==='all'?'všem':'jednomu členovi')+'.'+(target==='all'?'\n'+body:''),{noPing:target!=='all',extraPing:pingBox('ping-msg'),embed:rich(C_TEAL,'💬 NOVÁ ZPRÁVA','**'+subject+'**'+(target==='all'?'\n'+body:''),[['Komu',target==='all'?'Všichni členové':'Jeden člen']],{by:(getMember()?getMember().displayName:'Admin')})});
   document.getElementById('msgSubject').value='';document.getElementById('msgBody').value='';
   st.textContent='// ZPRÁVA ODESLÁNA';setTimeout(function(){st.textContent='';},2000);
   toast('Zpráva odeslána','success');renderAdminMessages();
@@ -1699,7 +1708,7 @@ function addItem(){
   var items=DB.get('warehouse')||[];
   items.push({id:uid(),name:name,cat:cat,qty:qty,min:min,img:img,note:note});
   DB.set('warehouse',items);
-  addLog('wh','Admin přidal novou položku: '+name+' ('+qty+' ks)',{img:img,pingCat:cat,plain:true,icon:'🆕'});
+  addLog('wh','Admin přidal novou položku: '+name+' ('+qty+' ks)',{img:img,pingCat:cat,plain:true,icon:'🆕',extraPing:pingBox('ping-additem')});
   ['wi-name','wi-img','wi-note'].forEach(function(i){document.getElementById(i).value='';});
   document.getElementById('wi-qty').value='1';document.getElementById('wi-min').value='0';
   document.getElementById('wi-preview').innerHTML='—';
@@ -1815,6 +1824,7 @@ function saveBoost(p){
   var img=bEl(p,'bo-img').value.trim();
   var st=bEl(p,'boostStatus');
   if(!name){st.textContent='// ZADEJTE NÁZEV AUTA';return;}
+  var exPing=pingBox((p||'')+'ping-boost');
   var list=DB.get('boosting')||[];
   var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena')+' — Backup: '+(backup?'POTŘEBA':'ne')+(note?' — Poznámka: '+note:'');
   var short=name+' (Tier '+tier+(speed?', '+speed+' MP/H':'')+') · Lokace: '+(loc||'neuvedena')+'; Backup: '+(backup?'POTŘEBA':'NE')+(note?'; Poznámka: '+note:'');
@@ -1822,11 +1832,11 @@ function saveBoost(p){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
     b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.backup=backup;b.note=note;b.img=img;
-    addLog('boost',m.displayName+' upravil vozidlo '+short,{embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,img)});
+    addLog('boost',m.displayName+' upravil vozidlo '+short,{extraPing:exPing,embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,img)});
     toast('Vozidlo upraveno','success');
   }else{
     list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,backup:backup,note:note,img:img,ownerId:m.id,addedBy:m.displayName});
-    addLog('boost',m.displayName+' přidal vozidlo '+short,{embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,img)});
+    addLog('boost',m.displayName+' přidal vozidlo '+short,{extraPing:exPing,embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,img)});
     toast(name+' přidáno','success');
   }
   DB.set('boosting',list);
@@ -1926,7 +1936,7 @@ function submitHeist(){
     footer:{text:'Heist report'},
     timestamp:new Date().toISOString()
   };
-  addLog('heist',m.displayName+' nahlásil heist: '+target+' — '+(escaped?'ujeli':'neujeli')+', lidí: '+people+', loot: '+loot+'.',{embed:em,icon:'💎'});
+  addLog('heist',m.displayName+' nahlásil heist: '+target+' — '+(escaped?'ujeli':'neujeli')+', lidí: '+people+', loot: '+loot+'.',{embed:em,icon:'💎',extraPing:pingBox('ping-heist')});
   ['hs-detail','hs-people','hs-loot','hs-desc'].forEach(function(i){document.getElementById(i).value='';});
   document.getElementById('hs-target').selectedIndex=0;document.getElementById('hs-escaped').value='yes';
   st.style.color='';st.textContent='// REPORT ODESLÁN';setTimeout(function(){st.textContent='';},3000);
@@ -2047,7 +2057,7 @@ function submitExcuse(){
     'Předpokládaná délka nepřítomnosti: **'+(length||'neuvedena')+'**\n\n'+
     (note?'Poznámka: '+note+'\n\n':'')+
     'S pozdravem,\n**'+m.displayName+'**';
-  addLog('excuse','Člen "'+m.displayName+'" odeslal omluvenku na "'+event+'".',{embedTitle:'✉ OMLUVENKA — '+m.displayName,discordText:tmpl});
+  addLog('excuse','Člen "'+m.displayName+'" odeslal omluvenku na "'+event+'".',{embedTitle:'✉ OMLUVENKA — '+m.displayName,discordText:tmpl,extraPing:pingBox('ping-exc')});
   ['excDate','excEvent','excReason','excLength','excNote'].forEach(function(i){document.getElementById(i).value='';});
   st.textContent='// ODESLÁNO';setTimeout(function(){st.textContent='';},2500);
   toast('Omluvenka odeslána','success');renderMyExcuses();renderAdminExcuses();
@@ -2077,7 +2087,7 @@ function submitReport(){
   var reports=DB.get('reports')||[];
   reports.push({id:uid(),memberId:m.id,memberName:m.displayName,body:body,date:nowStr()});
   DB.set('reports',reports);
-  addLog('report','Člen "'+m.displayName+'" odeslal hlášení.',{embed:rich(C_PURPLE,'📄 NOVÉ HLÁŠENÍ','**'+m.displayName+'** odeslal hlášení.',[],{by:m.displayName})});
+  addLog('report','Člen "'+m.displayName+'" odeslal hlášení.',{extraPing:pingBox('ping-rep'),embed:rich(C_PURPLE,'📄 NOVÉ HLÁŠENÍ','**'+m.displayName+'** odeslal hlášení.',[],{by:m.displayName})});
   document.getElementById('reportText').value='';
   st.textContent='// ODESLÁNO';setTimeout(function(){st.textContent='';},2500);
   toast('Hlášení odesláno','success');renderSentReports();renderAdminReports();
@@ -2192,7 +2202,7 @@ function submitIncome(){
     status:'pending'
   });
   DB.set('incomes',incomes);
-  addLog('fin','Člen "'+m.displayName+'" nahlásil příjem $'+amount+' ('+source+').',{embed:rich(C_YELLOW,'💵 NAHLÁŠEN PŘÍJEM',null,[['👤 Člen',m.displayName],['💵 Částka',money(amount)],['📦 Zdroj',source]],{by:m.displayName})});
+  addLog('fin','Člen "'+m.displayName+'" nahlásil příjem $'+amount+' ('+source+').',{extraPing:pingBox('ping-inc'),embed:rich(C_YELLOW,'💵 NAHLÁŠEN PŘÍJEM',null,[['👤 Člen',m.displayName],['💵 Částka',money(amount)],['📦 Zdroj',source]],{by:m.displayName})});
   document.getElementById('incAmount').value='';
   document.getElementById('incNote').value='';
   st.textContent='// ODESLÁNO KE SCHVÁLENÍ';

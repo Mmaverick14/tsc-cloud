@@ -556,3 +556,9 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .wh-search,.wh-sort{background:var(--deep);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.7rem;padding:.45rem .6rem;outline:none;}
 .wh-search{flex:1;min-width:160px;}
 .wh-search:focus,.wh-sort:focus{border-color:var(--acc);}
+
+
+/* ── OZNAČIT MEMBER (zaškrtávátko u formulářů) ── */
+.ping-chk{display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--textb);letter-spacing:.06em;user-select:none;}
+.ping-chk input{accent-color:var(--acc);}
+.ping-chk.small{font-size:.55rem;margin-top:.2rem;}

@@ -124,7 +124,7 @@
             <div class="field-group"><label class="fl">VAŠE JMÉNO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="depName" placeholder="Jméno..."/></div></div>
             <div class="field-group"><label class="fl">ITEM</label><div class="iw"><span class="ip">&gt;_</span><select id="depItem" class="fw"></select></div></div>
             <div class="field-group"><label class="fl">MNOŽSTVÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="depAmt" value="1" min="1"/></div></div>
-            <div class="dep-ftr"><button class="btn-acc small" onclick="depositItem()">+ VLOŽIT DO SKLADU</button><span id="depStatus" class="smsg"></span></div>
+            <div class="dep-ftr"><button class="btn-acc small" onclick="depositItem()">+ VLOŽIT DO SKLADU</button><label class="ping-chk"><input type="checkbox" id="ping-dep"/><span>🔔 Označit Member</span></label><span id="depStatus" class="smsg"></span></div>
           </div>
         </div>
       </div>
@@ -146,7 +146,7 @@
             <div class="field-group fg-full"><label class="fl">FOTO — URL z Fivemanage</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="mbo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'m')"/></div></div>
             <div class="field-group"><label class="fl">NÁHLED</label><div id="mbo-preview" class="img-prev" style="width:140px;height:80px;">—</div></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" id="mboostSaveBtn" onclick="saveBoost('m')">PŘIDAT</button><button class="btn-ghost small" onclick="resetBoostForm('m')">ZRUŠIT</button><span id="mboostStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" id="mboostSaveBtn" onclick="saveBoost('m')">PŘIDAT</button><label class="ping-chk"><input type="checkbox" id="mping-boost"/><span>🔔 Označit Member</span></label><button class="btn-ghost small" onclick="resetBoostForm('m')">ZRUŠIT</button><span id="mboostStatus" class="smsg"></span></div>
         </div>
         <div class="wh-filters">
           <button class="wf active" onclick="mBoostFilter('all',this)">VŠE</button>
@@ -176,7 +176,7 @@
             <div class="field-group fg-full"><label class="fl">LOOT *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="hs-loot" placeholder="např. $85 000 + 12× zlatý slitek (nebo „nic“)"/></div></div>
             <div class="field-group fg-full"><label class="fl">POPIS PRŮBĚHU *</label><textarea id="hs-desc" class="adm-ta" style="min-height:110px;" placeholder="Jak akce probíhala, co se povedlo / nepovedlo, zásah policie..."></textarea></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="submitHeist()">💎 ODESLAT REPORT</button><span id="hsStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="submitHeist()">💎 ODESLAT REPORT</button><label class="ping-chk"><input type="checkbox" id="ping-heist"/><span>🔔 Označit Member</span></label><span id="hsStatus" class="smsg"></span></div>
         </div>
         <div class="sh">// MOJE REPORTY</div>
         <div id="myHeists" class="stream"></div>
@@ -212,7 +212,7 @@
             </div>
           </div>
           <div class="fp-ftr">
-            <button class="btn-acc small" onclick="submitIncome()">💰 NAHLÁSIT PŘÍJEM</button>
+            <button class="btn-acc small" onclick="submitIncome()">💰 NAHLÁSIT PŘÍJEM</button><label class="ping-chk"><input type="checkbox" id="ping-inc"/><span>🔔 Označit Member</span></label>
             <span id="incStatus" class="smsg"></span>
           </div>
         </div>
@@ -237,7 +237,7 @@
             <div class="field-group fg-full"><label class="fl">PŘEDPOKLÁDANÁ DÉLKA NEPŘÍTOMNOSTI</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="excLength" placeholder="např. 2 dny, do neděle..."/></div></div>
             <div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="excNote"/></div></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="submitExcuse()">ODESLAT</button><span id="excStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="submitExcuse()">ODESLAT</button><label class="ping-chk"><input type="checkbox" id="ping-exc"/><span>🔔 Označit Member</span></label><span id="excStatus" class="smsg"></span></div>
         </div>
         <div class="sh">// MOJE OMLUVENKY</div>
         <div id="myExcuses" class="stream"></div>
@@ -251,7 +251,7 @@
             <label class="fl">ZPRÁVA PRO VEDENÍ</label>
             <textarea id="reportText" class="adm-ta" style="min-height:120px;" placeholder="Zadejte zprávu..."></textarea>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="submitReport()">📢 ODESLAT</button><span id="reportStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="submitReport()">📢 ODESLAT</button><label class="ping-chk"><input type="checkbox" id="ping-rep"/><span>🔔 Označit Member</span></label><span id="reportStatus" class="smsg"></span></div>
         </div>
         <div class="sh">// ODESLANÉ</div>
         <div id="mSentReports" class="stream"></div>
@@ -368,7 +368,7 @@
             <div class="field-group fg-full"><label class="fl">NÁZEV</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="taskTitle"/></div></div>
             <div class="field-group fg-full"><label class="fl">BRIEFING</label><textarea id="taskDesc" class="adm-ta"></textarea></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="assignTask()">ODESLAT ROZKAZ</button><span id="taskStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="assignTask()">ODESLAT ROZKAZ</button><label class="ping-chk"><input type="checkbox" id="ping-task"/><span>🔔 Označit Member</span></label><span id="taskStatus" class="smsg"></span></div>
         </div>
               <div class="sh">// ZADANÉ ÚKOLY</div>
         <div id="aTaskList" class="stream"></div>
@@ -383,7 +383,7 @@
             <div class="field-group"><label class="fl">PŘEDMĚT</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="msgSubject"/></div></div>
             <div class="field-group fg-full"><label class="fl">OBSAH</label><textarea id="msgBody" class="adm-ta"></textarea></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="sendMsg()">ODESLAT</button><span id="msgStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="sendMsg()">ODESLAT</button><label class="ping-chk"><input type="checkbox" id="ping-msg"/><span>🔔 Označit Member</span></label><span id="msgStatus" class="smsg"></span></div>
         </div>
               <div class="sh">// ODESLANÉ ZPRÁVY</div>
         <div id="aMsgList" class="stream"></div>
@@ -402,7 +402,7 @@
             <div class="field-group"><label class="fl">NÁHLED</label><div id="wi-preview" class="img-prev">—</div></div>
             <div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-note"/></div></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="addItem()">PŘIDAT</button><span id="addItemStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="addItem()">PŘIDAT</button><label class="ping-chk"><input type="checkbox" id="ping-additem"/><span>🔔 Označit Member</span></label><span id="addItemStatus" class="smsg"></span></div>
         </div>
         <div class="wh-filters">
           <button class="wf active" onclick="aWhFilter('all',this)">VŠE</button>
@@ -443,7 +443,7 @@
             <div class="field-group fg-full"><label class="fl">FOTO — URL z Fivemanage</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bo-img" placeholder="https://r2.fivemanage.com/..." oninput="previewBoostImg(this.value,'')"/></div></div>
             <div class="field-group"><label class="fl">NÁHLED</label><div id="bo-preview" class="img-prev" style="width:140px;height:80px;">—</div></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" id="boostSaveBtn" onclick="saveBoost()">PŘIDAT</button><button class="btn-ghost small" onclick="resetBoostForm()">ZRUŠIT</button><span id="boostStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" id="boostSaveBtn" onclick="saveBoost()">PŘIDAT</button><label class="ping-chk"><input type="checkbox" id="ping-boost"/><span>🔔 Označit Member</span></label><button class="btn-ghost small" onclick="resetBoostForm()">ZRUŠIT</button><span id="boostStatus" class="smsg"></span></div>
         </div>
         <div class="wh-filters">
           <button class="wf active" onclick="aBoostFilter('all',this)">VŠE</button>
@@ -504,7 +504,7 @@
               </table>
             </div>
           </div>
-          <div class="fp-ftr" style="margin-top:.8rem;"><button class="btn-acc small" onclick="addCloth()">+ PŘIDAT SET</button><span id="addClothStatus" class="smsg"></span></div>
+          <div class="fp-ftr" style="margin-top:.8rem;"><button class="btn-acc small" onclick="addCloth()">+ PŘIDAT SET</button><label class="ping-chk"><input type="checkbox" id="ping-cloth"/><span>🔔 Označit Member</span></label><span id="addClothStatus" class="smsg"></span></div>
         </div>
         <div id="aClothCols" class="cloth-sets-wrap adm-cloth"></div>
       </div>
@@ -520,7 +520,7 @@
             <div class="field-group"><label class="fl">NEPOVINNÁ</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="exp-optional" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Člen platí dobrovolně</span></label></div></div>
             <div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="exp-note"/></div></div>
           </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="addExpense()">PŘIDAT</button><span id="expStatus" class="smsg"></span></div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="addExpense()">PŘIDAT</button><label class="ping-chk"><input type="checkbox" id="ping-exp"/><span>🔔 Označit Member</span></label><span id="expStatus" class="smsg"></span></div>
         </div>
         <div id="financeAdminPanel" class="finance-admin"></div>
       </div>
