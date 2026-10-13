@@ -178,8 +178,9 @@ function sendToDiscord(type,msg,opts){
     var cp=opts.pingCat?((secs['cat_'+opts.pingCat]||{}).ping||''):'';
     ping=pingTag(cp||sec.ping);
   }
+  if(opts.extraPing)ping=(ping?ping+' ':'')+opts.extraPing;
   var text='`'+nowStr()+'` '+msg;
-  var body={username:s.webhookName||'Frakce LOG',allowed_mentions:{parse:['roles','everyone']}};
+  var body={username:s.webhookName||'Frakce LOG',allowed_mentions:{parse:['roles','everyone','users']}};
   var img=opts.img?absImg(opts.img):'';
   if(opts.embed){
     if(ping)body.content=ping;
@@ -584,7 +585,7 @@ function renderBoard(){
     return '<div class="board-post '+p.type+'">'+
       '<div class="bp-header"><div class="bp-title">'+esc(p.title)+'</div>'+
       '<span class="bp-type '+p.type+'">'+{info:'INFO',warning:'VAROVÁNÍ',urgent:'URGENTNÍ',confirm:'POTVRDIT'}[p.type]+'</span></div>'+
-      '<div class="bp-body">'+esc(p.body)+'</div>'+
+      '<div class="bp-body">'+esc(mentionView(p.body))+'</div>'+
       '<div class="bp-footer"><span class="bp-date">'+p.date+' — '+esc(p.author)+'</span>'+
       '<div class="bp-reactions">'+
         (needsConfirm?'<span class="bp-confirm-count">✓ '+confCount+'</span>'+
@@ -701,6 +702,7 @@ function renderMemberWarehouse(){
 // Upozornění do Discordu při poklesu pod limit (jen při přechodu dolů, ne při každém výdeji)
 function stockAlert(item,before){
   if(!item||item.qty>=before)return;
+  if(item.cat==='drugs')return; // drogy se do Discordu nehlásí
   var min=item.min||0;
   if(item.qty===0&&before>0){
     addLog('wh','Došla zásoba: '+item.name+' (0 ks) — je potřeba doplnit.',{img:item.img,pingCat:item.cat,plain:true,icon:'🚨'});
@@ -1282,6 +1284,7 @@ function renderSettings(){
   var fs=DB.get('finsettings')||{weeklyFee:5000,feeDay:0};
   document.getElementById('discordWebhook').value=s.webhook||'';
   document.getElementById('discordName').value=s.webhookName||'Frakce LOG';
+  document.getElementById('memberRoleId').value=s.memberRoleId||'';
   document.getElementById('weeklyFee').value=fs.weeklyFee||5000;
   document.getElementById('feeDay').value=fs.feeDay||0;
   renderSectionHooks();
@@ -1291,6 +1294,7 @@ function saveWebhook(){
   var s=DB.get('settings')||{};
   s.webhook=document.getElementById('discordWebhook').value.trim();
   s.webhookName=document.getElementById('discordName').value.trim()||'Frakce LOG';
+  s.memberRoleId=(document.getElementById('memberRoleId').value||'').replace(/\D/g,'');
   DB.set('settings',s);setText('webhookStatus','// ULOŽENO');setTimeout(function(){setText('webhookStatus','');},2000);toast('Webhook uložen','success');
 }
 function testWebhook(){
@@ -1385,6 +1389,7 @@ function renderMemberGrid(){
         (m.position==='Boss'?'<div class="mc-note">🔒 Chráněný účet — Bosse nelze odebrat</div>':'')+
         (locked?'<div style="display:none">':'<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;">')+
           '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:0;" id="nm2-'+m.id+'" value="'+esc(m.displayName)+'" placeholder="IC jméno"/><button class="btn-acc small" onclick="changeName(\''+m.id+'\')">JMÉNO</button></div>'+
+          '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:0;" id="did-'+m.id+'" value="'+esc(m.discordId||'')+'" placeholder="Discord ID"/><button class="btn-acc small" onclick="changeDiscordId(\''+m.id+'\')">DISCORD</button></div>'+
           '<select class="mc-pos-sel" id="pos-'+m.id+'">'+POSITIONS.map(function(p){return '<option value="'+p+'"'+(m.position===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+
           '<button class="btn-acc small" onclick="changePosition(\''+m.id+'\')">POZICE</button>'+
           (m.position==='Boss'?'':'<button class="btn-acc small" onclick="toggleAdminAccess(\''+m.id+'\')">'+(!m.adminAccess?'DÁT ADMIN':'ODEBRAT ADMIN')+'</button>')+
@@ -1441,6 +1446,7 @@ async function createMember(){
   var pos=document.getElementById('nm-pos').value;
   var admin=document.getElementById('nm-admin').checked;
   var note=document.getElementById('nm-note').value.trim();
+  var discordId=(document.getElementById('nm-discord').value||'').replace(/\D/g,'');
   var st=document.getElementById('createStatus');
   if(!email||!name||!pass){st.textContent='// VYPLŇTE POVINNÁ POLE';return;}
   if(email.indexOf('@')<1){st.textContent='// NEPLATNÝ E-MAIL';return;}
@@ -1454,14 +1460,23 @@ async function createMember(){
   try{res=await adminApi({action:'create',email:email,password:pass});}
   catch(e){st.textContent='// CHYBA: '+e.message;return;}
   members=DB.get('members')||[];
-  members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin,note:note,panic:false});
+  members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin,note:note,discordId:discordId,panic:false});
   DB.set('members',members);
   addLog('member','Admin registroval nového člena: "'+name+'" ('+pos+').');
   st.textContent='// ČLEN REGISTROVÁN';
   setTimeout(function(){st.textContent='';},3000);
-  ['nm-email','nm-name','nm-pass','nm-note'].forEach(function(i){document.getElementById(i).value='';});
+  ['nm-email','nm-name','nm-pass','nm-note','nm-discord'].forEach(function(i){document.getElementById(i).value='';});
   document.getElementById('nm-admin').checked=false;
   toast(name+' registrován','success');renderMemberGrid();populatePwMember();
+}
+function changeDiscordId(id){
+  var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
+  if(!canManage(m)){toast('Bosse může spravovat jen Boss','error');return;}
+  var el=document.getElementById('did-'+id);
+  var v=(el?el.value:'').replace(/\D/g,'');
+  m.discordId=v;DB.set('members',members);
+  addLog('member','Admin nastavil Discord ID člena "'+m.displayName+'".',{noDiscord:true});
+  toast('Discord ID uloženo','success');renderMemberGrid();
 }
 function changeName(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
@@ -1527,10 +1542,28 @@ function renderAdminBoard(){
         (p.type==='confirm'?'<span style="font-size:.65rem;color:var(--muted)">✓ '+confCount+'</span>':'')+
         '<button class="btn-micro del" onclick="delPost(\''+p.id+'\')">✕</button>'+
       '</div></div>'+
-      '<div class="bp-body">'+esc(p.body)+'</div>'+
+      '<div class="bp-body">'+esc(mentionView(p.body))+'</div>'+
       '<div class="bp-footer"><span class="bp-date">'+p.date+' — '+esc(p.author)+'</span></div>'+
     '</div>';
   }).join('');
+}
+// @jméno člena -> <@DiscordID> (jen členové s vyplněným Discord ID)
+function resolveMentions(t){
+  t=String(t||'');
+  var ms=(DB.get('members')||[]).filter(function(m){return m.discordId&&m.displayName;})
+    .sort(function(a,b){return b.displayName.length-a.displayName.length;});
+  ms.forEach(function(m){
+    var re=new RegExp('@'+m.displayName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?![\\w\u00C0-\u017F])','gi');
+    t=t.replace(re,'<@'+m.discordId+'>');
+  });
+  return t;
+}
+// <@ID> -> @jméno (zobrazení na webu)
+function mentionView(t){
+  var ms=DB.get('members')||[];
+  return String(t||'').replace(/<@!?(\d{5,})>/g,function(x,id){
+    var m=ms.find(function(y){return y.discordId===id;});return m?'@'+m.displayName:x;
+  });
 }
 function postBoard(){
   var title=document.getElementById('boardTitle').value.trim();
@@ -1543,8 +1576,19 @@ function postBoard(){
   posts.push({id:uid(),title:title,body:body,type:type,date:nowStr(),author:author});
   DB.set('board',posts);
   var bt={info:['ℹ️ INFO',C_BLUE],warning:['⚠️ VAROVÁNÍ',C_ORANGE],urgent:['🚨 URGENTNÍ',C_RED],confirm:['✅ POTVRĎTE PŘEČTENÍ',C_PURPLE]}[type]||['',C_BLUE];
-  addLog('board','Admin přidal příspěvek na nástěnku: "'+title+'".',{embed:rich(bt[1],'📌 NOVÝ PŘÍSPĚVEK NA NÁSTĚNCE','**'+title+'**',[['Typ',bt[0]],['Autor',author]],{by:author})});
+  // Discord: @jméno / <@ID> v textu pingne hráče, checkbox pingne roli Member (ID v Nastavení)
+  var dTitle=resolveMentions(title),dBody=resolveMentions(body);
+  var mentions=[];var rx=/<@!?(\d{5,})>/g,mm;
+  while((mm=rx.exec(dTitle+' '+dBody))){var tag='<@'+mm[1]+'>';if(mentions.indexOf(tag)===-1)mentions.push(tag);}
+  var cfgS=DB.get('settings')||{};
+  var pingBox=document.getElementById('boardPingMember');
+  if(pingBox&&pingBox.checked){
+    if(cfgS.memberRoleId)mentions.push('<@&'+cfgS.memberRoleId+'>');
+    else toast('V Nastavení chybí ID role Member','error',4000);
+  }
+  addLog('board','Admin přidal příspěvek na nástěnku: "'+title+'".',{extraPing:mentions.join(' '),embed:rich(bt[1],'📌 NOVÝ PŘÍSPĚVEK NA NÁSTĚNCE','**'+dTitle+'**\n'+dBody,[['Typ',bt[0]],['Autor',author]],{by:author})});
   document.getElementById('boardTitle').value='';document.getElementById('boardBody').value='';
+  if(pingBox)pingBox.checked=false;
   st.textContent='// ZVEŘEJNĚNO';setTimeout(function(){st.textContent='';},2000);
   toast('Příspěvek zveřejněn','success');renderAdminBoard();renderBoard();
 }

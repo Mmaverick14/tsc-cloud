@@ -324,6 +324,7 @@
             <div class="field-group"><label class="fl">HESLO (MIN. 6 ZNAKŮ)</label><div class="iw"><span class="ip">&gt;_</span><input type="password" id="nm-pass"/></div></div>
             <div class="field-group"><label class="fl">POZICE</label><div class="iw"><span class="ip">&gt;_</span><select id="nm-pos"><option>Boss</option><option>Right hand</option><option>Counselor</option><option>Devil's Advocate</option><option>Chief of Arms</option><option>Advisor</option><option>Intelligence Chief</option><option>Keeper of secrets</option><option selected>Member</option></select></div></div>
             <div class="field-group"><label class="fl">ADMIN PŘÍSTUP</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="nm-admin" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Povoleno</span></label></div></div>
+            <div class="field-group"><label class="fl">DISCORD ID</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="nm-discord" placeholder="např. 123456789012345678"/></div></div>
             <div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="nm-note"/></div></div>
           </div>
           <div class="fp-ftr"><button class="btn-acc small" onclick="createMember()">REGISTROVAT</button><span id="createStatus" class="smsg"></span></div>
@@ -347,8 +348,9 @@
         <div class="form-panel" style="margin:1.2rem;">
           <div class="form-grid">
             <div class="field-group fg-full"><label class="fl">NADPIS</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="boardTitle"/></div></div>
-            <div class="field-group fg-full"><label class="fl">OBSAH</label><textarea id="boardBody" class="adm-ta" style="min-height:80px;"></textarea></div>
+            <div class="field-group fg-full"><label class="fl">OBSAH (označení hráče: @jméno nebo &lt;@ID&gt;)</label><textarea id="boardBody" class="adm-ta" style="min-height:80px;"></textarea></div>
             <div class="field-group"><label class="fl">TYP</label><div class="iw"><span class="ip">&gt;_</span><select id="boardType"><option value="info">INFO</option><option value="warning">VAROVÁNÍ</option><option value="urgent">URGENTNÍ</option><option value="confirm">POTVRĎTE PŘEČTENÍ</option></select></div></div>
+            <div class="field-group"><label class="fl">OZNAČIT</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="boardPingMember" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Označit Member</span></label></div></div>
           </div>
           <div class="fp-ftr"><button class="btn-acc small" onclick="postBoard()">ZVEŘEJNIT</button><span id="boardStatus" class="smsg"></span></div>
         </div>
@@ -558,6 +560,7 @@
           <div class="form-grid">
             <div class="field-group fg-full"><label class="fl">WEBHOOK URL</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="discordWebhook" placeholder="https://discord.com/api/webhooks/..."/></div></div>
             <div class="field-group fg-full"><label class="fl">NÁZEV BOTA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="discordName" value="Frakce LOG"/></div></div>
+            <div class="field-group fg-full"><label class="fl">ID ROLE „MEMBER“ (pro označení na nástěnce)</label><div class="iw"><span class="ip">@</span><input type="text" id="memberRoleId" placeholder="ID Discord role Member"/></div></div>
           </div>
           <div class="fp-ftr"><button class="btn-acc small" onclick="saveWebhook()">ULOŽIT</button><button class="btn-ghost small" onclick="testWebhook()" style="margin-left:.5rem">TEST</button><span id="webhookStatus" class="smsg"></span></div>
         </div>
