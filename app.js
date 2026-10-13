@@ -51,11 +51,11 @@ var DB={
   }
 };
 
-var POSITIONS=['Mastermind','Overseer',"Devil's Advocate",'Consul','Captain','Enforcer','Associate'];
+var POSITIONS=['Mastermind','Overseer',"Devil's Advocate",'Advisor','Captain','Enforcer','Associate'];
 // Mastermind a Overseer mají admin přístup automaticky
 var ADMIN_POS=['Mastermind','Overseer'];
 // převod starých názvů pozic (už uložených u členů) na nové
-var OLD_POS_MAP={'Boss':'Mastermind','Right hand':'Overseer','Counselor':'Consul',"Devil's Advocate":"Devil's Advocate",'Chief of Arms':'Captain','Advisor':'Enforcer','Intelligence Chief':'Enforcer','Keeper of secrets':'Enforcer','Member':'Associate'};
+var OLD_POS_MAP={'Boss':'Mastermind','Right hand':'Overseer','Counselor':'Advisor',"Devil's Advocate":"Devil's Advocate",'Chief of Arms':'Captain','Advisor':'Enforcer','Intelligence Chief':'Enforcer','Keeper of secrets':'Enforcer','Member':'Associate'};
 function migratePositions(){
   var members=DB.get('members');if(!members)return;
   var ch=false;
@@ -71,7 +71,7 @@ function syncAdminForPos(m,oldPos){
   if(ADMIN_POS.indexOf(m.position)!==-1)m.adminAccess=true;
   else if(oldPos&&ADMIN_POS.indexOf(oldPos)!==-1)m.adminAccess=false;
 }
-var VEDENI_POS=['Mastermind','Overseer',"Devil's Advocate",'Consul'];
+var VEDENI_POS=['Mastermind','Overseer',"Devil's Advocate",'Advisor'];
 var CAT={weapons:'ZBRANĚ',ammo:'MUNICE',drugs:'DROGY',equipment:'VYBAVENÍ',vehicles:'VOZIDLA',other:'OSTATNÍ'};
 var PRIO={low:'LOW',normal:'NORMAL',high:'HIGH',urgent:'URGENT'};
 var CLOTH_CAT={masks:'Masky & Vousy',jackets:'Bundy & Trička',pants:'Kalhoty & Boty',acc:'Doplňky',sets:'Sety'};
@@ -88,7 +88,7 @@ function canManage(target){
   if(target.position!=='Mastermind')return true;
   var me=getMember();return !!me&&me.position==='Mastermind';
 }
-var RADIO_GEN_POS=['Mastermind','Overseer',"Devil's Advocate",'Consul','Captain'];
+var RADIO_GEN_POS=['Mastermind','Overseer',"Devil's Advocate",'Advisor','Captain'];
 function canRegenRadios(){var m=getMember();return !!m&&RADIO_GEN_POS.indexOf(m.position)!==-1;}
 function isVedeni(pos){return VEDENI_POS.indexOf(pos)!==-1;}
 function getWeekKey(){var d=new Date();var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
@@ -1357,7 +1357,7 @@ function genNewRadios(){
   return f;
 }
 function regenRadios(){
-  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Mastermind, Overseer, Devil\'s Advocate, Consul a Captain','error');return;}
+  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Mastermind, Overseer, Devil\'s Advocate, Advisor a Captain','error');return;}
   if(!confirm('Vygenerovat nové frekvence hned teď? Staré přestanou platit.'))return;
   var m=getMember();var who=m?m.displayName:'Admin';
   var f=genNewRadios();
@@ -2625,13 +2625,13 @@ function rosterNames(m){
   return {first:f,last:l,nick:(m.nick||'').trim()};
 }
 // Strike a návrhy povýšení smí spravovat jen první tři nejvyšší role
-var ROSTER_POS=['Mastermind','Overseer','Consul'];
+var ROSTER_POS=['Mastermind','Overseer','Advisor'];
 function canRoster(){var m=getMember();return !!m&&ROSTER_POS.indexOf(m.position)!==-1;}
 function renderRoster(admin){
   var el=document.getElementById(admin?'rosterAdmin':'rosterMember');if(!el)return;
   var ctl=admin&&canRoster();
   var bar=ctl?'<div class="fp-ftr" style="margin-bottom:.8rem;"><button class="btn-acc small" onclick="sendRosterToDiscord()">📤 POSLAT NA DISCORD</button><span id="rosterSendStatus" class="smsg"></span></div>':'';
-  var note=(admin&&!ctl)?'<div class="radio-info" style="margin-bottom:.8rem;">Strike a návrhy povýšení mohou spravovat jen <b>Mastermind, Overseer a Consul</b>. Ty ostatní vidí přehled jen pro čtení.</div>':'';
+  var note=(admin&&!ctl)?'<div class="radio-info" style="margin-bottom:.8rem;">Strike a návrhy povýšení mohou spravovat jen <b>Mastermind, Overseer a Advisor</b>. Ty ostatní vidí přehled jen pro čtení.</div>':'';
   var members=(DB.get('members')||[]).slice().sort(function(a,b){
     var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);
     return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');
@@ -2667,7 +2667,7 @@ function rosterTarget(id,namesOnly){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});
   if(!m)return null;
   if(!namesOnly){
-    if(!canRoster()){toast('Strike a povýšení spravuje jen Mastermind, Overseer a Consul','error');return null;}
+    if(!canRoster()){toast('Strike a povýšení spravuje jen Mastermind, Overseer a Advisor','error');return null;}
     if(m.position==='Mastermind'){toast('Mastermindovi nelze dát strike ani změnit roli','error');return null;}
   }
   if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return null;}
@@ -2675,7 +2675,7 @@ function rosterTarget(id,namesOnly){
 }
 // Pošle aktuální seznam členů (hodnost, jméno, přezdívka, strike, návrh povýšení) na Discord do sekce „Seznam Členů“
 function sendRosterToDiscord(){
-  if(!canRoster()){toast('Odeslat Crew List smí jen Mastermind, Overseer a Consul','error');return;}
+  if(!canRoster()){toast('Odeslat Crew List smí jen Mastermind, Overseer a Advisor','error');return;}
   var members=(DB.get('members')||[]).slice().sort(function(a,b){
     var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);
     return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');
