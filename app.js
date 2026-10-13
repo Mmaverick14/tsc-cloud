@@ -114,6 +114,7 @@ var SECTIONS=[
   {key:'report',label:'Hlášení'},
   {key:'radio',label:'Vysílačka'},
   {key:'member',label:'Členové'},
+  {key:'roster',label:'Seznam Členů (strike, povýšení)'},
   {key:'panic',label:'Panic'}
 ];
 function sectionLabel(k){var s=SECTIONS.find(function(x){return x.key===k;});return s?s.label:k;}
@@ -132,7 +133,7 @@ function pingTag(v){
 // opts: {img:'url/soubor', pingCat:'weapons', noPing:true}
 // jméno zadané ve formuláři; pokud se liší od přihlášeného člena, přidá se v závorce
 function whoName(jmeno,m){return String(jmeno).toLowerCase()===String(m.displayName).toLowerCase()?jmeno:jmeno+' ('+m.displayName+')';}
-var LOG_ICONS={sys:'🔑',board:'📌',task:'✅',msg:'💬',wh:'📦',ev:'📤',boost:'🚗',heist:'💎',cloth:'👕',fin:'💰',excuse:'📝',excuse_dec:'📝',report:'📄',radio:'📻',member:'👤',panic:'🚨'};
+var LOG_ICONS={sys:'🔑',board:'📌',task:'✅',msg:'💬',wh:'📦',ev:'📤',boost:'🚗',heist:'💎',cloth:'👕',fin:'💰',excuse:'📝',excuse_dec:'📝',report:'📄',radio:'📻',member:'👤',roster:'🪪',panic:'🚨'};
 // ── GRAFICKÉ ZÁPISY (embed) ──
 function money(n){return '$'+Number(n||0).toLocaleString('cs-CZ');}
 function clip(s,n){s=String(s==null?'':s);return s.length>n?s.slice(0,n-1)+'…':s;}
@@ -413,13 +414,15 @@ var M_RENDER={
   board:function(){renderBoard();},tasks:function(){renderMemberTasks();},messages:function(){renderMemberMessages();},
   warehouse:function(){renderMemberWarehouse();},boosting:function(){renderMemberBoosting();},clothing:function(){renderClothing();},
   finance:function(){renderMyFinance();renderMyIncomes();},excuse:function(){renderMyExcuses();},
-  report:function(){renderSentReports();},heist:function(){renderMyHeists();},radio:function(){renderMyRadio();},contacts:function(){renderContacts();}
+  report:function(){renderSentReports();},heist:function(){renderMyHeists();},radio:function(){renderMyRadio();},contacts:function(){renderContacts();},
+  roster:function(){renderRoster(false);}
 };
 var A_RENDER={
   members:function(){renderMemberGrid();},tasks:function(){renderAdminTasks();},messages:function(){renderAdminMessages();},board:function(){renderAdminBoard();},warehouse:function(){renderAdminWarehouse();},
   boosting:function(){renderAdminBoosting();},heists:function(){renderAdminHeists();},
   clothing:function(){renderAdminClothing();},finance:function(){renderAdminFinance();},excuses:function(){renderAdminExcuses();},
-  reports:function(){renderAdminReports();},incomes:function(){renderAdminIncomes();},log:function(){renderLog();}
+  reports:function(){renderAdminReports();},incomes:function(){renderAdminIncomes();},log:function(){renderLog();},
+  roster:function(){renderRoster(true);}
 };
 function forceLogout(panic){
   currentMemberId=null;stopRealtime();DB.cache={};
@@ -476,6 +479,7 @@ function aTab(tab,btn){
   if(btn)btn.classList.add('active');
   renderPickers();
   if(tab==='members')    renderMemberGrid();
+  if(tab==='roster')     renderRoster(true);
   if(tab==='board')      renderAdminBoard();
   if(tab==='tasks')      {populateTaskTarget();renderAdminTasks();}
   if(tab==='messages')   {populateMsgTarget();renderAdminMessages();}
@@ -515,6 +519,7 @@ function mTab(tab,btn){
   if(tab==='report')    renderSentReports();
   if(tab==='radio')     renderMyRadio();
   if(tab==='contacts')  renderContacts();
+  if(tab==='roster')    renderRoster(false);
   if(tab==='incomes')   {renderMyIncomes();}
   updateBadges();
 }
@@ -1404,6 +1409,7 @@ function renderMemberGrid(){
         (locked?'<div style="display:none">':'<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;">')+
           '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:0;" id="nm2-'+m.id+'" value="'+esc(m.displayName)+'" placeholder="IC jméno"/><button class="btn-acc small" onclick="changeName(\''+m.id+'\')">JMÉNO</button></div>'+
           '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:0;" id="did-'+m.id+'" value="'+esc(m.discordId||'')+'" placeholder="Discord ID"/><button class="btn-acc small" onclick="changeDiscordId(\''+m.id+'\')">DISCORD</button></div>'+
+          '<div style="display:flex;gap:.4rem;width:100%;margin-bottom:.2rem;flex-wrap:wrap;"><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="fn-'+m.id+'" value="'+esc(rosterNames(m).first)+'" placeholder="Jméno"/><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="ln-'+m.id+'" value="'+esc(rosterNames(m).last)+'" placeholder="Příjmení"/><input type="text" class="mc-pos-sel" style="flex:1;min-width:70px;" id="nk-'+m.id+'" value="'+esc(m.nick||'')+'" placeholder="Přezdívka"/><button class="btn-acc small" onclick="changeRosterInfo(\''+m.id+'\')">ÚDAJE</button></div>'+
           '<select class="mc-pos-sel" id="pos-'+m.id+'">'+POSITIONS.map(function(p){return '<option value="'+p+'"'+(m.position===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+
           '<button class="btn-acc small" onclick="changePosition(\''+m.id+'\')">POZICE</button>'+
           (m.position==='Boss'?'':'<button class="btn-acc small" onclick="toggleAdminAccess(\''+m.id+'\')">'+(!m.adminAccess?'DÁT ADMIN':'ODEBRAT ADMIN')+'</button>')+
@@ -1461,6 +1467,9 @@ async function createMember(){
   var admin=document.getElementById('nm-admin').checked;
   var note=document.getElementById('nm-note').value.trim();
   var discordId=(document.getElementById('nm-discord').value||'').replace(/\D/g,'');
+  var firstName=document.getElementById('nm-first').value.trim();
+  var lastName=document.getElementById('nm-last').value.trim();
+  var nick=document.getElementById('nm-nick').value.trim();
   var st=document.getElementById('createStatus');
   if(!email||!name||!pass){st.textContent='// VYPLŇTE POVINNÁ POLE';return;}
   if(email.indexOf('@')<1){st.textContent='// NEPLATNÝ E-MAIL';return;}
@@ -1474,12 +1483,12 @@ async function createMember(){
   try{res=await adminApi({action:'create',email:email,password:pass});}
   catch(e){st.textContent='// CHYBA: '+e.message;return;}
   members=DB.get('members')||[];
-  members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin,note:note,discordId:discordId,panic:false});
+  members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin,note:note,discordId:discordId,firstName:firstName,lastName:lastName,nick:nick,strikes:0,panic:false});
   DB.set('members',members);
   addLog('member','Admin registroval nového člena: "'+name+'" ('+pos+').');
   st.textContent='// ČLEN REGISTROVÁN';
   setTimeout(function(){st.textContent='';},3000);
-  ['nm-email','nm-name','nm-pass','nm-note','nm-discord'].forEach(function(i){document.getElementById(i).value='';});
+  ['nm-email','nm-name','nm-pass','nm-note','nm-discord','nm-first','nm-last','nm-nick'].forEach(function(i){document.getElementById(i).value='';});
   document.getElementById('nm-admin').checked=false;
   toast(name+' registrován','success');renderMemberGrid();populatePwMember();
 }
@@ -2089,7 +2098,7 @@ function delHeist(id){
 }
 
 // ── LOG ──────────────────────────────────────
-var LOG_LABELS={ev:'VÝDEJ',wh:'SKLAD',task:'ÚKOL',msg:'ZPRÁVA',member:'ČLEN',board:'NÁSTĚNKA',sys:'SYSTÉM',fin:'FINANCE',panic:'PANIC',boost:'BOOSTING',heist:'HEIST',cloth:'OBLEČENÍ',excuse:'OMLUVENKA',report:'HLÁŠENÍ',radio:'VYSÍLAČKA'};
+var LOG_LABELS={roster:'SEZNAM ČLENŮ',ev:'VÝDEJ',wh:'SKLAD',task:'ÚKOL',msg:'ZPRÁVA',member:'ČLEN',board:'NÁSTĚNKA',sys:'SYSTÉM',fin:'FINANCE',panic:'PANIC',boost:'BOOSTING',heist:'HEIST',cloth:'OBLEČENÍ',excuse:'OMLUVENKA',report:'HLÁŠENÍ',radio:'VYSÍLAČKA'};
 var logCat='all';
 function logFilter(cat,btn){
   logCat=cat;document.querySelectorAll('#logFilters .wf').forEach(function(b){b.classList.remove('active');});
@@ -2483,6 +2492,108 @@ function delLogEntry(idx){
   var log=DB.get('syslog')||[];
   if(idx<0||idx>=log.length)return;
   log.splice(idx,1);DB.set('syslog',log);renderLog();
+}
+
+// ── NAŠE ČLENOVÉ (přehled: jméno, příjmení, přezdívka, hodnost, strike, návrh na povýšení) ──
+// Jméno/příjmení/přezdívku nastavuje Vedení v Admin → Členové. Když chybí, jméno se odvodí z IC jména.
+function rosterNames(m){
+  var f=(m.firstName||'').trim(),l=(m.lastName||'').trim();
+  if(!f&&!l){var p=String(m.displayName||'').trim().split(/\s+/);f=p[0]||'';l=p.slice(1).join(' ');}
+  return {first:f,last:l,nick:(m.nick||'').trim()};
+}
+// Strike a návrhy povýšení smí spravovat jen první tři nejvyšší role
+var ROSTER_POS=['Boss','Right hand','Counselor'];
+function canRoster(){var m=getMember();return !!m&&ROSTER_POS.indexOf(m.position)!==-1;}
+function renderRoster(admin){
+  var el=document.getElementById(admin?'rosterAdmin':'rosterMember');if(!el)return;
+  var ctl=admin&&canRoster();
+  var note=(admin&&!ctl)?'<div class="radio-info" style="margin-bottom:.8rem;">Strike a návrhy povýšení mohou spravovat jen <b>Boss, Right hand a Counselor</b>. Ty ostatní vidí přehled jen pro čtení.</div>':'';
+  var members=(DB.get('members')||[]).slice().sort(function(a,b){
+    var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);
+    return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');
+  });
+  if(!members.length){el.innerHTML='<div class="empty-s">// Žádní členové</div>';return;}
+  var rows=members.map(function(m){
+    var n=rosterNames(m);var s=Math.max(0,Math.min(3,parseInt(m.strikes)||0));
+    var strike='<div class="rs-strikes s'+s+'">'+[1,2,3].map(function(i){return '<span class="rs-chip'+(i<=s?' on':'')+'">'+i+'</span>';}).join('')+'</div>';
+    var promo=m.promo?('<div class="rs-promo"><b>→ '+esc(m.promo.to)+'</b>'+(m.promo.note?'<div class="rs-promo-note">'+esc(m.promo.note)+'</div>':'')+(m.promo.by?'<div class="rs-promo-by">// '+esc(m.promo.by)+(m.promo.date?' — '+esc(m.promo.date):'')+'</div>':'')+'</div>'):'<span class="rs-none">—</span>';
+    var act='';
+    if(ctl){
+      if(!canManage(m)){act='<td class="rs-act"><span class="rs-none">🔒 Boss</span></td>';}
+      else{
+        act='<td class="rs-act">'+
+          '<div class="rs-act-row"><span class="rs-lbl">STRIKE</span><button class="btn-micro" onclick="setStrike(\''+m.id+'\',-1)"'+(s<=0?' disabled':'')+'>−</button><button class="btn-micro del" onclick="setStrike(\''+m.id+'\',1)"'+(s>=3?' disabled':'')+'>+</button></div>'+
+          '<div class="rs-act-row"><select class="mc-pos-sel" id="rp-sel-'+m.id+'">'+POSITIONS.filter(function(p){return p!==m.position;}).map(function(p){return '<option'+(m.promo&&m.promo.to===p?' selected':'')+'>'+esc(p)+'</option>';}).join('')+'</select></div>'+
+          '<div class="rs-act-row"><input type="text" class="mc-pos-sel" id="rp-note-'+m.id+'" placeholder="Důvod / poznámka" value="'+esc(m.promo?m.promo.note||'':'')+'"/></div>'+
+          '<div class="rs-act-row"><button class="btn-acc small" onclick="proposePromo(\''+m.id+'\')">'+(m.promo?'ZMĚNIT NÁVRH':'NAVRHNOUT')+'</button>'+
+          (m.promo?'<button class="btn-acc small" onclick="approvePromo(\''+m.id+'\')">✓ POVÝŠIT</button><button class="btn-micro del" onclick="clearPromo(\''+m.id+'\')">✕</button>':'')+'</div></td>';
+      }
+    }
+    return '<tr'+(s>=3?' class="rs-danger"':'')+'>'+
+      '<td data-l="Jméno">'+esc(n.first)+'</td>'+
+      '<td data-l="Příjmení">'+esc(n.last)+'</td>'+
+      '<td data-l="Přezdívka">'+(n.nick?esc(n.nick):'<span class="rs-none">—</span>')+'</td>'+
+      '<td data-l="Hodnost"><span class="rs-pos '+(isVedeni(m.position)?'vedeni':'other')+'">'+esc(m.position)+'</span></td>'+
+      '<td data-l="Strike">'+strike+'</td>'+
+      '<td data-l="Návrh na povýšení">'+promo+'</td>'+act+'</tr>';
+  }).join('');
+  el.innerHTML=note+'<div class="rs-scroll"><table class="rs-table"><thead><tr><th>JMÉNO</th><th>PŘÍJMENÍ</th><th>PŘEZDÍVKA</th><th>HODNOST</th><th>STRIKE</th><th>NÁVRH NA POVÝŠENÍ</th>'+(ctl?'<th>SPRÁVA</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function rosterTarget(id){
+  var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});
+  if(!m)return null;
+  if(!canRoster()){toast('Strike a povýšení spravuje jen Boss, Right hand a Counselor','error');return null;}
+  if(!canManage(m)){toast('Bosse může spravovat jen Boss','error');return null;}
+  return {members:members,m:m};
+}
+function rosterWho(){var a=getMember();return a?a.displayName:'Admin';}
+function changeRosterInfo(id){
+  var t=rosterTarget(id);if(!t)return;
+  t.m.firstName=(document.getElementById('fn-'+id).value||'').trim();
+  t.m.lastName=(document.getElementById('ln-'+id).value||'').trim();
+  t.m.nick=(document.getElementById('nk-'+id).value||'').trim();
+  DB.set('members',t.members);
+  addLog('member','Admin upravil jméno/příjmení/přezdívku člena "'+t.m.displayName+'".',{noDiscord:true});
+  toast('Údaje uloženy','success');renderMemberGrid();
+}
+function setStrike(id,delta){
+  var t=rosterTarget(id);if(!t)return;
+  var old=Math.max(0,Math.min(3,parseInt(t.m.strikes)||0));
+  var nu=Math.max(0,Math.min(3,old+delta));
+  if(nu===old)return;
+  t.m.strikes=nu;DB.set('members',t.members);
+  var n=rosterNames(t.m);
+  addLog('roster',rosterWho()+(delta>0?' udělil strike ':' odebral strike ')+'členovi '+t.m.displayName+' ('+old+' → '+nu+'/3).',{embed:rich(delta>0?(nu>=3?C_RED:C_ORANGE):C_GREEN,delta>0?'⚠️ STRIKE UDĚLEN':'✅ STRIKE ODEBRÁN','**'+t.m.displayName+'**',[
+    ['👤 Jméno',(n.first+' '+n.last).trim()||'—'],['🏷 Přezdívka',n.nick||'—'],['🎖️ Hodnost',t.m.position],
+    ['⚡ Strike',['—','1/3','2/3','3/3'][nu]+' (dříve '+old+'/3)']],{by:rosterWho()})});
+  toast('Strike '+nu+'/3 — '+t.m.displayName,delta>0?'error':'success');
+  renderRoster(true);
+}
+function proposePromo(id){
+  var t=rosterTarget(id);if(!t)return;
+  var to=document.getElementById('rp-sel-'+id).value;
+  var note=(document.getElementById('rp-note-'+id).value||'').trim();
+  t.m.promo={to:to,note:note,by:rosterWho(),date:nowStr()};
+  DB.set('members',t.members);
+  addLog('roster',rosterWho()+' navrhl povýšení: '+t.m.displayName+' ('+t.m.position+' → '+to+')'+(note?' — '+note:'')+'.',{embed:rich(C_BLUE,'⬆️ NÁVRH NA POVÝŠENÍ','**'+t.m.displayName+'**',[
+    ['🎖️ Nyní',t.m.position],['➡️ Navrženo',to],['📝 Důvod',note||'—',false]],{by:rosterWho()})});
+  toast('Návrh na povýšení uložen','success');renderRoster(true);
+}
+function clearPromo(id){
+  var t=rosterTarget(id);if(!t||!t.m.promo)return;
+  delete t.m.promo;DB.set('members',t.members);
+  addLog('roster',rosterWho()+' zrušil návrh na povýšení člena '+t.m.displayName+'.',{embed:rich(C_GREY,'🚫 NÁVRH NA POVÝŠENÍ ZRUŠEN','**'+t.m.displayName+'**',[['🎖️ Hodnost',t.m.position]],{by:rosterWho()})});
+  toast('Návrh zrušen','info');renderRoster(true);
+}
+function approvePromo(id){
+  var t=rosterTarget(id);if(!t||!t.m.promo)return;
+  var to=t.m.promo.to;var me=getMember();
+  if(to==='Boss'&&!(me&&me.position==='Boss')){toast('Pozici Boss může přidělit jen Boss','error');return;}
+  if(!confirm('Povýšit "'+t.m.displayName+'" na "'+to+'"?'))return;
+  var old=t.m.position;t.m.position=to;delete t.m.promo;
+  DB.set('members',t.members);
+  addLog('roster',rosterWho()+' povýšil '+t.m.displayName+' ('+old+' → '+to+').',{embed:rich(C_GREEN,'🏅 POVÝŠENÍ','**'+t.m.displayName+'**',[['🎖️ Původní',old],['➡️ Nová hodnost',to]],{by:rosterWho()})});
+  toast('Povýšeno na '+to,'success');renderRoster(true);
 }
 
 // ── START ──────────────────────────────────────

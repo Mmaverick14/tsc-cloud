@@ -61,6 +61,7 @@
         <button class="nb" onclick="mTab('excuse',this)"><span class="ni">📝</span><span class="nl">OMLUVENKY</span></button>
         <button class="nb" onclick="mTab('report',this)"><span class="ni">📢</span><span class="nl">HLÁŠENÍ</span></button>
         <button class="nb" onclick="mTab('radio',this)"><span class="ni">📻</span><span class="nl">VYSÍLAČKA</span></button>
+        <button class="nb" onclick="mTab('roster',this)"><span class="ni">🪪</span><span class="nl">NAŠE ČLENOVÉ</span></button>
         <button class="nb" onclick="mTab('contacts',this)"><span class="ni">📱</span><span class="nl">KONTAKTY</span></button>
         <button class="nb admin-only hidden" id="adminNavBtn" onclick="goToAdmin()"><span class="ni">🛡️</span><span class="nl">ADMIN</span></button>
       </nav>
@@ -266,6 +267,12 @@
         <div id="radioDisplay" class="radio-wrap"></div>
       </div>
 
+      <!-- NAŠE ČLENOVÉ -->
+      <div id="mt-roster" class="mt">
+        <div class="ph"><div class="pt">🪪 // NAŠE ČLENOVÉ</div></div>
+        <div id="rosterMember" class="roster-wrap"></div>
+      </div>
+
       <!-- KONTAKTY -->
       <div id="mt-contacts" class="mt">
         <div class="ph"><div class="pt">📱 // KONTAKTY</div></div>
@@ -309,12 +316,19 @@
         <button class="nb" onclick="aTab('incomes',this)"><span class="ni">💰</span><span class="nl">PŘÍJMY</span></button>
         <button class="nb" onclick="aTab('log',this)"><span class="ni">📜</span><span class="nl">LOG</span></button>
         <button class="nb" onclick="aTab('members',this)"><span class="ni">👥</span><span class="nl">ČLENOVÉ</span></button>
+        <button class="nb" onclick="aTab('roster',this)"><span class="ni">🪪</span><span class="nl">NAŠE ČLENOVÉ</span></button>
       </nav>
       <div class="sb-foot">
         <button class="btn-back" onclick="goBackToMember()">← ZPĚT</button>
       </div>
     </aside>
     <main class="main">
+
+      <!-- NAŠE ČLENOVÉ ADMIN -->
+      <div id="at-roster" class="at">
+        <div class="ph"><div class="pt">🪪 // NAŠE ČLENOVÉ — STRIKY A POVÝŠENÍ</div></div>
+        <div id="rosterAdmin" class="roster-wrap"></div>
+      </div>
 
       <!-- MEMBERS -->
       <div id="at-members" class="at">
@@ -323,7 +337,10 @@
           <div class="fp-title">// REGISTRACE ČLENA</div>
           <div class="form-grid">
             <div class="field-group"><label class="fl">E-MAIL (PŘIHLÁŠENÍ)</label><div class="iw"><span class="ip">&gt;_</span><input type="email" id="nm-email"/></div></div>
-            <div class="field-group"><label class="fl">IC JMÉNO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="nm-name"/></div></div>
+            <div class="field-group"><label class="fl">IC JMÉNO (zobrazované)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="nm-name"/></div></div>
+            <div class="field-group"><label class="fl">JMÉNO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="nm-first"/></div></div>
+            <div class="field-group"><label class="fl">PŘÍJMENÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="nm-last"/></div></div>
+            <div class="field-group"><label class="fl">PŘEZDÍVKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="nm-nick"/></div></div>
             <div class="field-group"><label class="fl">HESLO (MIN. 6 ZNAKŮ)</label><div class="iw"><span class="ip">&gt;_</span><input type="password" id="nm-pass"/></div></div>
             <div class="field-group"><label class="fl">POZICE</label><div class="iw"><span class="ip">&gt;_</span><select id="nm-pos"><option>Boss</option><option>Right hand</option><option>Counselor</option><option>Devil's Advocate</option><option>Chief of Arms</option><option>Advisor</option><option>Intelligence Chief</option><option>Keeper of secrets</option><option selected>Member</option></select></div></div>
             <div class="field-group"><label class="fl">ADMIN PŘÍSTUP</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="nm-admin" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Povoleno</span></label></div></div>

@@ -585,5 +585,33 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .boost-thumbs img:hover{border-color:var(--acc);}
 
 
+.log-type.roster{background:rgba(52,152,219,.08);color:#4a90d9;border:1px solid #1a3a5a;}
+/* ── NAŠE ČLENOVÉ ── */
+.roster-wrap{padding:1.1rem;}
+.rs-scroll{overflow-x:auto;border:1px solid var(--border);}
+.rs-table{width:100%;border-collapse:collapse;background:var(--card);min-width:720px;}
+.rs-table th{font-family:'Share Tech Mono',monospace;font-size:.52rem;letter-spacing:.14em;color:var(--acc-dim);background:var(--surf);border-bottom:2px solid var(--acc-dim);padding:.55rem .7rem;text-align:left;white-space:nowrap;}
+.rs-table td{padding:.6rem .7rem;border-bottom:1px solid var(--border);font-family:'Rajdhani',sans-serif;font-size:.95rem;font-weight:600;color:var(--textb);vertical-align:top;}
+.rs-table tbody tr:hover td{background:var(--surf);}
+.rs-table tr.rs-danger td:first-child{box-shadow:inset 3px 0 0 var(--red);}
+.rs-pos{font-family:'Share Tech Mono',monospace;font-size:.66rem;font-weight:700;}
+.rs-pos.vedeni{color:var(--pos-vedeni);}.rs-pos.other{color:var(--text);}
+.rs-none{color:var(--muted);font-weight:400;}
+.rs-strikes{display:flex;gap:.3rem;}
+.rs-chip{font-family:'Orbitron',sans-serif;font-size:.62rem;font-weight:700;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--brite);color:var(--muted);}
+.rs-strikes.s1 .rs-chip.on{color:var(--acc);border-color:var(--acc);background:var(--acc-dark);}
+.rs-strikes.s2 .rs-chip.on{color:orange;border-color:orange;background:rgba(255,165,0,.08);}
+.rs-strikes.s3 .rs-chip.on{color:var(--red);border-color:var(--red);background:rgba(192,57,43,.15);animation:blink 1.5s step-end infinite;}
+.rs-promo b{color:var(--green);font-weight:700;}
+.rs-promo-note{font-size:.8rem;font-weight:400;color:var(--text);margin-top:.15rem;}
+.rs-promo-by{font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--muted);margin-top:.15rem;font-weight:400;}
+.rs-act{min-width:210px;}
+.rs-act-row{display:flex;gap:.3rem;align-items:center;margin-bottom:.3rem;flex-wrap:wrap;}
+.rs-act-row .mc-pos-sel{width:100%;box-sizing:border-box;}
+.rs-lbl{font-family:'Share Tech Mono',monospace;font-size:.52rem;color:var(--acc-dim);letter-spacing:.12em;margin-right:.2rem;}
+.rs-act .btn-micro:disabled{opacity:.3;cursor:not-allowed;}
+.rs-act .mc-pos-sel{background:var(--surf);border:1px solid var(--border);color:var(--textb);font-family:'Share Tech Mono',monospace;font-size:.65rem;padding:.32rem .45rem;outline:none;color-scheme:dark;}
+@media(max-width:700px){.roster-wrap{padding:.7rem;}}
+
 /* admin vysílačka – čitelný info řádek */
 #rAutoInfo{color:var(--text)!important;}
