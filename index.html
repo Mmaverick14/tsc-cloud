@@ -53,6 +53,7 @@
         <button class="nb active" onclick="mTab('board',this)"><span class="ni">📣</span><span class="nl">OZNÁMENÍ</span></button>
         <button class="nb" onclick="mTab('tasks',this)"><span class="ni">📋</span><span class="nl">ÚKOLY</span><span class="nbadge" id="taskBadge"></span></button>
         <button class="nb" onclick="mTab('messages',this)"><span class="ni">💬</span><span class="nl">ZPRÁVY</span><span class="nbadge" id="msgBadge"></span></button>
+        <button class="nb" onclick="mTab('calendar',this)"><span class="ni">📅</span><span class="nl">KALENDÁŘ</span></button>
         <button class="nb" onclick="mTab('warehouse',this)"><span class="ni">📦</span><span class="nl">SKLAD</span></button>
         <button class="nb" onclick="mTab('boosting',this)"><span class="ni">🚗</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="mTab('heist',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
@@ -72,6 +73,12 @@
       </div>
     </aside>
     <main class="main">
+
+      <!-- KALENDÁŘ -->
+      <div id="mt-calendar" class="mt">
+        <div class="ph"><div class="pt">📅 // KALENDÁŘ AKCÍ</div></div>
+        <div id="calBodyM" class="cal-wrap"></div>
+      </div>
 
       <!-- NÁSTĚNKA -->
       <div id="mt-board" class="mt active">
@@ -305,6 +312,7 @@
         <button class="nb active" onclick="aTab('board',this)"><span class="ni">📣</span><span class="nl">OZNÁMENÍ</span></button>
         <button class="nb" onclick="aTab('tasks',this)"><span class="ni">📋</span><span class="nl">ÚKOLY</span></button>
         <button class="nb" onclick="aTab('messages',this)"><span class="ni">💬</span><span class="nl">ZPRÁVY</span></button>
+        <button class="nb" onclick="aTab('calendar',this)"><span class="ni">📅</span><span class="nl">KALENDÁŘ</span></button>
         <button class="nb" onclick="aTab('warehouse',this)"><span class="ni">📦</span><span class="nl">SKLAD</span></button>
         <button class="nb" onclick="aTab('boosting',this)"><span class="ni">🚗</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="aTab('heists',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
@@ -315,6 +323,7 @@
         <button class="nb" onclick="aTab('radio',this)"><span class="ni">📻</span><span class="nl">VYSÍLAČKA</span></button>
         <button class="nb" onclick="aTab('settings',this)"><span class="ni">🔧</span><span class="nl">NASTAVENÍ</span></button>
         <button class="nb" onclick="aTab('incomes',this)"><span class="ni">💰</span><span class="nl">PŘÍJMY</span></button>
+        <button class="nb" onclick="aTab('stats',this)"><span class="ni">📊</span><span class="nl">STATISTIKY</span></button>
         <button class="nb" onclick="aTab('log',this)"><span class="ni">📜</span><span class="nl">LOG</span></button>
         <button class="nb" onclick="aTab('members',this)"><span class="ni">👥</span><span class="nl">ČLENOVÉ</span></button>
         <button class="nb" onclick="aTab('roster',this)"><span class="ni">🪪</span><span class="nl">CREW LIST</span></button>
@@ -365,6 +374,30 @@
       </div>
 
       <!-- BOARD ADMIN -->
+      <div id="at-calendar" class="at">
+        <div class="ph"><div class="pt">📅 // KALENDÁŘ AKCÍ</div></div>
+        <div class="form-panel" style="margin:1.2rem;">
+          <div class="fp-title">// NOVÁ AKCE</div>
+          <div class="form-grid">
+            <div class="field-group fg-full"><label class="fl">NÁZEV *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="evTitle" placeholder="např. Fleeca heist, týdenní porada..."/></div></div>
+            <div class="field-group"><label class="fl">TYP</label><div class="iw"><span class="ip">&gt;_</span><select id="evType"><option value="heist">Heist</option><option value="meeting">Schůzka</option><option value="training">Trénink</option><option value="other">Jiné</option></select></div></div>
+            <div class="field-group"><label class="fl">MÍSTO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="evPlace" placeholder="kde se sejdeme"/></div></div>
+            <div class="field-group"><label class="fl">DATUM *</label><div class="iw"><span class="ip">&gt;_</span><input type="date" id="evDate"/></div></div>
+            <div class="field-group"><label class="fl">ČAS *</label><div class="iw"><span class="ip">&gt;_</span><input type="time" id="evTime" value="20:00"/></div></div>
+            <div class="field-group fg-full"><label class="fl">POZNÁMKA</label><textarea id="evNote" class="adm-ta" style="min-height:60px;" placeholder="co vzít, role, pravidla..."></textarea></div>
+          </div>
+          <div class="fp-ftr"><button class="btn-acc small" onclick="addEvent()">+ NAPLÁNOVAT AKCI</button><span id="evStatus" class="smsg"></span></div>
+        </div>
+        <div id="calBodyA" class="cal-wrap"></div>
+      </div>
+
+      <div id="at-stats" class="at">
+        <div class="ph"><div class="pt">📊 // STATISTIKY</div>
+          <select class="st-range" onchange="statsRange=this.value;renderStats()"><option value="all">Období: celé</option><option value="30">Posledních 30 dní</option><option value="7">Posledních 7 dní</option></select>
+        </div>
+        <div id="statsBody" class="st-wrap"></div>
+      </div>
+
       <div id="at-board" class="at active">
         <div class="ph"><div class="pt">📣 // OZNÁMENÍ</div></div>
         <div id="dashA" class="dash"></div>
