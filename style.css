@@ -628,3 +628,62 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .menu-ed-mv:hover:not(:disabled){background:var(--acc-dark);border-color:var(--acc-dim);}
 .menu-ed-mv:disabled{opacity:.25;cursor:default;}
 .menu-ed-hint{font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:.7rem;}
+
+/* ══ VYLEPŠENÍ: MENU ══ */
+.nb{transition:color .15s,background .2s,transform .18s,box-shadow .2s;}
+.nb:hover{transform:translateX(2px);}
+.nb .ni{font-size:.8rem;width:16px;transition:transform .2s,filter .2s;}
+.nb:hover .ni{transform:scale(1.15);}
+.nb.active{background:linear-gradient(90deg,rgba(196,154,20,.16),rgba(196,154,20,.02));border-color:rgba(196,154,20,.25);box-shadow:inset 3px 0 0 var(--acc);}
+.nb.active .ni{filter:drop-shadow(0 0 4px rgba(196,154,20,.6));}
+.nb.active .nl{text-shadow:0 0 8px rgba(196,154,20,.35);}
+.nb.grp-start{margin-top:.5rem;}
+.nb.grp-start::before{content:'';position:absolute;top:-.3rem;left:.6rem;right:.6rem;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);}
+.nbadge.visible{animation:badgePulse 2s ease-in-out infinite;}
+@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.5);}50%{box-shadow:0 0 0 4px rgba(192,57,43,0);}}
+.mt.active,.at.active{animation:tabIn .25s ease both;}
+@keyframes tabIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+/* ══ VYLEPŠENÍ: PŘEHLED (dashboard) ══ */
+.dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem;margin:0 1.2rem 1rem;}
+.dc{background:var(--card);border:1px solid var(--border);border-top:2px solid var(--acc-dim);padding:.65rem .8rem;transition:border-color .2s,transform .2s,background .2s;}
+.dc[onclick]{cursor:pointer;}
+.dc[onclick]:hover{border-color:var(--acc-dim);background:var(--acc-dark);transform:translateY(-2px);}
+.dc-top{display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem;}
+.dc-ic{font-size:.85rem;}
+.dc-lb{font-family:'Share Tech Mono',monospace;font-size:.55rem;letter-spacing:.14em;color:var(--text);}
+.dc-val{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:700;color:var(--acc);line-height:1.1;}
+.dc-val small{font-size:.75rem;color:var(--text);margin-left:.15rem;}
+.dc-sub{font-family:'Share Tech Mono',monospace;font-size:.52rem;color:var(--text);margin-top:.3rem;}
+.dc.warn{border-top-color:var(--red);}
+.dc.warn .dc-val{color:var(--red);}
+.dc.ok{border-top-color:var(--gdim);}
+.dc.ok .dc-val{color:var(--green);}
+.dash-online{grid-column:1/-1;font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--text);letter-spacing:.06em;padding:.1rem .1rem 0;}
+.dash-online .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:.45rem;box-shadow:0 0 6px var(--green);animation:badgePulse 2s infinite;}
+
+/* ══ VYLEPŠENÍ: MOBIL ══ */
+@media(max-width:700px){
+  .sidebar{padding-bottom:env(safe-area-inset-bottom,0px);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;scroll-snap-type:x proximity;background:rgba(18,18,18,.97);backdrop-filter:blur(8px);box-shadow:0 -6px 18px rgba(0,0,0,.5);border-top:1px solid var(--acc-dim);}
+  .sidebar::-webkit-scrollbar{display:none;}
+  .sb-nav{flex:0 0 auto;justify-content:flex-start;}
+  .nb{flex:0 0 auto;min-width:62px;min-height:52px;padding:.4rem .5rem;scroll-snap-align:center;border-top:2px solid transparent;}
+  .nb:hover{transform:none;}
+  .nb .ni{font-size:1.1rem;width:auto;}
+  .nb .nl{font-size:.52rem;letter-spacing:.02em;white-space:nowrap;}
+  .nb.active{background:linear-gradient(180deg,rgba(196,154,20,.18),transparent);border-top-color:var(--acc);box-shadow:none;}
+  .nb.grp-start{margin-top:0;margin-left:6px;}
+  .nb.grp-start::before{top:22%;bottom:22%;left:-4px;right:auto;width:1px;height:auto;background:var(--border);}
+  .nb.admin-only{border-top:2px solid transparent;margin-top:0;}
+  .nbadge{position:absolute;top:3px;right:6px;margin-left:0;}
+  .sb-foot{display:flex;align-items:center;gap:.4rem;padding:0 .5rem;border:none;margin:0 0 0 auto;flex:0 0 auto;}
+  .sb-foot .btn-back{white-space:nowrap;font-size:.5rem;padding:.45rem .6rem;width:auto;margin:0;}
+  .main{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px));}
+  .panic-btn{bottom:calc(66px + env(safe-area-inset-bottom,0px));}
+  .dash{margin:0 .7rem .8rem;grid-template-columns:1fr 1fr;}
+  .dc-val{font-size:1.25rem;}
+  .toast-container{left:.7rem;right:.7rem;}
+  .toast{max-width:none;}
+  .menu-ed{width:100%;}
+  .menu-ed-mv{width:36px;height:36px;}
+}

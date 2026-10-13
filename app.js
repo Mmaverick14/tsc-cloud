@@ -55,7 +55,7 @@ var POSITIONS=['Mastermind','Overseer',"Devil's Advocate",'Advisor','Captain','E
 // Mastermind a Overseer mají admin přístup automaticky
 var ADMIN_POS=['Mastermind','Overseer'];
 // převod starých názvů pozic (už uložených u členů) na nové
-var OLD_POS_MAP={'Boss':'Mastermind','Right hand':'Overseer','Counselor':'Advisor',"Devil's Advocate":"Devil's Advocate",'Chief of Arms':'Captain','Advisor':'Enforcer','Intelligence Chief':'Enforcer','Keeper of secrets':'Enforcer','Member':'Associate'};
+var OLD_POS_MAP={'Boss':'Mastermind','Right hand':'Overseer','Counselor':'Advisor','Consul':'Advisor',"Devil's Advocate":"Devil's Advocate",'Chief of Arms':'Captain','Intelligence Chief':'Enforcer','Keeper of secrets':'Enforcer','Member':'Associate'};
 function migratePositions(){
   var members=DB.get('members');if(!members)return;
   var ch=false;
@@ -412,10 +412,12 @@ async function enterPortal(session,isFreshLogin){
 
 // ── REALTIME (změny od ostatních členů se propíšou hned) ──
 function startRealtime(){
+  startPresence();
   if(rtChannel||!sb)return;
   rtChannel=sb.channel('frakce-kv').on('postgres_changes',{event:'*',schema:'public',table:TABLE},function(p){
     var row=p.new;if(!row||!row.key)return;
     if(Date.now()-(DB.lastWrite[row.key]||0)<2000)return; // vlastní zápis
+    if(/^seen_/.test(row.key)){if(row.value!==undefined)DB.cache[row.key]=row.value;renderDash();return;} // online stav — jen přepočítat přehled
     if(row.value===undefined){
       sb.from(TABLE).select('value').eq('key',row.key).maybeSingle().then(function(r){
         if(r.data){DB.cache[row.key]=r.data.value;scheduleRefresh();}
@@ -426,6 +428,7 @@ function startRealtime(){
   }).subscribe();
 }
 function stopRealtime(){
+  stopPresence();
   if(rtChannel&&sb){try{sb.removeChannel(rtChannel);}catch(e){}}
   rtChannel=null;
 }
@@ -492,10 +495,73 @@ function goToAdmin(){
 }
 
 
+
+// ════════════════════════════════
+//  ÚVODNÍ PŘEHLEDY (dashboard) + ONLINE STAV
+// ════════════════════════════════
+var PRESENCE_MS=5*60*1000,presenceTimer=null;
+function scrollNavTo(btn){
+  try{if(window.matchMedia('(max-width:700px)').matches){var sb=btn.closest('.sidebar');
+    if(sb){sb.scrollTo({left:btn.offsetLeft-(sb.clientWidth-btn.offsetWidth)/2,behavior:'smooth'});}}}catch(e){}
+}
+function pingPresence(){var m=getMember();if(!m)return;DB.set('seen_'+m.id,Date.now());}
+function startPresence(){pingPresence();clearInterval(presenceTimer);presenceTimer=setInterval(pingPresence,120000);}
+function stopPresence(){clearInterval(presenceTimer);presenceTimer=null;}
+function onlineMembers(){
+  var now=Date.now();
+  return (DB.get('members')||[]).filter(function(x){
+    if(x.id===currentMemberId)return true;
+    var t=DB.cache['seen_'+x.id];return typeof t==='number'&&now-t<PRESENCE_MS;
+  });
+}
+function goNav(scope,key){
+  var root=scope==='a'?'#adminScreen':'#memberScreen';
+  var b=document.querySelector(root+' .nb[onclick*="\''+key+'\'"]');
+  (scope==='a'?aTab:mTab)(key,b);
+}
+function dashCard(icon,label,val,sub,cls,go){
+  return '<div class="dc '+(cls||'')+'"'+(go?' onclick="'+go+'"':'')+'>'+
+    '<div class="dc-top"><span class="dc-ic">'+icon+'</span><span class="dc-lb">'+label+'</span></div>'+
+    '<div class="dc-val">'+val+'</div>'+(sub?'<div class="dc-sub">'+sub+'</div>':'')+'</div>';
+}
+function renderDash(){
+  var m=getMember();if(!m)return;
+  var members=DB.get('members')||[];
+  var on=onlineMembers();
+  var onLine='<div class="dash-online"><span class="dot"></span>ONLINE: '+(on.length?on.map(function(x){return esc(x.displayName);}).join(', '):'—')+'</div>';
+  var el=document.getElementById('dashM');
+  if(el){
+    var tasks=DB.get('tasks')||{},msgs=DB.get('messages')||{};
+    var openT=(tasks[m.id]||[]).filter(function(t){return !t.done;}).length;
+    var nMsg=(msgs[m.id]||[]).length;
+    var conf=DB.get('boardConfirmed')||{};
+    var toConf=(DB.get('board')||[]).filter(function(p){return p.type==='confirm'&&!((conf[p.id]||[]).indexOf(m.id)!==-1);}).length;
+    el.innerHTML=
+      dashCard('📋','ÚKOLY',openT,openT?'otevřené':'vše hotovo',openT?'':'ok',"goNav('m','tasks')")+
+      dashCard('💬','ZPRÁVY',nMsg,nMsg?'ve schránce':'žádné nové',nMsg?'':'ok',"goNav('m','messages')")+
+      dashCard('✓','K POTVRZENÍ',toConf,toConf?'čeká na přečtení':'nic nečeká',toConf?'warn':'ok')+
+      dashCard('🟢','ONLINE',on.length+'<small>/'+members.length+'</small>','členů v posledních 5 min','')+
+      onLine;
+  }
+  var ea=document.getElementById('dashA');
+  if(ea){
+    var tAll=DB.get('tasks')||{},open=0;
+    Object.keys(tAll).forEach(function(k){open+=(tAll[k]||[]).filter(function(t){return !t.done;}).length;});
+    var low=(DB.get('warehouse')||[]).filter(function(i){return i.qty===0||(i.min>0&&i.qty<=i.min);}).length;
+    ea.innerHTML=
+      dashCard('👥','ČLENOVÉ',members.length,'v crew',"","goNav('a','members')")+
+      dashCard('🟢','ONLINE',on.length+'<small>/'+members.length+'</small>','členů v posledních 5 min','')+
+      dashCard('📋','OTEVŘENÉ ÚKOLY',open,'napříč členy',open?'':'ok',"goNav('a','tasks')")+
+      dashCard('📦','NÍZKÁ ZÁSOBA',low,low?'položek dochází':'sklad v pořádku',low?'warn':'ok',"goNav('a','warehouse')")+
+      onLine;
+  }
+}
+
 // ════════════════════════════════
 //  ÚPRAVA MENU (pořadí + názvy) — edituje jen Mastermind
 // ════════════════════════════════
 // DB klíč 'menu_cfg' = {admin:{order:[klíče],names:{klíč:'Nový název'}}, member:{...}}
+var MENU_GROUPS={board:'A',tasks:'A',messages:'A',warehouse:'B',boosting:'B',heist:'B',heists:'B',clothing:'B',finance:'C',excuse:'D',excuses:'D',report:'D',reports:'D',radio:'D',settings:'E',incomes:'E',log:'E',members:'E',roster:'E',contacts:'E',admin:'E'};
 var MENU_NAVS={admin:'#adminScreen .sb-nav',member:'#memberScreen .sb-nav'};
 function menuKey(btn){
   if(btn.id==='adminNavBtn')return 'admin';
@@ -524,6 +590,13 @@ function applyMenuCfg(){
     items.forEach(function(it){
       var nl=it.btn.querySelector('.nl');
       if(nl)nl.textContent=(names[it.key]||'').trim()||it.def;
+    });
+    // oddělovače skupin (podle klíče záložky; funguje i po přeskládání)
+    var prev=null;
+    Array.prototype.forEach.call(nv.querySelectorAll(':scope > .nb'),function(b){
+      var g=MENU_GROUPS[menuKey(b)]||'Z';
+      b.classList.toggle('grp-start',prev!==null&&g!==prev);
+      prev=g;
     });
   });
   var me=getMember();
@@ -598,7 +671,7 @@ function aTab(tab,btn){
   document.querySelectorAll('.at').forEach(function(t){t.classList.remove('active');});
   document.querySelectorAll('#adminScreen .nb').forEach(function(b){b.classList.remove('active');});
   var el=document.getElementById('at-'+tab);if(el)el.classList.add('active');
-  if(btn)btn.classList.add('active');
+  if(btn){btn.classList.add('active');scrollNavTo(btn);}
   renderPickers();
   if(tab==='members')    renderMemberGrid();
   if(tab==='roster')     renderRoster(true);
@@ -625,7 +698,7 @@ function mTab(tab,btn){
   document.querySelectorAll('.mt').forEach(function(t){t.classList.remove('active');});
   document.querySelectorAll('#memberScreen .nb').forEach(function(b){b.classList.remove('active');});
   var el=document.getElementById('mt-'+tab);if(el)el.classList.add('active');
-  if(btn)btn.classList.add('active');
+  if(btn){btn.classList.add('active');scrollNavTo(btn);}
   var m=getMember();
   if(m){setText('sbName',m.displayName);setText('sbPos',m.position);}
   renderPickers();
@@ -702,6 +775,7 @@ function updateBadges(){
 
 // ── BOARD ────────────────────────────────────
 function renderBoard(){
+  renderDash();
   var posts=DB.get('board')||[];
   var confirmed=DB.get('boardConfirmed')||{};
   var m=getMember();
@@ -1675,6 +1749,7 @@ function liftPanic(id){
 
 // ── BOARD ADMIN ───────────────────────────────
 function renderAdminBoard(){
+  renderDash();
   var posts=DB.get('board')||[];
   var confirmed=DB.get('boardConfirmed')||{};
   var el=document.getElementById('adminBoardList');if(!el)return;
