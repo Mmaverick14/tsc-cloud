@@ -474,6 +474,7 @@ function aTab(tab,btn){
   document.querySelectorAll('#adminScreen .nb').forEach(function(b){b.classList.remove('active');});
   var el=document.getElementById('at-'+tab);if(el)el.classList.add('active');
   if(btn)btn.classList.add('active');
+  renderPickers();
   if(tab==='members')    renderMemberGrid();
   if(tab==='board')      renderAdminBoard();
   if(tab==='tasks')      {populateTaskTarget();renderAdminTasks();}
@@ -501,6 +502,7 @@ function mTab(tab,btn){
   if(btn)btn.classList.add('active');
   var m=getMember();
   if(m){setText('sbName',m.displayName);setText('sbPos',m.position);}
+  renderPickers();
   if(tab==='board')     renderBoard();
   if(tab==='tasks')     renderMemberTasks();
   if(tab==='messages')  renderMemberMessages();
@@ -1547,6 +1549,43 @@ function renderAdminBoard(){
     '</div>';
   }).join('');
 }
+// ── VÝBĚR LIDÍ K OZNAČENÍ (nástěnka, úkoly, zprávy, hlášení) ──
+var PICKERS=['pick-board','pick-task','pick-msg','pick-rep'];
+function renderPickers(){
+  var ms=(DB.get('members')||[]).slice().sort(function(a,b){return String(a.displayName).localeCompare(String(b.displayName),'cs');});
+  PICKERS.forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    el.innerHTML='<details class="pick-det"><summary>👥 Vybrat lidi k označení <span class="pick-count" id="'+id+'-n">(0)</span></summary>'+
+      '<div class="pick-tools"><button type="button" class="btn-micro" onclick="pickAll(\''+id+'\',true)">VŠICHNI</button><button type="button" class="btn-micro" onclick="pickAll(\''+id+'\',false)">ŽÁDNÝ</button></div>'+
+      '<div class="pick-list">'+(ms.length?ms.map(function(m){
+        return m.discordId
+          ?'<label class="pick-item"><input type="checkbox" value="'+esc(m.discordId)+'" onchange="pickUpdate(\''+id+'\')"/><span>'+esc(m.displayName)+'</span></label>'
+          :'<label class="pick-item off" title="Člen nemá vyplněné Discord ID"><input type="checkbox" disabled/><span>'+esc(m.displayName)+' <em>(chybí Discord ID)</em></span></label>';
+      }).join(''):'<span class="pick-item off">Žádní členové</span>')+'</div></details>';
+  });
+}
+function pickUpdate(id){
+  var el=document.getElementById(id);if(!el)return;
+  setText(id+'-n','('+el.querySelectorAll('input[type=checkbox]:checked').length+')');
+}
+function pickAll(id,on){
+  var el=document.getElementById(id);if(!el)return;
+  el.querySelectorAll('input[type=checkbox]:not(:disabled)').forEach(function(c){c.checked=on;});
+  pickUpdate(id);
+}
+// vrátí '<@id> <@id>' pro vybrané lidi a výběr vymaže
+function pickPing(id){
+  var el=document.getElementById(id);if(!el)return '';
+  var out=[];
+  el.querySelectorAll('input[type=checkbox]:checked').forEach(function(c){
+    if(c.value)out.push('<@'+c.value+'>');c.checked=false;
+  });
+  pickUpdate(id);
+  return out.join(' ');
+}
+function joinPings(){
+  return Array.prototype.slice.call(arguments).filter(function(x){return x;}).join(' ');
+}
 // Zaškrtnutá volba „Označit Member“ -> ping role Member (ID v Nastavení). Po použití se odškrtne.
 function pingBox(id){
   var b=document.getElementById(id);
@@ -1595,6 +1634,7 @@ function postBoard(){
     if(cfgS.memberRoleId)mentions.push('<@&'+cfgS.memberRoleId+'>');
     else toast('V Nastavení chybí ID role Member','error',4000);
   }
+  pickPing('pick-board').split(' ').forEach(function(t){if(t&&mentions.indexOf(t)===-1)mentions.push(t);});
   addLog('board','Admin přidal příspěvek na nástěnku: "'+title+'".',{extraPing:mentions.join(' '),embed:rich(bt[1],'📌 NOVÝ PŘÍSPĚVEK NA NÁSTĚNCE','**'+dTitle+'**\n'+dBody,[['Typ',bt[0]],['Autor',author]],{by:author})});
   document.getElementById('boardTitle').value='';document.getElementById('boardBody').value='';
   if(pingBox)pingBox.checked=false;
@@ -1630,7 +1670,7 @@ function assignTask(){
   DB.set('tasks',tasks);
   var m=DB.get('members')||[];var tm=m.find(function(x){return x.id===target;});
   var pr={low:['LOW',C_GREY],normal:['NORMAL',C_GREEN],high:['HIGH',C_ORANGE],urgent:['URGENT',C_RED]}[prio]||['NORMAL',C_GREEN];
-  addLog('task','Admin přiřadil úkol "'+title+'" členovi "'+(tm?tm.displayName:target)+'".',{extraPing:pingBox('ping-task'),embed:rich(pr[1],'✅ NOVÝ ÚKOL','**'+title+'**',[['👤 Člen',tm?tm.displayName:target],['⚡ Priorita',pr[0]]],{by:(getMember()?getMember().displayName:'Admin')})});
+  addLog('task','Admin přiřadil úkol "'+title+'" členovi "'+(tm?tm.displayName:target)+'".',{extraPing:joinPings(pingBox('ping-task'),pickPing('pick-task')),embed:rich(pr[1],'✅ NOVÝ ÚKOL','**'+title+'**',[['👤 Člen',tm?tm.displayName:target],['⚡ Priorita',pr[0]]],{by:(getMember()?getMember().displayName:'Admin')})});
   document.getElementById('taskTitle').value='';document.getElementById('taskDesc').value='';
   st.textContent='// ROZKAZ ODESLÁN';setTimeout(function(){st.textContent='';},2000);
   toast('Úkol přiřazen','success');renderAdminTasks();
@@ -1646,7 +1686,7 @@ function sendMsg(){
   var mid=uid();var targets=target==='all'?members.map(function(m){return m.id;}):[target];
   targets.forEach(function(tid){if(!msgs[tid])msgs[tid]=[];msgs[tid].push({id:mid,subject:subject,body:body,date:nowStr()});});
   DB.set('messages',msgs);
-  addLog('msg','Admin odeslal zprávu "'+subject+'" — '+(target==='all'?'všem':'jednomu členovi')+'.'+(target==='all'?'\n'+body:''),{noPing:target!=='all',extraPing:pingBox('ping-msg'),embed:rich(C_TEAL,'💬 NOVÁ ZPRÁVA','**'+subject+'**'+(target==='all'?'\n'+body:''),[['Komu',target==='all'?'Všichni členové':'Jeden člen']],{by:(getMember()?getMember().displayName:'Admin')})});
+  addLog('msg','Admin odeslal zprávu "'+subject+'" — '+(target==='all'?'všem':'jednomu členovi')+'.'+(target==='all'?'\n'+body:''),{noPing:target!=='all',extraPing:joinPings(pingBox('ping-msg'),pickPing('pick-msg')),embed:rich(C_TEAL,'💬 NOVÁ ZPRÁVA','**'+subject+'**'+(target==='all'?'\n'+body:''),[['Komu',target==='all'?'Všichni členové':'Jeden člen']],{by:(getMember()?getMember().displayName:'Admin')})});
   document.getElementById('msgSubject').value='';document.getElementById('msgBody').value='';
   st.textContent='// ZPRÁVA ODESLÁNA';setTimeout(function(){st.textContent='';},2000);
   toast('Zpráva odeslána','success');renderAdminMessages();
@@ -2087,7 +2127,7 @@ function submitReport(){
   var reports=DB.get('reports')||[];
   reports.push({id:uid(),memberId:m.id,memberName:m.displayName,body:body,date:nowStr()});
   DB.set('reports',reports);
-  addLog('report','Člen "'+m.displayName+'" odeslal hlášení.',{extraPing:pingBox('ping-rep'),embed:rich(C_PURPLE,'📄 NOVÉ HLÁŠENÍ','**'+m.displayName+'** odeslal hlášení.',[],{by:m.displayName})});
+  addLog('report','Člen "'+m.displayName+'" odeslal hlášení.',{extraPing:joinPings(pingBox('ping-rep'),pickPing('pick-rep')),embed:rich(C_PURPLE,'📄 NOVÉ HLÁŠENÍ','**'+m.displayName+'** odeslal hlášení.',[],{by:m.displayName})});
   document.getElementById('reportText').value='';
   st.textContent='// ODESLÁNO';setTimeout(function(){st.textContent='';},2500);
   toast('Hlášení odesláno','success');renderSentReports();renderAdminReports();

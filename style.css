@@ -562,3 +562,18 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 .ping-chk{display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--textb);letter-spacing:.06em;user-select:none;}
 .ping-chk input{accent-color:var(--acc);}
 .ping-chk.small{font-size:.55rem;margin-top:.2rem;}
+
+
+/* ── VÝBĚR LIDÍ K OZNAČENÍ ── */
+.member-pick{width:100%;}
+.pick-det{background:var(--surf);border:1px solid var(--border);}
+.pick-det summary{cursor:pointer;padding:.5rem .7rem;font-family:'Share Tech Mono',monospace;font-size:.68rem;color:var(--textb);letter-spacing:.06em;list-style:none;}
+.pick-det summary::-webkit-details-marker{display:none;}
+.pick-det[open] summary{border-bottom:1px solid var(--border);color:var(--acc);}
+.pick-count{color:var(--acc);}
+.pick-tools{display:flex;gap:.4rem;padding:.5rem .7rem 0;}
+.pick-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.25rem .8rem;padding:.5rem .7rem;max-height:200px;overflow-y:auto;}
+.pick-item{display:flex;align-items:center;gap:.4rem;font-family:'Rajdhani',sans-serif;font-size:.85rem;color:var(--textb);cursor:pointer;}
+.pick-item input{accent-color:var(--acc);}
+.pick-item.off{opacity:.45;cursor:not-allowed;}
+.pick-item em{font-style:normal;font-size:.6rem;color:var(--muted);}
