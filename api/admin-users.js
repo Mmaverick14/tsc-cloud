@@ -1,6 +1,3 @@
-// Vercel serverless funkce — správa přihlašovacích účtů členů.
-// Potřebuje env proměnné: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (nikdy je nedávej do klientského kódu!)
-
 const SB_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,12 +38,12 @@ module.exports = async (req, res) => {
   const members = (rows[0] && rows[0].value) || [];
   if (!members.length) {
     // prázdný výsledek = klíč nemá přístup k tabulce (RLS) nebo řádek "members" neexistuje
-    return res.status(500).json({ error: 'Seznam členů je prázdný — pravděpodobně je v SUPABASE_SERVICE_ROLE_KEY anon klíč místo service_role' });
+    return res.status(500).json({ error: 'Seznam členů je prázdný pravděpodobně je v SUPABASE_SERVICE_ROLE_KEY anon klíč místo service_role' });
   }
   const me = members.find((m) => m.authId === caller.id);
   if (!me) {
     // DOČASNÝ DEBUG: po vyřešení problému nahraď běžnou hláškou
-    return res.status(403).json({ error: 'Nemáš admin přístup — tvoje ID ' + caller.id + ' nenalezeno mezi členy (členů: ' + members.length + ')' });
+    return res.status(403).json({ error: 'Nemáš admin přístup tvoje ID ' + caller.id + ' nenalezeno mezi členy (členů: ' + members.length + ')' });
   }
   if (!me.adminAccess || me.panic) return res.status(403).json({ error: 'Nemáš admin přístup' });
 
@@ -78,7 +75,7 @@ module.exports = async (req, res) => {
       const gr = await svc('/auth/v1/admin/users/' + id);
       if (!gr.ok) return res.status(404).json({ error: 'Účet nenalezen' });
       const target = await gr.json();
-      if (!(target.app_metadata && target.app_metadata.frakce)) return res.status(403).json({ error: 'Tento účet nepatří frakci' });
+      if (!(target.app_metadata && target.app_metadata.frakce)) return res.status(403).json({ error: 'Tento účet nepatří frakce' });
 
       if (b.action === 'setPassword') {
         const password = String(b.password || '');
