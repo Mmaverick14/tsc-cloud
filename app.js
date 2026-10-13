@@ -51,8 +51,8 @@ var DB={
   }
 };
 
-var POSITIONS=['Boss','Right hand','Counselor',"Devil's Advocate",'Chief of Arms','Advisor','Intelligence Chief','Keeper of secrets','Member'];
-var VEDENI_POS=['Boss','Right hand','Counselor',"Devil's Advocate"];
+var POSITIONS=['Mastermid','Overseer','Consul',"Devil's Advocate",'Captain','Enforcer','Associate','Member'];
+var VEDENI_POS=['Mastermid','Overseer','Counselor',];
 var CAT={weapons:'ZBRANĚ',ammo:'MUNICE',drugs:'DROGY',equipment:'VYBAVENÍ',vehicles:'VOZIDLA',other:'OSTATNÍ'};
 var PRIO={low:'LOW',normal:'NORMAL',high:'HIGH',urgent:'URGENT'};
 var CLOTH_CAT={masks:'Masky & Vousy',jackets:'Bundy & Trička',pants:'Kalhoty & Boty',acc:'Doplňky',sets:'Sety'};
@@ -62,14 +62,14 @@ var pendingLoginId=null;
 
 function getMember(id){var members=DB.get('members')||[];return members.find(function(m){return m.id===(id||currentMemberId);})||null;}
 function isAdmin(){var m=getMember();return m&&m.adminAccess;}
-function isBossPos(m){return !!m&&m.position==='Boss';}
+function isBossPos(m){return !!m&&m.position==='Mastermid';}
 // Bosse smí spravovat jen Boss; ostatní (i Right hand) ne
 function canManage(target){
   if(!target)return false;
-  if(target.position!=='Boss')return true;
-  var me=getMember();return !!me&&me.position==='Boss';
+  if(target.position!=='Mastermid')return true;
+  var me=getMember();return !!me&&me.position==='Mastermid';
 }
-var RADIO_GEN_POS=['Boss','Right hand','Counselor',"Devil's Advocate",'Chief of Arms'];
+var RADIO_GEN_POS=['Mastermid','Overseer','Consul'];
 function canRegenRadios(){var m=getMember();return !!m&&RADIO_GEN_POS.indexOf(m.position)!==-1;}
 function isVedeni(pos){return VEDENI_POS.indexOf(pos)!==-1;}
 function getWeekKey(){var d=new Date();var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
