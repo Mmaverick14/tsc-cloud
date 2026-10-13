@@ -133,6 +133,21 @@ function pingTag(v){
 // jméno zadané ve formuláři; pokud se liší od přihlášeného člena, přidá se v závorce
 function whoName(jmeno,m){return String(jmeno).toLowerCase()===String(m.displayName).toLowerCase()?jmeno:jmeno+' ('+m.displayName+')';}
 var LOG_ICONS={sys:'🔑',board:'📌',task:'✅',msg:'💬',wh:'📦',ev:'📤',boost:'🚗',heist:'💎',cloth:'👕',fin:'💰',excuse:'📝',excuse_dec:'📝',report:'📄',radio:'📻',member:'👤',panic:'🚨'};
+// ── GRAFICKÉ ZÁPISY (embed) ──
+function money(n){return '$'+Number(n||0).toLocaleString('cs-CZ');}
+function clip(s,n){s=String(s==null?'':s);return s.length>n?s.slice(0,n-1)+'…':s;}
+// rich(barva, nadpis, popis, [[název,hodnota,inline?],...], {img, big, by})
+function rich(color,title,desc,fields,o){
+  o=o||{};
+  var e={title:title,color:color,footer:{text:(o.by?o.by+' • ':'')+nowStr()}};
+  if(desc)e.description=clip(desc,3500);
+  var fl=(fields||[]).filter(function(f){return f&&f[1]!==undefined&&f[1]!==null&&String(f[1]).trim()!=='';});
+  if(fl.length)e.fields=fl.map(function(f){return {name:f[0],value:clip(f[1],1000),inline:f[2]!==false};});
+  var img=o.img?absImg(o.img):'';
+  if(img){if(o.big)e.image={url:img};else e.thumbnail={url:img};}
+  return e;
+}
+var C_BLUE=0x3498db,C_ORANGE=0xe67e22,C_RED=0xe74c3c,C_GREEN=0x2ecc71,C_PURPLE=0x9b59b6,C_PINK=0xe91e63,C_YELLOW=0xf1c40f,C_TEAL=0x1abc9c,C_GREY=0x95a5a6;
 function addLog(type,text,opts){
   var m=getMember();var actor=m?m.displayName:'Systém';
   var log=DB.get('syslog')||[];
@@ -830,7 +845,7 @@ function addCloth(){
   var items=DB.get('clothing')||[];
   items.push(setData);
   DB.set('clothing',items);
-  addLog('cloth','Admin přidal outfit set: "'+name+'".',{img:img});
+  addLog('cloth','Admin přidal outfit set: "'+name+'".',{embed:rich(C_PINK,'👕 NOVÝ OUTFIT SET','**'+name+'**'+(desc?'\n'+desc:''),[],{img:img,big:true,by:(getMember()?getMember().displayName:'Admin')})});
   st.textContent='// SET PŘIDÁN';
   setTimeout(function(){st.textContent='';},3000);
   document.getElementById('cl-name').value='';
@@ -906,7 +921,7 @@ function addExpense(){
   var fin=DB.get('finance')||{payments:[],expenses:[]};
   fin.expenses.push({id:uid(),name:name,amount:amount,type:type,note:note,optional:optional});
   DB.set('finance',fin);
-  addLog('fin','Admin přidal '+(optional?'nepovinnou ':'')+'výdajovou položku: "'+name+'" $'+amount+'.');
+  addLog('fin','Admin přidal '+(optional?'nepovinnou ':'')+'výdajovou položku: "'+name+'" $'+amount+'.',{embed:rich(C_YELLOW,'🧾 NOVÁ VÝDAJOVÁ POLOŽKA','**'+name+'**',[['💵 Částka',money(amount)],['Druh',optional?'Nepovinná':'Povinná']],{by:(getMember()?getMember().displayName:'Admin')})});
   st.textContent='// PŘIDÁNO';setTimeout(function(){st.textContent='';},3000);
   ['exp-name','exp-note'].forEach(function(i){document.getElementById(i).value='';});document.getElementById('exp-amount').value='';
   if(optEl)optEl.checked=false;
@@ -995,7 +1010,7 @@ function recordPayment(memberId,memberName){
   var wk=getWeekKey();
   fin.payments.push({id:uid(),memberId:memberId,memberName:memberName,weekKey:wk,amount:fs.weeklyFee,date:nowStr(),note:'Týdenní příspěvek',expenseId:'weekly'});
   DB.set('finance',fin);
-  addLog('fin','Admin evidoval platbu od "'+memberName+'" — $'+fs.weeklyFee+' ('+wk+').');
+  addLog('fin','Admin evidoval platbu od "'+memberName+'" — $'+fs.weeklyFee+' ('+wk+').',{embed:rich(C_GREEN,'💰 PLATBA EVIDOVÁNA',null,[['👤 Člen',memberName],['💵 Částka',money(fs.weeklyFee)],['📅 Týden',wk],['🧾 Za','Týdenní příspěvek',false]],{by:(getMember()?getMember().displayName:'Admin')})});
   toast('Platba evidována','success');renderAdminFinance();
 }
 function recordOptionalPayment(memberId,memberName,expenseId,expenseName,amount){
@@ -1005,7 +1020,7 @@ function recordOptionalPayment(memberId,memberName,expenseId,expenseName,amount)
   if(already){toast('Platba již evidována','info');return;}
   fin.payments.push({id:uid(),memberId:memberId,memberName:memberName,weekKey:wk,amount:amount,date:nowStr(),note:expenseName,expenseId:expenseId});
   DB.set('finance',fin);
-  addLog('fin','Admin evidoval platbu od "'+memberName+'" za "'+expenseName+'" — $'+amount+' ('+wk+').');
+  addLog('fin','Admin evidoval platbu od "'+memberName+'" za "'+expenseName+'" — $'+amount+' ('+wk+').',{embed:rich(C_GREEN,'💰 PLATBA EVIDOVÁNA',null,[['👤 Člen',memberName],['💵 Částka',money(amount)],['📅 Týden',wk],['🧾 Za',expenseName,false]],{by:(getMember()?getMember().displayName:'Admin')})});
   toast('Platba evidována','success');renderAdminFinance();
 }
 
@@ -1062,7 +1077,7 @@ function memberPayWeekly(){
   if(already){toast('Příspěvek již evidován','info');return;}
   fin.payments.push({id:uid(),memberId:m.id,memberName:m.displayName,weekKey:wk,amount:fs.weeklyFee,date:nowStr(),note:'Týdenní příspěvek',expenseId:'weekly'});
   DB.set('finance',fin);
-  addLog('fin','Člen "'+m.displayName+'" evidoval týdenní příspěvek $'+fs.weeklyFee+' ('+wk+').');
+  addLog('fin','Člen "'+m.displayName+'" evidoval týdenní příspěvek $'+fs.weeklyFee+' ('+wk+').',{embed:rich(C_GREEN,'💰 TÝDENNÍ PŘÍSPĚVEK',null,[['👤 Člen',m.displayName],['💵 Částka',money(fs.weeklyFee)],['📅 Týden',wk]],{by:m.displayName})});
   toast('Platba evidována ✓','success');renderMyFinance();updateBadges();
 }
 
@@ -1076,7 +1091,7 @@ function memberPayOptional(expenseId){
   if(already){toast('Platba již evidována','info');return;}
   fin.payments.push({id:uid(),memberId:m.id,memberName:m.displayName,weekKey:wk,amount:exp.amount,date:nowStr(),note:exp.name,expenseId:expenseId});
   DB.set('finance',fin);
-  addLog('fin','Člen "'+m.displayName+'" přispěl na "'+exp.name+'" — $'+exp.amount+' ('+wk+').');
+  addLog('fin','Člen "'+m.displayName+'" přispěl na "'+exp.name+'" — $'+exp.amount+' ('+wk+').',{embed:rich(C_GREEN,'💰 PŘÍSPĚVEK NA VÝDAJ',null,[['👤 Člen',m.displayName],['💵 Částka',money(exp.amount)],['📅 Týden',wk],['🧾 Na',exp.name,false]],{by:m.displayName})});
   toast('Platba evidována ✓','success');renderMyFinance();
 }
 
@@ -1249,9 +1264,13 @@ async function radioTick(){
     else{
       fresh.lastSlot=slot;DB.set('radioauto',fresh);
       var f=autoRadios(fresh,slot);
-      var hh=slot.split('-').pop();
-      addLog('radio','Automatická změna frekvencí ('+hh+':00) — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.',
-        {embed:radioEmbed('📻 Automatická změna frekvencí','Platí od **'+hh+':00** — předchozí frekvence už nefungují.',f)});
+      var sp=slot.split('-');var hh=sp[3];
+      var start=new Date(+sp[0],+sp[1]-1,+sp[2],+hh,0,0);
+      var lateMin=Math.round((Date.now()-start.getTime())/60000);
+      var nowHM=new Date().toTimeString().slice(0,5);
+      var note=lateMin>5?' (oznámeno až v **'+nowHM+'**, nikdo nebyl online)':'';
+      addLog('radio','Automatická změna frekvencí ('+hh+':00'+(lateMin>5?', oznámeno v '+nowHM:'')+') — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.',
+        {embed:radioEmbed('📻 Automatická změna frekvencí','Platí od **'+hh+':00**'+note+' — předchozí frekvence už nefungují.',f)});
     }
   }catch(e){console.error(e);}
   radioBusy=false;
@@ -1523,7 +1542,8 @@ function postBoard(){
   var author=getMember()?getMember().displayName:'Admin';
   posts.push({id:uid(),title:title,body:body,type:type,date:nowStr(),author:author});
   DB.set('board',posts);
-  addLog('board','Admin přidal příspěvek na nástěnku: "'+title+'".');
+  var bt={info:['ℹ️ INFO',C_BLUE],warning:['⚠️ VAROVÁNÍ',C_ORANGE],urgent:['🚨 URGENTNÍ',C_RED],confirm:['✅ POTVRĎTE PŘEČTENÍ',C_PURPLE]}[type]||['',C_BLUE];
+  addLog('board','Admin přidal příspěvek na nástěnku: "'+title+'".',{embed:rich(bt[1],'📌 NOVÝ PŘÍSPĚVEK NA NÁSTĚNCE','**'+title+'**',[['Typ',bt[0]],['Autor',author]],{by:author})});
   document.getElementById('boardTitle').value='';document.getElementById('boardBody').value='';
   st.textContent='// ZVEŘEJNĚNO';setTimeout(function(){st.textContent='';},2000);
   toast('Příspěvek zveřejněn','success');renderAdminBoard();renderBoard();
@@ -1556,7 +1576,8 @@ function assignTask(){
   tasks[target].push({id:uid(),title:title,desc:desc,priority:prio,date:nowStr(),done:false});
   DB.set('tasks',tasks);
   var m=DB.get('members')||[];var tm=m.find(function(x){return x.id===target;});
-  addLog('task','Admin přiřadil úkol "'+title+'" členovi "'+(tm?tm.displayName:target)+'".');
+  var pr={low:['LOW',C_GREY],normal:['NORMAL',C_GREEN],high:['HIGH',C_ORANGE],urgent:['URGENT',C_RED]}[prio]||['NORMAL',C_GREEN];
+  addLog('task','Admin přiřadil úkol "'+title+'" členovi "'+(tm?tm.displayName:target)+'".',{embed:rich(pr[1],'✅ NOVÝ ÚKOL','**'+title+'**',[['👤 Člen',tm?tm.displayName:target],['⚡ Priorita',pr[0]]],{by:(getMember()?getMember().displayName:'Admin')})});
   document.getElementById('taskTitle').value='';document.getElementById('taskDesc').value='';
   st.textContent='// ROZKAZ ODESLÁN';setTimeout(function(){st.textContent='';},2000);
   toast('Úkol přiřazen','success');renderAdminTasks();
@@ -1572,7 +1593,7 @@ function sendMsg(){
   var mid=uid();var targets=target==='all'?members.map(function(m){return m.id;}):[target];
   targets.forEach(function(tid){if(!msgs[tid])msgs[tid]=[];msgs[tid].push({id:mid,subject:subject,body:body,date:nowStr()});});
   DB.set('messages',msgs);
-  addLog('msg','Admin odeslal zprávu "'+subject+'" — '+(target==='all'?'všem':'jednomu členovi')+'.'+(target==='all'?'\n'+body:''),{noPing:target!=='all'});
+  addLog('msg','Admin odeslal zprávu "'+subject+'" — '+(target==='all'?'všem':'jednomu členovi')+'.'+(target==='all'?'\n'+body:''),{noPing:target!=='all',embed:rich(C_TEAL,'💬 NOVÁ ZPRÁVA','**'+subject+'**'+(target==='all'?'\n'+body:''),[['Komu',target==='all'?'Všichni členové':'Jeden člen']],{by:(getMember()?getMember().displayName:'Admin')})});
   document.getElementById('msgSubject').value='';document.getElementById('msgBody').value='';
   st.textContent='// ZPRÁVA ODESLÁNA';setTimeout(function(){st.textContent='';},2000);
   toast('Zpráva odeslána','success');renderAdminMessages();
@@ -1732,6 +1753,12 @@ function resetBoostForm(p){
   setText((p||'')+'boostSaveBtn','PŘIDAT');
   bEl(p,'boostFormPanel').classList.add('hidden');
 }
+function boostEmbed(title,by,name,tier,speed,loc,backup,note,img){
+  return rich(C_ORANGE,title,'**'+name+'**',[
+    ['🏁 Tier','Tier '+tier],['⚡ Rychlost',speed?speed+' MP/H':'—'],['🛡 Backup',backup?'POTŘEBA':'NE'],
+    ['📍 Lokace',loc||'neuvedena'],['📝 Poznámka',note,false]
+  ],{img:img,big:true,by:by});
+}
 function saveBoost(p){
   var m=getMember();if(!m)return;
   var name=bEl(p,'bo-name').value.trim();
@@ -1751,11 +1778,11 @@ function saveBoost(p){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
     b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.backup=backup;b.note=note;b.img=img;
-    addLog('boost',m.displayName+' upravil vozidlo '+short,{plain:true,icon:'🚗',img:img});
+    addLog('boost',m.displayName+' upravil vozidlo '+short,{embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,img)});
     toast('Vozidlo upraveno','success');
   }else{
     list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,backup:backup,note:note,img:img,ownerId:m.id,addedBy:m.displayName});
-    addLog('boost',m.displayName+' přidal vozidlo '+short,{plain:true,icon:'🚗',img:img});
+    addLog('boost',m.displayName+' přidal vozidlo '+short,{embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,img)});
     toast(name+' přidáno','success');
   }
   DB.set('boosting',list);
@@ -2006,7 +2033,7 @@ function submitReport(){
   var reports=DB.get('reports')||[];
   reports.push({id:uid(),memberId:m.id,memberName:m.displayName,body:body,date:nowStr()});
   DB.set('reports',reports);
-  addLog('report','Člen "'+m.displayName+'" odeslal hlášení.');
+  addLog('report','Člen "'+m.displayName+'" odeslal hlášení.',{embed:rich(C_PURPLE,'📄 NOVÉ HLÁŠENÍ','**'+m.displayName+'** odeslal hlášení.',[],{by:m.displayName})});
   document.getElementById('reportText').value='';
   st.textContent='// ODESLÁNO';setTimeout(function(){st.textContent='';},2500);
   toast('Hlášení odesláno','success');renderSentReports();renderAdminReports();
@@ -2121,7 +2148,7 @@ function submitIncome(){
     status:'pending'
   });
   DB.set('incomes',incomes);
-  addLog('fin','Člen "'+m.displayName+'" nahlásil příjem $'+amount+' ('+source+').');
+  addLog('fin','Člen "'+m.displayName+'" nahlásil příjem $'+amount+' ('+source+').',{embed:rich(C_YELLOW,'💵 NAHLÁŠEN PŘÍJEM',null,[['👤 Člen',m.displayName],['💵 Částka',money(amount)],['📦 Zdroj',source]],{by:m.displayName})});
   document.getElementById('incAmount').value='';
   document.getElementById('incNote').value='';
   st.textContent='// ODESLÁNO KE SCHVÁLENÍ';
@@ -2247,7 +2274,8 @@ function resolveIncome(id,decision){
   if(!item)return;
   item.status=decision;
   DB.set('incomes',incomes);
-  addLog('fin','Admin '+(decision==='confirmed'?'potvrdil':'zamítl')+' příjem $'+item.amount+' od "'+item.memberName+'" ('+item.source+').');
+  var okI=decision==='confirmed';
+  addLog('fin','Admin '+(okI?'potvrdil':'zamítl')+' příjem $'+item.amount+' od "'+item.memberName+'" ('+item.source+').',{embed:rich(okI?C_GREEN:C_RED,okI?'✅ PŘÍJEM POTVRZEN':'❌ PŘÍJEM ZAMÍTNUT',null,[['👤 Člen',item.memberName],['💵 Částka',money(item.amount)],['📦 Zdroj',item.source]],{by:(getMember()?getMember().displayName:'Admin')})});
   toast(decision==='confirmed'?'Příjem potvrzen ✓':'Zamítnuto','info');
   renderAdminIncomes();
   renderAdminFinance();
