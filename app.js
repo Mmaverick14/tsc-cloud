@@ -263,6 +263,7 @@ function showScreen(id){
     var e=document.getElementById(s);e.classList.remove('active');e.classList.add('hidden');
   });
   var t=document.getElementById(id);t.classList.remove('hidden');t.classList.add('active');
+  applyMenuCfg();
 }
 
 async function goBack(){
@@ -437,6 +438,7 @@ function refreshView(){
   if(!m||m.panic){forceLogout(!!(m&&m.panic));return;}
   var adminBtn=document.getElementById('adminNavBtn');
   if(adminBtn)adminBtn.classList.toggle('hidden',!m.adminAccess);
+  applyMenuCfg();
   var ae=document.activeElement;
   if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))return; // nepřepisovat, když uživatel píše
   var adminOpen=document.getElementById('adminScreen').classList.contains('active');
@@ -467,6 +469,106 @@ function goToAdmin(){
   addLog('sys','Člen "'+m.displayName+'" vstoupil do Administrace.');
   showScreen('adminScreen');
   aTab('board',document.querySelector('#adminScreen .nb'));
+}
+
+
+// ════════════════════════════════
+//  ÚPRAVA MENU (pořadí + názvy) — edituje jen Boss
+// ════════════════════════════════
+// DB klíč 'menu_cfg' = {admin:{order:[klíče],names:{klíč:'Nový název'}}, member:{...}}
+var MENU_NAVS={admin:'#adminScreen .sb-nav',member:'#memberScreen .sb-nav'};
+function menuKey(btn){
+  if(btn.id==='adminNavBtn')return 'admin';
+  var m=/\(\s*'([^']+)'/.exec(btn.getAttribute('onclick')||'');
+  return m?m[1]:null;
+}
+function menuItems(nav){
+  var out=[];
+  document.querySelectorAll(MENU_NAVS[nav]+' > .nb').forEach(function(b){
+    var k=menuKey(b);if(!k)return;
+    var nl=b.querySelector('.nl');
+    if(nl&&b.dataset.defName===undefined)b.dataset.defName=nl.textContent;
+    var ni=b.querySelector('.ni');
+    out.push({key:k,btn:b,def:b.dataset.defName||'',icon:ni?ni.textContent:''});
+  });
+  return out;
+}
+function applyMenuCfg(){
+  var cfg=DB.get('menu_cfg')||{};
+  Object.keys(MENU_NAVS).forEach(function(nav){
+    var items=menuItems(nav);if(!items.length)return;
+    var c=cfg[nav]||{},order=c.order||[],names=c.names||{};
+    var nv=document.querySelector(MENU_NAVS[nav]);
+    var rank=function(k){var i=order.indexOf(k);return i===-1?1000+items.findIndex(function(x){return x.key===k;}):i;};
+    items.slice().sort(function(x,y){return rank(x.key)-rank(y.key);}).forEach(function(it){nv.appendChild(it.btn);});
+    items.forEach(function(it){
+      var nl=it.btn.querySelector('.nl');
+      if(nl)nl.textContent=(names[it.key]||'').trim()||it.def;
+    });
+  });
+  var me=getMember();
+  var eb=document.getElementById('menuEditBtn');
+  if(eb)eb.classList.toggle('hidden',!isBossPos(me));
+}
+
+var mnuDraft=null,mnuNav='admin';
+function mnuBuild(nav){
+  var c=(DB.get('menu_cfg')||{})[nav]||{},order=c.order||[],names=c.names||{};
+  var items=menuItems(nav).map(function(it){return {key:it.key,def:it.def,icon:it.icon,name:names[it.key]||''};});
+  var rank=function(k){var i=order.indexOf(k);return i===-1?1000+items.findIndex(function(x){return x.key===k;}):i;};
+  items.sort(function(x,y){return rank(x.key)-rank(y.key);});
+  return items;
+}
+function openMenuEditor(){
+  if(!isBossPos(getMember())){toast('Menu může upravovat jen Boss','error');return;}
+  mnuDraft={admin:mnuBuild('admin'),member:mnuBuild('member')};
+  mnuNav='admin';
+  var ov=document.createElement('div');ov.className='modal-ov';ov.id='menuEditor';
+  ov.innerHTML='<div class="modal-box menu-ed"><div class="modal-title">// UPRAVIT MENU</div>'+
+    '<div class="menu-ed-tabs"><button class="wf active" id="mnuTabAdmin" onclick="mnuSwitch(\'admin\')">VEDENÍ</button><button class="wf" id="mnuTabMember" onclick="mnuSwitch(\'member\')">ČLENOVÉ</button></div>'+
+    '<div id="mnuList" class="menu-ed-list"></div>'+
+    '<div class="menu-ed-hint">Prázdný název = výchozí. Změna platí pro všechny.</div>'+
+    '<div class="modal-ftr"><button class="btn-acc small" onclick="mnuSave()">ULOŽIT</button><button class="btn-ghost small" onclick="mnuReset()">VÝCHOZÍ</button><button class="btn-ghost small" onclick="mnuClose()">ZAVŘÍT</button></div></div>';
+  document.body.appendChild(ov);
+  mnuRender();
+}
+function mnuClose(){var e=document.getElementById('menuEditor');if(e)e.remove();mnuDraft=null;}
+function mnuSwitch(nav){
+  mnuNav=nav;
+  document.getElementById('mnuTabAdmin').classList.toggle('active',nav==='admin');
+  document.getElementById('mnuTabMember').classList.toggle('active',nav==='member');
+  mnuRender();
+}
+function mnuRender(){
+  var l=document.getElementById('mnuList');if(!l||!mnuDraft)return;
+  l.innerHTML=mnuDraft[mnuNav].map(function(it,i){
+    return '<div class="menu-ed-row"><span class="menu-ed-ic">'+esc(it.icon)+'</span>'+
+      '<input type="text" maxlength="24" value="'+esc(it.name)+'" placeholder="'+esc(it.def)+'" oninput="mnuDraft[mnuNav]['+i+'].name=this.value"/>'+
+      '<button class="menu-ed-mv" onclick="mnuMove('+i+',-1)" '+(i===0?'disabled':'')+'>▲</button>'+
+      '<button class="menu-ed-mv" onclick="mnuMove('+i+',1)" '+(i===mnuDraft[mnuNav].length-1?'disabled':'')+'>▼</button></div>';
+  }).join('');
+}
+function mnuMove(i,d){
+  var a=mnuDraft[mnuNav],j=i+d;if(j<0||j>=a.length)return;
+  var t=a[i];a[i]=a[j];a[j]=t;mnuRender();
+}
+function mnuReset(){
+  mnuDraft[mnuNav]=menuItems(mnuNav).map(function(it){return {key:it.key,def:it.def,icon:it.icon,name:''};});
+  mnuRender();
+}
+function mnuSave(){
+  if(!isBossPos(getMember())){toast('Menu může upravovat jen Boss','error');return;}
+  var cfg={};
+  Object.keys(mnuDraft).forEach(function(nav){
+    var names={};
+    mnuDraft[nav].forEach(function(it){var n=(it.name||'').trim();if(n&&n!==it.def)names[it.key]=n;});
+    cfg[nav]={order:mnuDraft[nav].map(function(it){return it.key;}),names:names};
+  });
+  DB.set('menu_cfg',cfg);
+  applyMenuCfg();
+  addLog('sys','Boss "'+getMember().displayName+'" upravil pořadí/názvy menu.');
+  toast('Menu uloženo','success');
+  mnuClose();
 }
 
 // ════════════════════════════════

@@ -615,3 +615,16 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 
 /* admin vysílačka – čitelný info řádek */
 #rAutoInfo{color:var(--text)!important;}
+
+/* ── ÚPRAVA MENU (Boss) ── */
+.menu-ed{width:420px;max-height:90vh;display:flex;flex-direction:column;}
+.menu-ed-tabs{display:flex;gap:.4rem;margin-bottom:.8rem;}
+.menu-ed-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.35rem;padding-right:.2rem;}
+.menu-ed-row{display:flex;align-items:center;gap:.4rem;}
+.menu-ed-ic{width:20px;text-align:center;flex-shrink:0;}
+.menu-ed-row input{flex:1;min-width:0;padding:.4rem .5rem;background:var(--bg);border:1px solid var(--border);color:var(--textb,#c8b988);font-family:'Rajdhani',sans-serif;font-size:.8rem;font-weight:600;letter-spacing:.07em;}
+.menu-ed-row input:focus{outline:none;border-color:var(--acc-dim);}
+.menu-ed-mv{width:28px;height:28px;background:transparent;border:1px solid var(--border);color:var(--acc);cursor:pointer;font-size:.6rem;flex-shrink:0;}
+.menu-ed-mv:hover:not(:disabled){background:var(--acc-dark);border-color:var(--acc-dim);}
+.menu-ed-mv:disabled{opacity:.25;cursor:default;}
+.menu-ed-hint{font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:.7rem;}
