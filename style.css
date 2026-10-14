@@ -819,3 +819,17 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
   .st-table-wrap{margin:0 .7rem;}
   .st-donut-wrap{flex-direction:column;gap:.6rem;}
 }
+
+/* ══ ČITELNOST: větší a kontrastnější popisky formulářů ══ */
+.fp-title{font-size:.85rem;color:var(--acc);letter-spacing:.14em;font-weight:700;}
+.fl{font-size:.74rem;color:#e0b52a;letter-spacing:.1em;font-weight:700;}
+.sh,.excuse-form-title,.fa-exp-title{font-size:.78rem;color:#d9c27a;letter-spacing:.14em;}
+.iw input,.iw select{font-size:.92rem;}
+.adm-ta{font-size:.9rem;}
+.ip{font-size:.85rem;color:var(--acc);}
+.iw input::placeholder,.adm-ta::placeholder,.wh-search::placeholder{color:#8a7a50;}
+.smsg{font-size:.75rem;}
+.ping-chk{font-size:.72rem;}
+.btn-acc{font-size:.72rem;}
+.btn-acc.small{font-size:.7rem;}
+@media(max-width:700px){.fl{font-size:.78rem;}.fp-title{font-size:.9rem;}}
