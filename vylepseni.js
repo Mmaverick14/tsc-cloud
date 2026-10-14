@@ -191,50 +191,82 @@
     else s=s.replace(',','.');
     return Math.floor(parseFloat(s))||0;
   }
+  // ── pravidla lootu: podíl frakce mění jen Mastermind, report jde odeslat až po vyplnění lootu ──
+  function lootFac(){var c=DB.get('lootcfg')||{};var v=parseFloat(c.fac);return isNaN(v)?10:Math.min(100,Math.max(0,v));}
+  function isBoss(){var m=getMember();return !!m&&m.position==='Mastermind';}
+  window.__lootCalc=null;
+  function lootField(){return document.getElementById('hs-loot');}
+  function lootValid(){
+    var c=window.__lootCalc,f=lootField();
+    return !!c&&!!f&&f.value===c.txt&&c.crew===heistCrewIds().join(',');
+  }
+  function syncLootBtn(){
+    var f=lootField();if(!f)return;
+    if(window.__lootCalc&&!lootValid()){window.__lootCalc=null;f.value='';} // změnila se parta nebo se report odeslal
+    var b=document.querySelector('#mt-heist .fp-ftr button[onclick="submitHeist()"]');
+    if(b){var ok=lootValid();b.disabled=!ok;b.title=ok?'':'Nejdřív vyplň loot přes „ROZDĚLIT LOOT“';}
+  }
+  setInterval(syncLootBtn,400);
+  var _sh=window.submitHeist;
+  window.submitHeist=function(){
+    syncLootBtn();
+    if(!lootValid()){toast('Nejdřív vyplň loot přes „ROZDĚLIT LOOT“','error',4000);return;}
+    return _sh.apply(this,arguments);
+  };
+
   function openLoot(){
     var old=document.querySelector('.loot-ov');if(old)old.remove();
     var me=getMember(),ids=heistCrewIds(),mems=ids.map(memById).filter(Boolean);
+    if(!mems.length){toast('Nejdřív vyber účastníky heistu','error');return;}
     var names=mems.map(function(x){return memberLabel(x);});
-    var leaderIdx=me?ids.indexOf(me.id):-1;
+    var leaderIdx=me?ids.indexOf(me.id):-1,boss=isBoss();
     var ov=document.createElement('div');ov.className='modal-ov loot-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
     ov.innerHTML='<div class="modal-box loot-box"><div class="modal-title">🧮 ROZDĚLENÍ LOOTU</div>'+
       '<div class="loot-grid">'+
         '<div class="field-group"><label class="fl">CELKOVÁ ČÁSTKA ($)</label><div class="iw"><span class="ip">$</span><input type="number" id="lcAmt" min="0" step="1"/></div></div>'+
-        '<div class="field-group"><label class="fl">PODÍL FRAKCE (%)</label><div class="iw"><span class="ip">%</span><input type="number" id="lcFac" min="0" max="100" step="1"/></div></div>'+
+        '<div class="field-group"><label class="fl">PODÍL FRAKCE (%)'+(boss?'':' 🔒')+'</label><div class="iw"><span class="ip">%</span><input type="number" id="lcFac" min="0" max="100" step="1"'+(boss?'':' disabled')+'/></div></div>'+
         '<div class="field-group"><label class="fl">BONUS PRO VEDOUCÍHO (% ze zbytku)</label><div class="iw"><span class="ip">%</span><input type="number" id="lcBon" min="0" max="100" step="1"/></div></div>'+
-        '<div class="field-group"><label class="fl">POČET LIDÍ'+(names.length?' (podle výběru)':'')+'</label><div class="iw"><span class="ip">#</span><input type="number" id="lcN" min="1" step="1"'+(names.length?' disabled':'')+'/></div></div>'+
-      '</div><div id="lcRes"></div>'+
+        '<div class="field-group"><label class="fl">POČET LIDÍ (podle výběru)</label><div class="iw"><span class="ip">#</span><input type="number" id="lcN" value="'+names.length+'" disabled/></div></div>'+
+      '</div>'+(boss?'<div class="loot-warn" style="color:var(--acc)">// Jako Mastermind měníš podíl frakce pro všechny.</div>':'<div class="loot-warn" style="color:var(--text)">// Podíl frakce nastavuje Mastermind.</div>')+
+      '<div id="lcRes"></div>'+
       '<div class="modal-ftr"><button class="btn-acc small" id="lcPut">VLOŽIT DO LOOTU</button><button class="btn-ghost small" id="lcNo">ZAVŘÍT</button></div></div>';
     document.body.appendChild(ov);
-    var A=ov.querySelector('#lcAmt'),F=ov.querySelector('#lcFac'),B=ov.querySelector('#lcBon'),N=ov.querySelector('#lcN'),R=ov.querySelector('#lcRes');
-    A.value=parseAmount((document.getElementById('hs-loot')||{}).value)||'';
-    F.value=lsGet('tsc_loot_fac')||10;B.value=lsGet('tsc_loot_bon')||0;N.value=names.length||(parseInt(lsGet('tsc_loot_n'))||4);
+    var A=ov.querySelector('#lcAmt'),F=ov.querySelector('#lcFac'),B=ov.querySelector('#lcBon'),R=ov.querySelector('#lcRes');
+    var prev=window.__lootCalc;
+    A.value=prev?prev.amount:parseAmount((lootField()||{}).value)||'';
+    F.value=lootFac();B.value=lsGet('tsc_loot_bon')||0;
     var last=null;
     function calc(){
-      var n=names.length||Math.max(1,parseInt(N.value)||1);
-      var nm=names.length?names:Array.apply(null,Array(n)).map(function(_,i){return 'Člen '+(i+1);});
-      var li=names.length?leaderIdx:-1;
-      last=calcLoot(parseFloat(A.value),F.value,B.value,nm,li);
-      lsSet('tsc_loot_fac',F.value||0);lsSet('tsc_loot_bon',B.value||0);if(!names.length)lsSet('tsc_loot_n',n);
+      var fac=boss?F.value:lootFac();
+      last=calcLoot(parseFloat(A.value),fac,B.value,names,leaderIdx);
+      last.facPct=Math.min(100,Math.max(0,+fac||0));last.bonPct=Math.min(100,Math.max(0,+B.value||0));
+      lsSet('tsc_loot_bon',B.value||0);
       R.innerHTML='<div class="loot-res">'+
-        last.shares.map(function(s,i){return '<div class="r"><span>'+esc(s.name)+(i===li&&last.bonus?' ⭐ vedoucí':'')+'</span><b>'+money(s.amt)+'</b></div>';}).join('')+
+        last.shares.map(function(s,i){return '<div class="r"><span>'+esc(s.name)+(i===leaderIdx&&last.bonus?' ⭐ vedoucí':'')+'</span><b>'+money(s.amt)+'</b></div>';}).join('')+
         '<div class="r fac"><span>🏛 Frakce'+(last.rem?' (vč. zbytku '+money(last.rem)+')':'')+'</span><b>'+money(last.fac)+'</b></div>'+
         '<div class="r tot"><span>CELKEM</span><b>'+money(last.amount)+'</b></div></div>'+
-        (names.length?'':'<div class="loot-warn">// Nevybral jsi účastníky ve formuláři — počítám jen s počtem lidí.</div>')+
-        (!names.length||leaderIdx!==-1?'':'<div class="loot-warn">// Nejsi v partě, bonus vedoucího propadá frakci.</div>');
+        (leaderIdx!==-1?'':'<div class="loot-warn">// Nejsi v partě, bonus vedoucího propadá frakci.</div>');
     }
-    [A,F,B,N].forEach(function(i){i.oninput=calc;});calc();
+    [A,F,B].forEach(function(i){i.oninput=calc;});calc();
+    if(boss)F.onchange=function(){
+      var v=Math.min(100,Math.max(0,parseFloat(F.value)||0));F.value=v;
+      DB.set('lootcfg',{fac:v,by:me.displayName,date:nowStr()});
+      addLog('heist','Mastermind '+me.displayName+' nastavil podíl frakce z lootu na '+v+' %.',{noDiscord:true});
+      toast('Podíl frakce nastaven na '+v+' %','success');calc();
+    };
     function close(){document.removeEventListener('keydown',key,true);ov.remove();}
     function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
     document.addEventListener('keydown',key,true);
     ov.querySelector('#lcNo').onclick=close;
     ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
     ov.querySelector('#lcPut').onclick=function(){
-      if(!last||!last.amount){toast('Zadej částku','error');return;}
+      if(!last||isNaN(parseFloat(A.value))){toast('Zadej částku (i 0, když nic nebylo)','error');return;}
       var per=last.shares.map(function(s){return s.amt;}),same=per.every(function(x){return x===per[0];});
-      var txt=money(last.amount)+' — rozdělení: '+(same?money(per[0])+' na hlavu':last.shares.map(function(s){return s.name+' '+money(s.amt);}).join(', '))+', frakce '+money(last.fac);
-      var f=document.getElementById('hs-loot');if(f)f.value=txt;
-      toast('Rozdělení vloženo do pole Loot','success');close();
+      var txt=last.amount===0?'nic ($0)':
+        money(last.amount)+' — rozdělení: '+(same?money(per[0])+' na hlavu':last.shares.map(function(s){return s.name+' '+money(s.amt);}).join(', '))+', frakce '+money(last.fac)+' ('+last.facPct+' %)';
+      var f=lootField();if(f)f.value=txt;
+      window.__lootCalc={txt:txt,amount:last.amount,crew:ids.join(','),fac:last.fac,facPct:last.facPct,bonPct:last.bonPct};
+      toast('Loot vyplněn — report jde odeslat','success');close();syncLootBtn();
     };
     A.focus();
   }
@@ -242,6 +274,9 @@
     var ftr=document.querySelector('#mt-heist .fp-ftr');if(!ftr||ftr.querySelector('.loot-btn'))return;
     var b=document.createElement('button');b.type='button';b.className='btn-ghost small loot-btn';b.textContent='🧮 ROZDĚLIT LOOT';b.onclick=openLoot;
     ftr.insertBefore(b,ftr.querySelector('.ping-chk')||ftr.lastElementChild);
+    var f=lootField();
+    if(f){f.readOnly=true;f.placeholder='Klikni na „🧮 ROZDĚLIT LOOT“ a vyplň rozdělení…';f.style.cursor='pointer';f.onclick=openLoot;}
+    syncLootBtn();
   })();
 
   // ═════════ 4) PROFIL ČLENA ═════════
@@ -400,7 +435,7 @@
   function wcfg(){var c=DB.get('weeklycfg')||{};return {on:c.on!==false,day:c.day==null?0:c.day,hour:c.hour==null?20:c.hour,last:c.last||''};}
   function lootSum(txt){
     var s=String(txt||''),tot=0,re=/\$\s*(\d[\d\s.,\u00a0]*)/g,m,found=false;
-    while((m=re.exec(s))){found=true;tot+=parseAmount(m[1]);}
+    if((m=re.exec(s))){found=true;tot=parseAmount(m[1]);}
     if(!found){var n=parseAmount(s);if(n>=1000)tot=n;}
     return tot;
   }

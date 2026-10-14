@@ -72,3 +72,10 @@
 .gk-card .gk-name{font-size:1.15rem}
 .gk-btn{text-decoration:none;white-space:nowrap}
 @media(max-width:700px){.gk-card{margin:.8rem .7rem 0;flex-wrap:wrap}.gk-btn{width:100%;text-align:center}}
+
+/* ── loot: zamčená pole a neaktivní tlačítka ── */
+.btn-acc:disabled{opacity:.35;cursor:not-allowed;pointer-events:auto}
+.btn-acc:disabled::before{display:none}
+.btn-acc:disabled:hover{color:var(--acc)}
+#hs-loot[readonly]{cursor:pointer}
+.iw input:disabled{opacity:.6;cursor:not-allowed}
