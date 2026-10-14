@@ -64,15 +64,13 @@
   }
   // schematická mapa, dokud není nahraný images/mapa.jpg
   function placeholder(){
-    var lab=[['PALETO BAY',.2,.07],['MT. CHILIAD',.42,.17],['GRAPESEED',.72,.2],['SANDY SHORES',.64,.35],['HARMONY',.42,.46],['CHUMASH',.12,.52],['VINEWOOD',.55,.6],['DOWNTOWN',.5,.69],['VESPUCCI',.36,.76],['LSIA',.38,.85],['PORT OF LS',.58,.87]];
-    var t=lab.map(function(l){return '<text x="'+l[1]*1000+'" y="'+l[2]*1300+'" fill="#6b7c88" font-family="Share Tech Mono,monospace" font-size="20" letter-spacing="2" text-anchor="middle">'+l[0]+'</text>';}).join('');
     var g='';for(var i=1;i<10;i++){g+='<line x1="'+i*100+'" y1="0" x2="'+i*100+'" y2="1300" /><line x1="0" y1="'+i*130+'" x2="1000" y2="'+i*130+'"/>';}
     var d=document.createElement('div');
     d.innerHTML='<svg viewBox="0 0 1000 1300" xmlns="http://www.w3.org/2000/svg"><rect width="1000" height="1300" fill="#0d1b24"/>'+
       '<g stroke="#15283a" stroke-width="1">'+g+'</g>'+
       '<path d="M120 60 L420 40 L700 120 L900 230 L880 420 L800 560 L700 700 L640 900 L560 1000 L420 980 L300 930 L220 820 L120 700 L70 520 L90 300 Z" fill="#1c2a1f" stroke="#2e4a35" stroke-width="3"/>'+
-      '<path d="M250 640 L650 600 L700 760 L560 960 L330 920 Z" fill="#22252b" stroke="#3a3f48" stroke-width="2"/>'+t+
-      '<text x="500" y="1250" fill="#c49a14" font-family="Share Tech Mono,monospace" font-size="18" text-anchor="middle" letter-spacing="2">SCHEMATICKÁ MAPA — nahraj vlastní do images/mapa.jpg</text></svg>';
+      '<path d="M250 640 L650 600 L700 760 L560 960 L330 920 Z" fill="#22252b" stroke="#3a3f48" stroke-width="2"/>'+
+      '</svg>';
     world.insertBefore(d.firstChild,world.firstChild);
   }
 
