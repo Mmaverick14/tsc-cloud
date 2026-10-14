@@ -18,3 +18,30 @@
 .theme-dot:hover{transform:scale(1.2)}.theme-dot.on{border-color:#fff}
 /* hledání v logu */
 .log-search{margin:.7rem 1.1rem 0;width:calc(100% - 2.2rem)}
+
+/* ── vlastní okna (confirm / prompt / alert) ── */
+.tsc-confirm{z-index:9500;backdrop-filter:blur(3px);animation:tabIn .18s ease both}
+.tsc-cbox{width:380px;box-shadow:0 20px 60px rgba(0,0,0,.8)}
+.tsc-cbox.danger{border-top-color:var(--red);background:linear-gradient(180deg,rgba(192,57,43,.08),var(--card) 60%)}
+.tsc-cbox.danger .modal-title{color:var(--red);animation:pp 2s ease-in-out infinite}
+.tsc-ctext{font-size:.95rem;line-height:1.6;color:var(--textb);word-break:break-word}
+.tsc-ctext b{color:var(--red)}
+.tsc-sub{font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--text);letter-spacing:.06em;margin-top:.4rem}
+.tsc-iw{margin-top:.8rem}
+.tsc-cbox .modal-ftr{justify-content:flex-end}
+.tsc-cbox .btn-danger{padding:.55rem 1.1rem;font-size:.62rem;letter-spacing:.14em;border-color:var(--red)}
+.tsc-cbox .btn-danger:hover{background:var(--red);color:#fff}
+
+/* ── limit členů frakce ── */
+.cap-bar{margin:0 1.2rem 1rem;padding:.75rem 1rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--acc-dim);font-size:.92rem;line-height:1.5;color:var(--textb)}
+.cap-bar b{color:var(--acc);font-weight:700}
+.cap-pips{display:flex;gap:3px;margin-top:.55rem}
+.cap-pips i{flex:1;height:6px;background:var(--surf);border:1px solid var(--border)}
+.cap-pips i.on{background:var(--acc-dim);border-color:var(--acc-dim)}
+.cap-bar.warn{border-left-color:orange}
+.cap-bar.warn b{color:orange}
+.cap-bar.warn .cap-pips i.on{background:orange;border-color:orange}
+.cap-bar.full{border-left-color:var(--red);background:rgba(192,57,43,.08)}
+.cap-bar.full b{color:var(--red)}
+.cap-bar.full .cap-pips i.on{background:var(--red);border-color:var(--red)}
+@media(max-width:700px){.cap-bar{margin:0 .7rem 1rem}.tsc-cbox{width:92vw}}

@@ -16,10 +16,21 @@
     if(m&&e)recordOptionalPayment(mid,m.displayName,eid,e.name,e.amount);
   };
 
-  // 2) Počítání čísel v přehledech
+  // 2) Počítání čísel v přehledech (+ karta ČLENOVÉ s limitem)
+  var MAX_MEMBERS=16;
+  function memCount(){return (DB.get('members')||[]).length;}
   var _rd=window.renderDash;
   window.renderDash=function(){
     _rd();
+    var ea=document.getElementById('dashA');
+    if(ea)ea.querySelectorAll('.dc').forEach(function(c){
+      var lb=c.querySelector('.dc-lb');
+      if(!lb||lb.textContent!=='ČLENOVÉ')return;
+      var n=memCount(),v=c.querySelector('.dc-val'),s=c.querySelector('.dc-sub');
+      if(v)v.innerHTML=n+'<small>/'+MAX_MEMBERS+'</small>';
+      if(s)s.textContent=n>=MAX_MEMBERS?'frakce je plná':'max '+MAX_MEMBERS+' lidí';
+      c.classList.toggle('warn',n>=MAX_MEMBERS);
+    });
     document.querySelectorAll('.dc-val').forEach(function(el){
       var n=el.firstChild&&el.firstChild.nodeType===3?parseInt(el.firstChild.nodeValue,10):NaN;
       if(isNaN(n)||n<1||n>9999||el.dataset.v==String(n))return;
@@ -94,4 +105,114 @@
   addEventListener('offline',function(){pill.classList.add('on');});
   addEventListener('online',function(){pill.classList.remove('on');toast('Připojeno ✓','success');if(window.DB)DB.flush();});
   if(!navigator.onLine)pill.classList.add('on');
+
+  // 7) Vlastní okna ve stylu webu (nahrazují confirm / prompt / alert prohlížeče)
+  function tscDialog(o,onOk){
+    var old=document.querySelector('.tsc-confirm');if(old)old.remove();
+    var ov=document.createElement('div');ov.className='modal-ov tsc-confirm';
+    ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="modal-box tsc-cbox'+(o.danger?' danger':'')+'">'+
+      '<div class="modal-title">'+o.title+'</div>'+
+      '<div class="tsc-ctext">'+o.text+'</div>'+
+      (o.input?'<div class="iw tsc-iw"><span class="ip">&gt;_</span><input type="text" class="tsc-in"/></div>':'')+
+      '<div class="modal-ftr"><button class="'+(o.danger?'btn-danger':'btn-acc small')+' tsc-ok">'+o.ok+'</button>'+
+      (o.single?'':'<button class="btn-ghost small tsc-no">'+(o.cancel||'ZRUŠIT')+'</button>')+'</div></div>';
+    document.body.appendChild(ov);
+    var inp=ov.querySelector('.tsc-in'),okb=ov.querySelector('.tsc-ok'),nob=ov.querySelector('.tsc-no');
+    if(inp)inp.value=o.value==null?'':String(o.value);
+    function close(){document.removeEventListener('keydown',key,true);if(ov.parentNode)ov.parentNode.removeChild(ov);}
+    function ok(){var v=inp?inp.value:undefined;close();if(onOk)onOk(v);}
+    function key(e){
+      if(e.key==='Escape'){e.stopPropagation();close();}
+      else if(e.key==='Enter'&&inp&&e.target===inp){e.preventDefault();ok();}
+    }
+    okb.onclick=ok;
+    if(nob)nob.onclick=close;
+    ov.addEventListener('mousedown',function(e){if(e.target===ov&&!o.single)close();});
+    document.addEventListener('keydown',key,true);
+    // nebezpečné akce mají výchozí focus na Zrušit, aby se nespustily omylem
+    (inp||(o.danger&&nob)||okb).focus();
+    if(inp)inp.select();
+  }
+  window.tscDialog=tscDialog;
+
+  function describe(msg){
+    var m=String(msg||'');
+    if(/PANIC/i.test(m))return {title:'⚠ AKTIVOVAT PANIC?',text:'Váš přístup bude <b>okamžitě zablokován</b> a změní se frekvence vysílaček.<br>Odemknout vás může jen Vedení.',ok:'AKTIVOVAT PANIC',danger:true};
+    var del=/^(Smazat|Vymazat)/i.test(m),rem=/^Odebrat/i.test(m);
+    if(del||rem)return {title:'⚠ '+(del?'SMAZAT?':'ODEBRAT?'),text:esc(m)+(del?'<div class="tsc-sub">Tuto akci nelze vrátit.</div>':''),ok:del?'SMAZAT':'ODEBRAT',danger:true};
+    if(/^Povýšit/i.test(m))return {title:'🏅 POVÝŠENÍ',text:esc(m),ok:'POVÝŠIT'};
+    if(/frekvence/i.test(m))return {title:'📻 NOVÉ FREKVENCE',text:esc(m),ok:'VYGENEROVAT'};
+    return {title:'// POTVRZENÍ',text:esc(m),ok:'POTVRDIT'};
+  }
+
+  // Funkce z app.js volají confirm() synchronně. Zavoláme je nanečisto (confirm vrátí false a zachytí text),
+  // ukážeme vlastní okno a po potvrzení je zavoláme znovu, tentokrát s confirm = true.
+  function wrapConfirm(name){
+    var orig=window[name];if(typeof orig!=='function')return;
+    window[name]=function(){
+      var self=this,args=arguments,oc=window.confirm,asked=null,res;
+      window.confirm=function(m){asked=m;return false;};
+      try{res=orig.apply(self,args);}finally{window.confirm=oc;}
+      if(asked===null)return res;
+      var d=describe(asked);d.cancel='ZRUŠIT';
+      tscDialog(d,function(){
+        window.confirm=function(){return true;};
+        try{orig.apply(self,args);}finally{window.confirm=oc;}
+      });
+    };
+  }
+  ['triggerPanic','delCloth','delExpense','delPayment','delPost','deleteItem','delBoost','delHeistTarget','delHeist','clearLog',
+   'delTaskAdmin','delMsgAdmin','delExcuse','delReport','delIncome','deleteMember','regenRadios','approvePromo','delEvent'].forEach(wrapConfirm);
+
+  // totéž pro prompt()
+  function wrapPrompt(name,title){
+    var orig=window[name];if(typeof orig!=='function')return;
+    window[name]=function(){
+      var self=this,args=arguments,op=window.prompt,asked=null;
+      window.prompt=function(m,d){asked={m:m,d:d};return null;};
+      try{orig.apply(self,args);}finally{window.prompt=op;}
+      if(!asked)return;
+      tscDialog({title:title,text:esc(asked.m),input:true,value:asked.d,ok:'ULOŽIT',cancel:'ZRUŠIT'},function(val){
+        window.prompt=function(){return val;};
+        try{orig.apply(self,args);}finally{window.prompt=op;}
+      });
+    };
+  }
+  wrapPrompt('setItemMin','🔔 LIMIT NÍZKÉ ZÁSOBY');
+  wrapPrompt('changeItemImg','🖼 ZMĚNIT FOTO');
+
+  window.alert=function(m){tscDialog({title:'// UPOZORNĚNÍ',text:esc(m),ok:'OK',single:true});};
+
+  // 8) Limit členů frakce (server dovoluje max 16 lidí)
+  function fullDialog(){
+    tscDialog({title:'⚠ FRAKCE JE PLNÁ',
+      text:'Máme maximální počet lidí ve frakci — <b>'+memCount()+'/'+MAX_MEMBERS+'</b>.<br>Server dovoluje maximálně '+MAX_MEMBERS+' členů. Nového člena jde přidat, až někoho odebereš.',
+      ok:'ROZUMÍM',single:true,danger:true});
+  }
+  var _cm=window.createMember;
+  window.createMember=function(){
+    if(memCount()>=MAX_MEMBERS){setText('createStatus','// FRAKCE JE PLNÁ ('+MAX_MEMBERS+'/'+MAX_MEMBERS+')');fullDialog();return;}
+    return _cm.apply(this,arguments);
+  };
+  var _tn=window.toggleNewMember;
+  window.toggleNewMember=function(){
+    var p=document.getElementById('newMemberPanel');
+    if(memCount()>=MAX_MEMBERS&&p&&p.classList.contains('hidden')){fullDialog();return;}
+    return _tn.apply(this,arguments);
+  };
+  var _rmg=window.renderMemberGrid;
+  window.renderMemberGrid=function(){
+    _rmg();
+    var host=document.getElementById('memberGrid');if(!host)return;
+    var bar=document.getElementById('capBar');
+    if(!bar){bar=document.createElement('div');bar.id='capBar';host.parentNode.insertBefore(bar,host);}
+    var n=memCount(),left=MAX_MEMBERS-n,cls=left<=0?'full':(left<=2?'warn':'ok'),msg;
+    if(left<=0)msg='🚫 <b>Frakce je plná — '+n+'/'+MAX_MEMBERS+'.</b> Server dovoluje maximálně '+MAX_MEMBERS+' lidí ve frakci. Nového člena jde přidat, až někoho odebereš.';
+    else if(left<=2)msg='⚠ <b>Skoro plno — '+n+'/'+MAX_MEMBERS+'.</b> Server dovoluje maximálně '+MAX_MEMBERS+' lidí ve frakci, '+(left===1?'zbývá 1 volné místo.':'zbývají '+left+' volná místa.');
+    else msg='👥 <b>Členů: '+n+'/'+MAX_MEMBERS+'</b> · server dovoluje maximálně '+MAX_MEMBERS+' lidí ve frakci.';
+    var pips='';for(var i=0;i<MAX_MEMBERS;i++)pips+='<i'+(i<n?' class="on"':'')+'></i>';
+    bar.className='cap-bar '+cls;
+    bar.innerHTML=msg+'<div class="cap-pips">'+pips+'</div>';
+  };
 })();
