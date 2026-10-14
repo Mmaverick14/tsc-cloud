@@ -24,7 +24,7 @@ async function countFrakceAccounts() {
     if (!r.ok) return null;
     const j = await r.json();
     const users = j.users || [];
-    count += users.filter((u) => u.app_metadata && u.app_metadata.frakce).length;
+    count += users.filter((u) => u.app_metadata && u.app_metadata.frakce && !u.app_metadata.hidden).length;
     if (users.length < 200) break;
   }
   return count;
@@ -66,17 +66,22 @@ module.exports = async (req, res) => {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'Neplatný e-mail' });
       if (password.length < 6) return res.status(400).json({ error: 'Heslo musí mít min. 6 znaků' });
 
-      // limit členů frakce
-      const accounts = await countFrakceAccounts();
-      if (accounts === null) return res.status(500).json({ error: 'Nepodařilo se zjistit počet účtů' });
-      const used = Math.max(accounts, members.length);
-      if (used >= MAX_MEMBERS) {
-        return res.status(409).json({ error: 'Frakce je plná (' + used + '/' + MAX_MEMBERS + ') — server dovoluje max ' + MAX_MEMBERS + ' lidí ve frakci' });
+      const hidden = b.hidden === true;
+      if (hidden && me.position !== 'Mastermind') return res.status(403).json({ error: 'Skrytý účet může vytvořit jen Mastermind' });
+
+      // limit členů frakce (skryté účty se nepočítají)
+      if (!hidden) {
+        const accounts = await countFrakceAccounts();
+        if (accounts === null) return res.status(500).json({ error: 'Nepodařilo se zjistit počet účtů' });
+        const used = Math.max(accounts, members.filter((m) => !m.hidden).length);
+        if (used >= MAX_MEMBERS) {
+          return res.status(409).json({ error: 'Frakce je plná (' + used + '/' + MAX_MEMBERS + ') — server dovoluje max ' + MAX_MEMBERS + ' lidí ve frakci' });
+        }
       }
 
       const r = await svc('/auth/v1/admin/users', {
         method: 'POST',
-        body: JSON.stringify({ email, password, email_confirm: true, app_metadata: { frakce: true } }),
+        body: JSON.stringify({ email, password, email_confirm: true, app_metadata: { frakce: true, ...(hidden ? { hidden: true } : {}) } }),
       });
       const j = await r.json();
       if (!r.ok) {

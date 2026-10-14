@@ -7,6 +7,7 @@
   function fee(){return Number((DB.get('finsettings')||{}).weeklyFee)||5000;}
   function isPaid(f,mid,wk){return f.payments.some(function(p){return p.memberId===mid&&p.weekKey===wk&&(p.expenseId==='weekly'||!p.expenseId);});}
   function members(){return DB.get('members')||[];}
+  function players(){return members().filter(function(m){return !m.hidden;});}
   function memById(id){return members().filter(function(m){return m.id===id;})[0]||null;}
   function joinIdx(m,ws){if(!m.joined)return -1;var d=new Date(m.joined+'T12:00:00');if(isNaN(d))return -1;var k=wkKey(d);for(var i=0;i<ws.length;i++)if(ws[i].key===k)return i;return -1;}
   // člen platí za týden, jen pokud už byl ve frakci (podle data vstupu, je-li známé)
@@ -26,7 +27,7 @@
   }
   function unpaidFor(wk,ws){
     var f=fin(),idx=0;for(var i=0;i<ws.length;i++)if(ws[i].key===wk)idx=i;
-    return members().filter(function(m){return liable(m,idx,ws)&&!isPaid(f,m.id,wk);});
+    return players().filter(function(m){return liable(m,idx,ws)&&!isPaid(f,m.id,wk);});
   }
   function sendReminder(wk,manual){
     var ws=weeksList(8),list=unpaidFor(wk,ws);
@@ -45,7 +46,7 @@
     var el=document.getElementById('financeAdminPanel');if(!el)return;
     var old=document.getElementById('unpaidBox');if(old)old.remove();
     var ws=weeksList(8);if(upSel>=ws.length)upSel=0;
-    var wk=ws[upSel].key,f=fin(),all=members(),list=unpaidFor(wk,ws),amt=fee(),cfg=remCfg();
+    var wk=ws[upSel].key,f=fin(),all=players(),list=unpaidFor(wk,ws),amt=fee(),cfg=remCfg();
     var fs=DB.get('finsettings')||{},due=DAYS[parseInt(fs.feeDay)||0];
     var opts=ws.map(function(w,i){return '<option value="'+i+'"'+(i===upSel?' selected':'')+'>'+(i===0?'Tento týden':i===1?'Minulý týden':'Před '+i+' týdny')+' · '+w.key+'</option>';}).join('');
     var rows=list.length?list.map(function(m){
@@ -157,7 +158,7 @@
   function renderAttOverview(){
     var host=document.getElementById('calBodyA');if(!host||!isAdmin())return;
     var old=document.getElementById('attOverview');if(old)old.remove();
-    var rows=members().map(function(m){return {m:m,s:attStats(m.id)};}).sort(function(a,b){
+    var rows=players().map(function(m){return {m:m,s:attStats(m.id)};}).sort(function(a,b){
       if(a.s.pct===null&&b.s.pct===null)return 0;if(a.s.pct===null)return 1;if(b.s.pct===null)return -1;return a.s.pct-b.s.pct;});
     var box=document.createElement('div');box.id='attOverview';
     box.innerHTML='<div class="fa-exp-title">// DOCHÁZKA ČLENŮ</div>'+
@@ -383,7 +384,7 @@
   window.renderRoster=function(admin){
     _rr.apply(this,arguments);
     var el=document.getElementById(admin?'rosterAdmin':'rosterMember');if(!el)return;
-    var ms=members().slice().sort(function(a,b){var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');});
+    var ms=players().slice().sort(function(a,b){var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');});
     Array.prototype.forEach.call(el.querySelectorAll('tbody tr'),function(tr,i){
       if(!ms[i])return;var td=tr.firstElementChild;if(td){td.setAttribute('data-prof',ms[i].id);td.classList.add('prof-link');td.title='Zobrazit profil';var pn=praises().filter(function(x){return x.memberId===ms[i].id;}).length;if(pn)td.insertAdjacentHTML('beforeend',' <span title="Pochvaly" style="color:var(--acc)">⭐'+pn+'</span>');}
     });

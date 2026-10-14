@@ -512,7 +512,7 @@ function stopPresence(){clearInterval(presenceTimer);presenceTimer=null;}
 function onlineMembers(){
   var now=Date.now();
   return (DB.get('members')||[]).filter(function(x){
-    if(x.id===currentMemberId)return true;
+    if(x.hidden)return false;if(x.id===currentMemberId)return true;
     var t=DB.cache['seen_'+x.id];return typeof t==='number'&&now-t<PRESENCE_MS;
   });
 }
@@ -528,7 +528,7 @@ function dashCard(icon,label,val,sub,cls,go){
 }
 function renderDash(){
   var m=getMember();if(!m)return;
-  var members=DB.get('members')||[];
+  var members=(DB.get('members')||[]).filter(function(x){return !x.hidden;});
   var on=onlineMembers();
   var onLine='<div class="dash-online"><span class="dot"></span>ONLINE: '+(on.length?on.map(function(x){return esc(x.displayName);}).join(', '):'—')+'</div>';
   var el=document.getElementById('dashM');
@@ -769,7 +769,7 @@ function updateBadges(){
   var mb=document.getElementById('msgBadge');
   if(mb){if(myMsgs.length){mb.textContent=myMsgs.length;mb.classList.add('visible');}else mb.classList.remove('visible');}
   var fs=DB.get('finsettings')||{weeklyFee:0};
-  if(fs.weeklyFee>0){
+  if(fs.weeklyFee>0&&!m.hidden){
     var wk=getWeekKey();
     var payments=((DB.get('finance')||{}).payments||[]);
     var paid=payments.some(function(p){return p.memberId===m.id&&p.weekKey===wk;});
@@ -1145,7 +1145,7 @@ function delExpense(id){
 function renderAdminFinance(){
   var fin=DB.get('finance')||{payments:[],expenses:[]};
   var fs=DB.get('finsettings')||{weeklyFee:5000};
-  var members=DB.get('members')||[];
+  var members=(DB.get('members')||[]).filter(function(x){return !x.hidden;});
   var wk=getWeekKey();
   var incomes=DB.get('incomes')||[];
   var confirmedIncome=incomes.filter(function(i){return i.status==='confirmed';}).reduce(function(s,i){return s+i.amount;},0);
@@ -1241,7 +1241,7 @@ function renderMyFinance(){
   var wk=getWeekKey();
   var el=document.getElementById('myFinance');if(!el)return;
   var html='';
-  if(fs.weeklyFee>0){
+  if(fs.weeklyFee>0&&!m.hidden){
     var weeklyPaid=fin.payments.some(function(p){return p.memberId===m.id&&p.weekKey===wk&&(p.expenseId==='weekly'||(!p.expenseId&&!p.note)||p.note==='Týdenní příspěvek');});
     html+='<div class="fa-expenses" style="margin-bottom:1rem;">'+
       '<div class="fa-exp-title">// TÝDENNÍ PŘÍSPĚVEK — '+wk+'</div>'+
@@ -1665,6 +1665,7 @@ async function createMember(){
   var pass=document.getElementById('nm-pass').value;
   var pos=document.getElementById('nm-pos').value;
   var admin=document.getElementById('nm-admin').checked;
+  var hidden=!!document.getElementById('nm-hidden').checked;
   var note=document.getElementById('nm-note').value.trim();
   var discordId=(document.getElementById('nm-discord').value||'').replace(/\D/g,'');
   var firstName=document.getElementById('nm-first').value.trim();
@@ -1677,19 +1678,20 @@ async function createMember(){
   var members=DB.get('members')||[];
   var me1=getMember();
   if(pos==='Mastermind'&&!(me1&&me1.position==='Mastermind')){st.textContent='// POZICI MASTERMIND MŮŽE PŘIDĚLIT JEN MASTERMIND';return;}
+  if(hidden&&!(me1&&me1.position==='Mastermind')){st.textContent='// SKRYTÝ ÚČET MŮŽE VYTVOŘIT JEN MASTERMIND';return;}
   if(members.find(function(m){return (m.email||'').toLowerCase()===email;})){st.textContent='// E-MAIL JIŽ EXISTUJE';return;}
   st.textContent='// VYTVÁŘÍM ÚČET...';
   var res;
-  try{res=await adminApi({action:'create',email:email,password:pass});}
+  try{res=await adminApi({action:'create',email:email,password:pass,hidden:hidden});}
   catch(e){st.textContent='// CHYBA: '+e.message;return;}
   members=DB.get('members')||[];
-  members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin||ADMIN_POS.indexOf(pos)!==-1,note:note,discordId:discordId,firstName:firstName,lastName:lastName,nick:nick,strikes:0,panic:false});
+  members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin||ADMIN_POS.indexOf(pos)!==-1,note:note,discordId:discordId,firstName:firstName,lastName:lastName,nick:nick,strikes:0,panic:false,hidden:hidden});
   DB.set('members',members);
   addLog('member','Admin registroval nového člena: "'+name+'" ('+pos+').');
   st.textContent='// ČLEN REGISTROVÁN';
   setTimeout(function(){st.textContent='';},3000);
   ['nm-email','nm-name','nm-pass','nm-note','nm-discord','nm-first','nm-last','nm-nick'].forEach(function(i){document.getElementById(i).value='';});
-  document.getElementById('nm-admin').checked=false;
+  document.getElementById('nm-admin').checked=false;document.getElementById('nm-hidden').checked=false;
   toast(name+' registrován','success');renderMemberGrid();populatePwMember();
 }
 function changeDiscordId(id){
@@ -2746,7 +2748,7 @@ function renderRoster(admin){
   var ctl=admin&&canRoster();
   var bar=ctl?'<div class="fp-ftr" style="margin-bottom:.8rem;"><button class="btn-acc small" onclick="sendRosterToDiscord()">📤 POSLAT NA DISCORD</button><span id="rosterSendStatus" class="smsg"></span></div>':'';
   var note=(admin&&!ctl)?'<div class="radio-info" style="margin-bottom:.8rem;">Strike a návrhy povýšení mohou spravovat jen <b>Mastermind, Overseer a Advisor</b>. Ty ostatní vidí přehled jen pro čtení.</div>':'';
-  var members=(DB.get('members')||[]).slice().sort(function(a,b){
+  var members=(DB.get('members')||[]).filter(function(x){return !x.hidden;}).sort(function(a,b){
     var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);
     return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');
   });
@@ -2790,7 +2792,7 @@ function rosterTarget(id,namesOnly){
 // Pošle aktuální seznam členů (hodnost, jméno, přezdívka, strike, návrh povýšení) na Discord do sekce „Seznam Členů“
 function sendRosterToDiscord(){
   if(!canRoster()){toast('Odeslat Crew List smí jen Mastermind, Overseer a Advisor','error');return;}
-  var members=(DB.get('members')||[]).slice().sort(function(a,b){
+  var members=(DB.get('members')||[]).filter(function(x){return !x.hidden;}).sort(function(a,b){
     var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);
     return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');
   });

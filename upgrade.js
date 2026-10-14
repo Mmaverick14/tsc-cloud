@@ -18,7 +18,7 @@
 
   // 2) Počítání čísel v přehledech (+ karta ČLENOVÉ s limitem)
   var MAX_MEMBERS=16;
-  function memCount(){return (DB.get('members')||[]).length;}
+  function memCount(){return (DB.get('members')||[]).filter(function(m){return !m.hidden;}).length;}
   var _rd=window.renderDash;
   window.renderDash=function(){
     _rd();
@@ -192,13 +192,12 @@
   }
   var _cm=window.createMember;
   window.createMember=function(){
-    if(memCount()>=MAX_MEMBERS){setText('createStatus','// FRAKCE JE PLNÁ ('+MAX_MEMBERS+'/'+MAX_MEMBERS+')');fullDialog();return;}
+    if(!(document.getElementById('nm-hidden')||{}).checked&&memCount()>=MAX_MEMBERS){setText('createStatus','// FRAKCE JE PLNÁ ('+MAX_MEMBERS+'/'+MAX_MEMBERS+')');fullDialog();return;}
     return _cm.apply(this,arguments);
   };
   var _tn=window.toggleNewMember;
   window.toggleNewMember=function(){
     var p=document.getElementById('newMemberPanel');
-    if(memCount()>=MAX_MEMBERS&&p&&p.classList.contains('hidden')){fullDialog();return;}
     return _tn.apply(this,arguments);
   };
   var _rmg=window.renderMemberGrid;
