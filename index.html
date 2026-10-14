@@ -65,6 +65,7 @@
         <button class="nb" onclick="mTab('report',this)"><span class="ni">📢</span><span class="nl">HLÁŠENÍ</span></button>
         <button class="nb" onclick="mTab('radio',this)"><span class="ni">📻</span><span class="nl">VYSÍLAČKA</span></button>
         <button class="nb" onclick="mTab('roster',this)"><span class="ni">🪪</span><span class="nl">CREW LIST</span></button>
+        <button class="nb" onclick="mTab('pochvaly',this)"><span class="ni">⭐</span><span class="nl">POCHVALY</span></button>
         <button class="nb" onclick="mTab('contacts',this)"><span class="ni">📱</span><span class="nl">KONTAKTY</span></button>
         <button class="nb admin-only hidden" id="adminNavBtn" onclick="goToAdmin()"><span class="ni">🛡️</span><span class="nl">ADMIN</span></button>
       </nav>
@@ -281,6 +282,12 @@
       <div id="mt-roster" class="mt">
         <div class="ph"><div class="pt">🪪 // CREW LIST</div></div>
         <div id="rosterMember" class="roster-wrap"></div>
+      </div>
+
+      <!-- POCHVALY -->
+      <div id="mt-pochvaly" class="mt">
+        <div class="ph"><div class="pt">⭐ // POCHVALY</div></div>
+        <div id="praiseRoot"></div>
       </div>
 
       <!-- KONTAKTY -->

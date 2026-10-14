@@ -479,4 +479,49 @@
     }
     p.querySelector('#wkOn').checked=cfg.on;p.querySelector('#wkDay').value=String(cfg.day);p.querySelector('#wkHour').value=String(cfg.hour);
   };
+
+  // ═════════ 7) ZÁLOŽKA POCHVALY (menu) ═════════
+  if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.pochvaly='D';
+  function renderPraiseTab(){
+    var el=document.getElementById('praiseRoot');if(!el)return;
+    var me=getMember();if(!me)return;
+    var all=praises(),ms=members();
+    var form='';
+    if(canPraise()){
+      form='<div class="form-panel" style="margin:1.2rem"><div class="fp-title">// NOVÁ POCHVALA (jen vedení)</div><div class="form-grid">'+
+        '<div class="field-group"><label class="fl">KOHO POCHVÁLIT *</label><div class="iw"><span class="ip">&gt;_</span><select id="ptMem">'+
+          ms.filter(function(x){return x.id!==me.id;}).sort(function(a,b){return String(a.displayName).localeCompare(String(b.displayName),'cs');}).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.displayName)+'</option>';}).join('')+'</select></div></div>'+
+        '<div class="field-group fg-full"><label class="fl">ZA CO? *</label><textarea id="ptTxt" class="adm-ta" maxlength="300" style="min-height:80px" placeholder="např. Skvěle vedl heist, pomohl s doplněním skladu…"></textarea></div></div>'+
+        '<div class="fp-ftr"><button class="btn-acc small" id="ptSend">⭐ ODESLAT POCHVALU</button><label class="ping-chk"><input type="checkbox" id="ptPing" checked/><span>🔔 Označit člena na Discordu</span></label></div></div>';
+    }
+    var cnt={};all.forEach(function(x){cnt[x.memberId]=(cnt[x.memberId]||0)+1;});
+    var top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a];}).slice(0,5).map(function(id,i){
+      var m=memById(id);if(!m)return '';
+      return '<div class="prof-li"><span>'+['🥇','🥈','🥉','4.','5.'][i]+' <span class="prof-link" data-prof="'+esc(id)+'">'+esc(m.displayName)+'</span></span><span>⭐ '+cnt[id]+'</span></div>';
+    }).join('');
+    var feed=all.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,50).map(function(x){
+      var del=isAdmin()||x.byId===me.id;
+      var m=memById(x.memberId);
+      return '<div class="map-li" style="display:block;padding:.7rem .9rem;margin:0 1.2rem .5rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--acc)">'+
+        '<div style="color:var(--textb);font-size:1rem;line-height:1.45">⭐ '+esc(x.text)+'</div>'+
+        '<div class="prof-sub" style="margin-top:.35rem"><span class="prof-link" data-prof="'+esc(x.memberId)+'">'+esc(m?m.displayName:x.memberName)+'</span> ← '+esc(x.byName||'?')+' · '+esc(x.time||'')+
+        (del?' <button class="btn-micro del" data-pdel="'+esc(x.id)+'" style="margin-left:.4rem">✕</button>':'')+'</div></div>';
+    }).join('');
+    el.innerHTML=form+
+      (top?'<div class="sh">// NEJVÍC POCHVALOVANÍ</div><div style="margin:0 1.2rem 1rem;padding:.5rem .9rem;background:var(--card);border:1px solid var(--border)">'+top+'</div>':'')+
+      '<div class="sh">// POSLEDNÍ POCHVALY ('+all.length+')</div>'+(feed||'<div class="empty-s">// Zatím žádné pochvaly</div>');
+    var b=el.querySelector('#ptSend');
+    if(b)b.onclick=function(){
+      var id=el.querySelector('#ptMem').value,tx=el.querySelector('#ptTxt').value.trim();
+      if(!id)return;if(!tx){toast('Napiš, za co pochvala je','error');return;}
+      givePraise(id,tx,el.querySelector('#ptPing').checked);renderPraiseTab();
+    };
+  }
+  document.addEventListener('click',function(e){
+    var d=e.target.closest&&e.target.closest('#praiseRoot [data-pdel]');
+    if(d){delPraise(d.getAttribute('data-pdel'));renderPraiseTab();}
+  });
+  var _mtab=window.mTab;
+  window.mTab=function(tab){var r=_mtab.apply(this,arguments);if(tab==='pochvaly')renderPraiseTab();return r;};
+  if(typeof M_RENDER!=='undefined')M_RENDER.pochvaly=renderPraiseTab;
 })();
