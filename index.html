@@ -10,7 +10,6 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="upgrade.css"/>
-  <link rel="stylesheet" href="mapa.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet"/>
 </head>
 <body>
@@ -59,7 +58,6 @@
         <button class="nb" onclick="mTab('warehouse',this)"><span class="ni">📦</span><span class="nl">SKLAD</span></button>
         <button class="nb" onclick="mTab('boosting',this)"><span class="ni">🚗</span><span class="nl">BOOSTING</span></button>
         <button class="nb" onclick="mTab('heist',this)"><span class="ni">💎</span><span class="nl">HEISTY</span></button>
-        <button class="nb" onclick="mTab('mapa',this)"><span class="ni">🗺️</span><span class="nl">MAPA</span></button>
         <button class="nb" onclick="mTab('clothing',this)"><span class="ni">👕</span><span class="nl">OBLEČENÍ</span></button>
         <button class="nb" onclick="mTab('finance',this)"><span class="ni">💵</span><span class="nl">FINANCE</span><span class="nbadge red" id="financeBadge"></span></button>
         <button class="nb" onclick="mTab('excuse',this)"><span class="ni">📝</span><span class="nl">OMLUVENKY</span></button>
@@ -282,12 +280,6 @@
       <div id="mt-roster" class="mt">
         <div class="ph"><div class="pt">🪪 // CREW LIST</div></div>
         <div id="rosterMember" class="roster-wrap"></div>
-      </div>
-
-      <!-- MAPA LOKACÍ -->
-      <div id="mt-mapa" class="mt">
-        <div class="ph"><div class="pt">🗺️ // MAPA LOKACÍ — BOOSTING · ÚKRYTY · HEISTY</div></div>
-        <div id="mapaRoot"></div>
       </div>
 
       <!-- KONTAKTY -->
@@ -684,7 +676,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="app.js"></script>
 <script src="upgrade.js"></script>
-<script src="mapa.js"></script>
 <script src="heslo.js"></script>
 </body>
 </html>
