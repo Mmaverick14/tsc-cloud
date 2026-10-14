@@ -3220,7 +3220,9 @@ function addEvent(){
   evs.push({id:uid(),title:title,type:type,start:date+'T'+time,place:place,note:note,by:m.id,byName:m.displayName,rsvp:{}});
   DB.set('events',evs);
   var d=evStart(evs[evs.length-1]);
-  addLog('cal','Admin naplánoval akci \"'+title+'\" ('+fmtEv(d)+').');
+  var tp=EV_TYPES[type]||EV_TYPES.other;
+  addLog('cal',m.displayName+' naplánoval akci "'+title+'" ('+fmtEv(d)+').',{embed:rich(parseInt(tp[1].slice(1),16),'📅 NOVÁ AKCE V KALENDÁŘI','**'+title+'**',[
+    ['🏷 Typ',tp[0]],['🕒 Kdy',fmtEv(d)],['📍 Místo',place||'neuvedeno'],['🧑 Naplánoval',m.displayName],['📝 Poznámka',note,false]],{by:m.displayName})});
   ['evTitle','evPlace','evNote'].forEach(function(i){document.getElementById(i).value='';});
   st.style.color='';st.textContent='// AKCE NAPLÁNOVÁNA';setTimeout(function(){st.textContent='';},2500);
   toast('Akce naplánována','success');
