@@ -51,11 +51,11 @@ var DB={
   }
 };
 
-var POSITIONS=['Mastermind','Overseer',"Devil's Advocate",'Advisor','Captain','Enforcer','Associate'];
-// Mastermind a Overseer mají admin přístup automaticky
-var ADMIN_POS=['Mastermind','Overseer'];
+var POSITIONS=['Mastermind','Overseer','Counselor',"Devil's Advocate",'Advisor','Captain','Enforcer','Associate'];
+// Mastermind, Overseer a Counselor mají admin přístup automaticky
+var ADMIN_POS=['Mastermind','Overseer','Counselor'];
 // převod starých názvů pozic (už uložených u členů) na nové
-var OLD_POS_MAP={'Boss':'Mastermind','Right hand':'Overseer','Counselor':'Advisor','Consul':'Advisor',"Devil's Advocate":"Devil's Advocate",'Chief of Arms':'Captain','Intelligence Chief':'Enforcer','Keeper of secrets':'Enforcer','Member':'Associate'};
+var OLD_POS_MAP={'Boss':'Mastermind','Right hand':'Overseer','Consul':'Advisor',"Devil's Advocate":"Devil's Advocate",'Chief of Arms':'Captain','Intelligence Chief':'Enforcer','Keeper of secrets':'Enforcer','Member':'Associate'};
 function migratePositions(){
   var members=DB.get('members');if(!members)return;
   var ch=false;
@@ -71,7 +71,7 @@ function syncAdminForPos(m,oldPos){
   if(ADMIN_POS.indexOf(m.position)!==-1)m.adminAccess=true;
   else if(oldPos&&ADMIN_POS.indexOf(oldPos)!==-1)m.adminAccess=false;
 }
-var VEDENI_POS=['Mastermind','Overseer',"Devil's Advocate",'Advisor'];
+var VEDENI_POS=['Mastermind','Overseer','Counselor',"Devil's Advocate",'Advisor'];
 var CAT={weapons:'ZBRANĚ',ammo:'MUNICE',drugs:'DROGY',equipment:'VYBAVENÍ',vehicles:'VOZIDLA',other:'OSTATNÍ'};
 var PRIO={low:'LOW',normal:'NORMAL',high:'HIGH',urgent:'URGENT'};
 var CLOTH_CAT={masks:'Masky & Vousy',jackets:'Bundy & Trička',pants:'Kalhoty & Boty',acc:'Doplňky',sets:'Sety'};
@@ -88,7 +88,7 @@ function canManage(target){
   if(target.position!=='Mastermind')return true;
   var me=getMember();return !!me&&me.position==='Mastermind';
 }
-var RADIO_GEN_POS=['Mastermind','Overseer',"Devil's Advocate",'Advisor','Captain'];
+var RADIO_GEN_POS=['Mastermind','Overseer','Counselor',"Devil's Advocate",'Advisor','Captain'];
 function canRegenRadios(){var m=getMember();return !!m&&RADIO_GEN_POS.indexOf(m.position)!==-1;}
 function isVedeni(pos){return VEDENI_POS.indexOf(pos)!==-1;}
 function getWeekKey(){var d=new Date();var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
@@ -1435,7 +1435,7 @@ function genNewRadios(){
   return f;
 }
 function regenRadios(){
-  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Mastermind, Overseer, Devil\'s Advocate, Advisor a Captain','error');return;}
+  if(!canRegenRadios()){toast('Nové frekvence smí generovat jen Mastermind, Overseer, Counselor, Devil\'s Advocate, Advisor a Captain','error');return;}
   if(!confirm('Vygenerovat nové frekvence hned teď? Staré přestanou platit.'))return;
   var m=getMember();var who=m?m.displayName:'Admin';
   var f=genNewRadios();
@@ -1725,7 +1725,7 @@ function changePosition(id){
 function toggleAdminAccess(id){
   var members=DB.get('members')||[];var m=members.find(function(x){return x.id===id;});if(!m)return;
   if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return;}
-  if(ADMIN_POS.indexOf(m.position)!==-1){toast('Mastermind a Overseer mají admin napevno','error');return;}
+  if(ADMIN_POS.indexOf(m.position)!==-1){toast('Mastermind, Overseer a Counselor mají admin napevno','error');return;}
   m.adminAccess=!m.adminAccess;DB.set('members',members);
   addLog('member','Admin '+(m.adminAccess?'přidělil':'odebral')+' admin přístup "'+m.displayName+'".');
   toast('Admin přístup '+(m.adminAccess?'přidělen':'odebrán'),'info');renderMemberGrid();
