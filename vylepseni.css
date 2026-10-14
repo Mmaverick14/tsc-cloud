@@ -86,3 +86,11 @@
 /* statistiky heistů: víc karet vedle sebe */
 .heist-stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .inc-sum-title small{color:var(--muted);letter-spacing:0}
+
+/* ── koš ── */
+.tr-row{display:flex;align-items:center;gap:.7rem;padding:.5rem 0;border-bottom:1px solid var(--border)}
+.tr-type{flex-shrink:0;font:.55rem 'Share Tech Mono',monospace;letter-spacing:.08em;color:var(--acc);border:1px solid var(--acc-dim);padding:.12rem .4rem;white-space:nowrap}
+.tr-name{flex:1;min-width:0;color:var(--textb);font-size:.95rem;font-weight:600;display:flex;flex-direction:column;word-break:break-word}
+.tr-name small{font:.55rem 'Share Tech Mono',monospace;color:var(--text);font-weight:400;margin-top:.1rem}
+.tr-act{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+@media(max-width:700px){.tr-row{flex-wrap:wrap}.tr-act{width:100%}}

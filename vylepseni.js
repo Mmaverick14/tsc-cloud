@@ -582,4 +582,89 @@
   var _mtab=window.mTab;
   window.mTab=function(tab){var r=_mtab.apply(this,arguments);if(tab==='pochvaly')renderPraiseTab();return r;};
   if(typeof M_RENDER!=='undefined')M_RENDER.pochvaly=renderPraiseTab;
+
+  // ═════════ 8) KOŠ (smazané položky jdou 30 dní vrátit) ═════════
+  // Zachytává mazání z polí s položkami (heisty, sklad, boosting, omluvenky, hlášení, oznámení, oblečení, akce, příjmy, pochvaly).
+  // Nic v app.js se nemění: sleduje se, které položky po uložení z pole zmizely.
+  var TRASH_KEYS={
+    heists:['💎 Heist',function(x){return x.target+' — '+(x.memberName||'');}],
+    warehouse:['📦 Sklad',function(x){return x.name+' ('+x.qty+' ks)';}],
+    boosting:['🚗 Vozidlo',function(x){return x.name+' (Tier '+x.tier+')';}],
+    excuses:['📝 Omluvenka',function(x){return (x.memberName||'')+' — '+(x.event||'');}],
+    reports:['📢 Hlášení',function(x){return (x.memberName||'')+': '+String(x.body||'').slice(0,60);}],
+    board:['📣 Oznámení',function(x){return x.title;}],
+    clothing:['👕 Oblečení',function(x){return x.name;}],
+    events:['📅 Akce',function(x){return x.title;}],
+    incomes:['💰 Příjem',function(x){return (x.memberName||'')+' — $'+x.amount+' ('+(x.source||'')+')';}],
+    praises:['⭐ Pochvala',function(x){return (x.memberName||'')+': '+String(x.text||'').slice(0,60);}]
+  };
+  var TRASH_DAYS=30,TRASH_MAX=150;
+  function trashLive(){
+    var a=DB.get('trash');a=Array.isArray(a)?a:[];
+    var lim=Date.now()-TRASH_DAYS*864e5;
+    return a.filter(function(e){return e&&e.ts>=lim;});
+  }
+  function trashAdd(key,items){
+    var me=getMember(),by=me?me.displayName:'?',list=trashLive();
+    items.forEach(function(it){list.unshift({id:uid(),key:key,item:it,by:by,ts:Date.now()});});
+    if(list.length>TRASH_MAX)list=list.slice(0,TRASH_MAX);
+    DB.set('trash',list);
+  }
+  var _dbset=DB.set;
+  DB.set=function(k,v){
+    try{
+      if(TRASH_KEYS[k]&&Array.isArray(v)&&Array.isArray(DB.cache[k])){
+        var keep={};v.forEach(function(x){if(x&&x.id)keep[x.id]=1;});
+        var gone=DB.cache[k].filter(function(x){return x&&x.id&&!keep[x.id];});
+        if(gone.length)trashAdd(k,gone);
+      }
+    }catch(e){console.error('trash',e);}
+    return _dbset.apply(DB,arguments);
+  };
+  function trashLabel(e){var d=TRASH_KEYS[e.key];if(!d)return e.key;try{return d[1](e.item)||'(bez názvu)';}catch(x){return '(bez názvu)';}}
+  function trashRestore(tid){
+    var t=trashLive(),e=t.filter(function(x){return x.id===tid;})[0];if(!e)return;
+    var arr=DB.get(e.key)||[];
+    if(!arr.some(function(x){return x&&x.id===e.item.id;}))arr.push(e.item);
+    DB.set(e.key,arr);
+    DB.set('trash',t.filter(function(x){return x.id!==tid;}));
+    addLog('sys',rosterWho()+' obnovil z koše: '+TRASH_KEYS[e.key][0]+' — '+trashLabel(e),{noDiscord:true});
+    toast('Obnoveno ✓','success');
+    renderTrash();try{refreshView();}catch(x){}
+  }
+  function trashPurge(tid){
+    DB.set('trash',trashLive().filter(function(x){return x.id!==tid;}));
+    toast('Trvale smazáno','info');renderTrash();
+  }
+  function trashEmpty(){DB.set('trash',[]);toast('Koš vysypán','info');renderTrash();}
+  function trashAsk(title,text,ok,fn){
+    if(typeof window.tscDialog==='function')window.tscDialog({title:title,text:text,ok:ok,danger:true,cancel:'ZRUŠIT'},fn);
+    else if(confirm(title))fn();
+  }
+  function renderTrash(){
+    var host=document.getElementById('at-settings');if(!host)return;
+    var p=document.getElementById('trashPanel');
+    if(!p){
+      p=document.createElement('div');p.id='trashPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';host.appendChild(p);
+      p.addEventListener('click',function(e){
+        var b=e.target.closest('[data-tr]');if(!b)return;
+        var a=b.getAttribute('data-tr'),id=b.getAttribute('data-id');
+        if(a==='restore')trashRestore(id);
+        else if(a==='purge')trashAsk('⚠ SMAZAT NAVŽDY?','Tuto položku už nepůjde vrátit.','SMAZAT',function(){trashPurge(id);});
+        else if(a==='empty')trashAsk('⚠ VYSYPAT KOŠ?','Všechny položky v koši se smažou navždy.','VYSYPAT',trashEmpty);
+      });
+    }
+    var list=trashLive();
+    p.innerHTML='<div class="fp-title">// KOŠ — SMAZANÉ POLOŽKY ('+list.length+') · uchovává se '+TRASH_DAYS+' dní</div>'+
+      (list.length?list.slice(0,60).map(function(e){
+        var d=new Date(e.ts);
+        return '<div class="tr-row"><span class="tr-type">'+esc(TRASH_KEYS[e.key]?TRASH_KEYS[e.key][0]:e.key)+'</span>'+
+          '<span class="tr-name">'+esc(trashLabel(e))+'<small>smazal '+esc(e.by||'?')+' · '+d.toLocaleString('cs-CZ',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</small></span>'+
+          '<span class="tr-act"><button class="btn-acc small" data-tr="restore" data-id="'+esc(e.id)+'">↩ OBNOVIT</button>'+
+          '<button class="btn-micro del" title="Smazat navždy" data-tr="purge" data-id="'+esc(e.id)+'">✕</button></span></div>';
+      }).join('')+'<div class="fp-ftr" style="margin-top:.7rem"><button class="btn-ghost small" data-tr="empty">🗑 VYSYPAT KOŠ</button></div>'
+      :'<div class="empty-s">// Koš je prázdný</div>');
+  }
+  var _rset2=window.renderSettings;
+  window.renderSettings=function(){_rset2.apply(this,arguments);renderTrash();};
 })();
