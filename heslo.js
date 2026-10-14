@@ -77,7 +77,7 @@
       if(r){
         setTimeout(function(){
           var m=getMember();
-          if(m&&!m.pwChanged&&!document.querySelector('.pw-self-ov'))openPw(true);
+          if(m&&!m.hidden&&!m.pwChanged&&!document.querySelector('.pw-self-ov'))openPw(true);
         },900);
       }
       return r;

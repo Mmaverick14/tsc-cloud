@@ -399,7 +399,7 @@ async function enterPortal(session,isFreshLogin){
     return false;
   }
   currentMemberId=m.id;
-  if(isFreshLogin)addLog('sys','Člen "'+m.displayName+'" se přihlásil.');
+  if(isFreshLogin&&!m.hidden)addLog('sys','Člen "'+m.displayName+'" se přihlásil.');
   document.getElementById('panicBtn').classList.remove('hidden');
   var adminBtn=document.getElementById('adminNavBtn');
   if(adminBtn)adminBtn.classList.toggle('hidden',!m.adminAccess);
@@ -491,7 +491,7 @@ async function adminApi(body){
 function goToAdmin(){
   var m=getMember();
   if(!m||!m.adminAccess)return;
-  addLog('sys','Člen "'+m.displayName+'" vstoupil do Administrace.');
+  if(!m.hidden)addLog('sys','Člen "'+m.displayName+'" vstoupil do Administrace.');
   showScreen('adminScreen');
   aTab('board',document.querySelector('#adminScreen .nb'));
 }
@@ -506,7 +506,7 @@ function scrollNavTo(btn){
   try{if(window.matchMedia('(max-width:700px)').matches){var sb=btn.closest('.sidebar');
     if(sb){sb.scrollTo({left:btn.offsetLeft-(sb.clientWidth-btn.offsetWidth)/2,behavior:'smooth'});}}}catch(e){}
 }
-function pingPresence(){var m=getMember();if(!m)return;DB.set('seen_'+m.id,Date.now());}
+function pingPresence(){var m=getMember();if(!m||m.hidden)return;DB.set('seen_'+m.id,Date.now());}
 function startPresence(){pingPresence();clearInterval(presenceTimer);presenceTimer=setInterval(function(){pingPresence();notifSync();},120000);}
 function stopPresence(){clearInterval(presenceTimer);presenceTimer=null;}
 function onlineMembers(){
@@ -738,7 +738,7 @@ function currentIds(m){
   };
 }
 function updateNewDots(){
-  var m=getMember();if(!m)return;
+  var m=getMember();if(!m||m.hidden)return;
   var cur=currentIds(m);var s=loadSeen(m);
   if(!s){s=cur;saveSeen(m,s);} // první spuštění: nic se nepovažuje za nové
   var active=document.querySelector('#memberScreen .mt.active');
@@ -1908,7 +1908,7 @@ function sendMsg(){
   if(!subject||!body){st.textContent='// VYPLŇTE POLE';return;}
   var msgs=DB.get('messages')||{};
   var members=DB.get('members')||[];
-  var mid=uid();var targets=target==='all'?members.map(function(m){return m.id;}):[target];
+  var mid=uid();var targets=target==='all'?members.filter(function(m){return !m.hidden;}).map(function(m){return m.id;}):[target];
   targets.forEach(function(tid){if(!msgs[tid])msgs[tid]=[];msgs[tid].push({id:mid,subject:subject,body:body,date:nowStr()});});
   DB.set('messages',msgs);
   addLog('msg','Admin odeslal zprávu "'+subject+'" — '+(target==='all'?'všem':'jednomu členovi')+'.'+(target==='all'?'\n'+body:''),{noPing:target!=='all',extraPing:joinPings(pingBox('ping-msg'),pickPing('pick-msg')),embed:rich(C_TEAL,'💬 NOVÁ ZPRÁVA','**'+subject+'**'+(target==='all'?'\n'+body:''),[['Komu',target==='all'?'Všichni členové':'Jeden člen']],{by:(getMember()?getMember().displayName:'Admin')})});
@@ -3044,7 +3044,7 @@ function notifSources(m){
   return out;
 }
 function notifSync(){
-  var m=getMember();if(!m||m.panic)return;
+  var m=getMember();if(!m||m.panic||m.hidden)return;
   var raw=DB.get('notif_'+m.id);var first=!raw;
   var d=(raw&&raw.items)?raw:{items:[],ids:[]};
   var known={};d.ids.forEach(function(i){known[i]=1;});
@@ -3080,6 +3080,7 @@ function notifBeep(){
 }
 function notifRender(){
   if(!currentMemberId)return;
+  var hm=getMember();document.querySelectorAll('.bell').forEach(function(b){b.style.display=(hm&&hm.hidden)?'none':'';});
   var d=notifData();var un=d.items.filter(function(i){return !i.read;}).length;
   document.querySelectorAll('.bell-n').forEach(function(b){b.textContent=un>9?'9+':un;b.classList.toggle('on',un>0);});
   document.querySelectorAll('.bell').forEach(function(b){b.classList.toggle('ring',un>0);});
