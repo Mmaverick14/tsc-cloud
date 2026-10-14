@@ -258,7 +258,11 @@
       tile('ÚSPĚŠNOST',hp===null?'—':hp+' <small>%</small>',hp===null?'':(hp>=60?'g':(hp>=35?'o':'r')))+
       tile('DOCHÁZKA',at.pct===null?'—':at.pct+' <small>%</small>',pctCls(at.pct)==='good'?'g':pctCls(at.pct)==='mid'?'o':pctCls(at.pct)==='bad'?'r':'')+
       tile('STRIKE',strikes+'<small>/3</small>',strikes>=3?'r':(strikes?'o':'g'));
+    var pr=praises().filter(function(x){return x.memberId===id;}),canDelP=function(x){var q=getMember();return !!q&&(isAdmin()||x.byId===q.id);};
+    tiles+=tile('POCHVALY',String(pr.length),pr.length?'g':'');
     var sec='';
+    if(pr.length)sec+='<div class="prof-sec">// POCHVALY</div>'+pr.slice(-5).reverse().map(function(x){
+      return '<div class="prof-li"><span>⭐ '+esc(x.text)+'</span><span>'+esc(x.byName||'')+' · '+esc((x.time||'').split(',')[0])+(canDelP(x)?' <button class="btn-micro del" data-pdel="'+esc(x.id)+'">✕</button>':'')+'</span></div>';}).join('');
     if(at.last.length)sec+='<div class="prof-sec">// POSLEDNÍ AKCE</div>'+at.last.map(function(x){return '<div class="prof-li"><span>'+esc(x.title)+'</span><span>'+fmtDate(x.date)+' · '+AT[x.v]+'</span></div>';}).join('');
     if(full){
       var f=fin(),ws=weeksList(8),owed=0,paidN=0,cnt=0;
@@ -280,12 +284,17 @@
       (m.promo?'<div class="prof-sec">// NÁVRH NA POVÝŠENÍ</div><div class="prof-li"><span>→ '+esc(m.promo.to)+'</span><span>'+esc(m.promo.note||'')+'</span></div>':'')+
       sec+
       (adm?'<div class="prof-sec">// ADMIN</div><div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><span class="fl" style="margin:0">DATUM VSTUPU</span><input type="date" id="profJ" value="'+esc(m.joined||'')+'" style="background:var(--surf);border:1px solid var(--brite);color:var(--textb);padding:.3rem .5rem"/><button class="btn-acc small" id="profJs">ULOŽIT</button></div>':'')+
-      '<div class="modal-ftr"><button class="btn-ghost small" id="profNo">ZAVŘÍT</button></div></div>';
+      '<div class="modal-ftr">'+(canPraise()&&!self?'<button class="btn-acc small" id="profPraise">⭐ DÁT POCHVALU</button>':'')+'<button class="btn-ghost small" id="profNo">ZAVŘÍT</button></div></div>';
     document.body.appendChild(ov);
     function close(){document.removeEventListener('keydown',key,true);ov.remove();}
     function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
     document.addEventListener('keydown',key,true);
     ov.querySelector('#profNo').onclick=close;
+    var pb=ov.querySelector('#profPraise');if(pb)pb.onclick=function(){close();openPraise(id);};
+    ov.addEventListener('click',function(e){
+      var d=e.target.closest&&e.target.closest('[data-pdel]');if(!d)return;
+      delPraise(d.getAttribute('data-pdel'));close();openProfile(id);
+    });
     ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
     var js=ov.querySelector('#profJs');
     if(js)js.onclick=function(){
@@ -319,7 +328,7 @@
     var el=document.getElementById(admin?'rosterAdmin':'rosterMember');if(!el)return;
     var ms=members().slice().sort(function(a,b){var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');});
     Array.prototype.forEach.call(el.querySelectorAll('tbody tr'),function(tr,i){
-      if(!ms[i])return;var td=tr.firstElementChild;if(td){td.setAttribute('data-prof',ms[i].id);td.classList.add('prof-link');td.title='Zobrazit profil';}
+      if(!ms[i])return;var td=tr.firstElementChild;if(td){td.setAttribute('data-prof',ms[i].id);td.classList.add('prof-link');td.title='Zobrazit profil';var pn=praises().filter(function(x){return x.memberId===ms[i].id;}).length;if(pn)td.insertAdjacentHTML('beforeend',' <span title="Pochvaly" style="color:var(--acc)">⭐'+pn+'</span>');}
     });
   };
   var _cm=window.createMember;
@@ -338,4 +347,136 @@
     b.onclick=function(){if(currentMemberId)openProfile(currentMemberId);};
     f.insertBefore(b,f.querySelector('.btn-back'));
   },1000);
+
+  // ═════════ 5) POCHVALY ═════════
+  if(typeof SECTIONS!=='undefined'){
+    if(!SECTIONS.some(function(x){return x.key==='praise';}))SECTIONS.push({key:'praise',label:'Pochvaly'});
+    if(!SECTIONS.some(function(x){return x.key==='weekly';}))SECTIONS.push({key:'weekly',label:'Týdenní souhrn'});
+  }
+  if(typeof LOG_ICONS!=='undefined'){LOG_ICONS.praise='⭐';LOG_ICONS.weekly='📊';}
+  function praises(){return DB.get('praises')||[];}
+  function canPraise(){var m=getMember();return !!m&&(isVedeni(m.position)||isAdmin());}
+  function givePraise(id,text,ping){
+    var me=getMember(),m=memById(id);if(!me||!m||!canPraise()||me.id===id)return;
+    var arr=praises();
+    arr.push({id:uid(),memberId:id,memberName:m.displayName,text:text,byId:me.id,byName:me.displayName,time:nowStr(),ts:Date.now()});
+    if(arr.length>1000)arr=arr.slice(-1000);
+    DB.set('praises',arr);
+    addLog('praise',me.displayName+' pochválil člena '+m.displayName+': '+text,{
+      embed:rich(C_YELLOW,'⭐ POCHVALA',text,[['👤 Člen',m.displayName],['🧑 Pochválil',me.displayName],['⭐ Celkem pochval',String(arr.filter(function(x){return x.memberId===id;}).length)]],{by:me.displayName}),
+      icon:'⭐',extraPing:ping?mention(m):''});
+    toast('Pochvala odeslána ⭐','success');
+  }
+  function delPraise(pid){
+    var arr=praises(),p=arr.filter(function(x){return x.id===pid;})[0],me=getMember();
+    if(!p||!me||!(isAdmin()||p.byId===me.id))return;
+    DB.set('praises',arr.filter(function(x){return x.id!==pid;}));
+    addLog('praise','Smazána pochvala pro '+p.memberName+'.',{noDiscord:true});
+    toast('Pochvala smazána','success');
+  }
+  function openPraise(id){
+    var m=memById(id);if(!m||!canPraise())return;
+    var old=document.querySelector('.praise-ov');if(old)old.remove();
+    var ov=document.createElement('div');ov.className='modal-ov praise-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="modal-box" style="max-width:440px;width:94vw"><div class="modal-title">⭐ POCHVALA — '+esc(m.displayName)+'</div>'+
+      '<div class="field-group"><label class="fl">ZA CO? *</label><textarea id="prTxt" class="adm-ta" maxlength="300" style="min-height:90px" placeholder="např. Skvěle vedl heist, pomohl s doplněním skladu…"></textarea></div>'+
+      '<label style="display:flex;gap:.4rem;align-items:center;margin-top:.6rem;font:.6rem \'Share Tech Mono\',monospace;color:var(--text);cursor:pointer"><input type="checkbox" id="prPing" checked/> OZNAČIT ČLENA NA DISCORDU'+(m.discordId?'':' (nemá vyplněné Discord ID)')+'</label>'+
+      '<div class="modal-ftr"><button class="btn-acc small" id="prOk">ODESLAT POCHVALU</button><button class="btn-ghost small" id="prNo">ZRUŠIT</button></div></div>';
+    document.body.appendChild(ov);
+    var T=ov.querySelector('#prTxt');
+    function close(){document.removeEventListener('keydown',key,true);ov.remove();}
+    function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
+    document.addEventListener('keydown',key,true);
+    ov.querySelector('#prNo').onclick=close;
+    ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
+    ov.querySelector('#prOk').onclick=function(){
+      var tx=T.value.trim();if(!tx){toast('Napiš, za co pochvala je','error');T.focus();return;}
+      givePraise(id,tx,ov.querySelector('#prPing').checked);close();openProfile(id);
+    };
+    T.focus();
+  }
+
+  // ═════════ 6) TÝDENNÍ SOUHRN NA DISCORD ═════════
+  function wcfg(){var c=DB.get('weeklycfg')||{};return {on:c.on!==false,day:c.day==null?0:c.day,hour:c.hour==null?20:c.hour,last:c.last||''};}
+  function lootSum(txt){
+    var s=String(txt||''),tot=0,re=/\$\s*(\d[\d\s.,\u00a0]*)/g,m,found=false;
+    while((m=re.exec(s))){found=true;tot+=parseAmount(m[1]);}
+    if(!found){var n=parseAmount(s);if(n>=1000)tot=n;}
+    return tot;
+  }
+  function buildWeekly(){
+    var now=new Date(),from=now.getTime()-7*864e5,ms=members();
+    var hs=(DB.get('heists')||[]).filter(function(h){var d=parseCz(h.date);return d&&d.getTime()>=from;});
+    var esc_=hs.filter(function(h){return h.escaped;}).length,loot=0,cnt={};
+    hs.forEach(function(h){loot+=lootSum(h.loot);((h.crew&&h.crew.length)?h.crew:[h.memberId]).forEach(function(id){cnt[id]=(cnt[id]||0)+1;});});
+    var top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a];}).slice(0,3).map(function(id){var m=memById(id);return m?memberLabel(m)+' ('+cnt[id]+'×)':null;}).filter(Boolean);
+    var ws=weeksList(8),wk=wkKey(now),un=unpaidFor(wk,ws);
+    var evs=(DB.get('events')||[]).filter(function(e){var d=evStart(e);return d&&d.getTime()>=from&&d.getTime()<=now.getTime()&&e.att&&Object.keys(e.att).length;});
+    var came=0,abs=0,absBy={};
+    evs.forEach(function(e){Object.keys(e.att).forEach(function(id){if(e.att[id]==='came')came++;else if(e.att[id]==='absent'){abs++;absBy[id]=(absBy[id]||0)+1;}});});
+    var absTxt=Object.keys(absBy).map(function(id){var m=memById(id);return m?memberLabel(m)+(absBy[id]>1?' ('+absBy[id]+'×)':''):null;}).filter(Boolean).join(', ');
+    var pr=praises().filter(function(x){return x.ts>=from;});
+    var fields=[
+      ['💎 Heisty',hs.length?hs.length+' (ujeli '+esc_+', neujeli '+(hs.length-esc_)+')':'žádné'],
+      ['💰 Loot (odhad)',loot?money(loot):'—'],
+      ['⭐ Pochvaly',String(pr.length)],
+      ['📋 Docházka',evs.length?(came+abs?Math.round(came/(came+abs)*100)+' % na '+evs.length+' '+(evs.length===1?'akci':'akcích'):'zapsána bez údajů'):'žádná zapsaná'],
+      ['🏆 Nejaktivnější',top.join(', ')||'—',false],
+      ['💵 Příspěvek '+wk+' — nezaplatili ('+un.length+')',un.length?un.map(function(m){return m.displayName;}).join(', '):'všichni zaplatili ✓',false]
+    ];
+    if(absTxt)fields.splice(5,0,['❌ Nepřišli na akce',absTxt,false]);
+    var f0=new Date(from);
+    return {desc:'Období: **'+f0.getDate()+'. '+(f0.getMonth()+1)+'.** – **'+now.getDate()+'. '+(now.getMonth()+1)+'. '+now.getFullYear()+'**\n*Loot je odhad z částek v $ uvedených v reportech.*',fields:fields,hs:hs.length,un:un.length};
+  }
+  function sendWeekly(manual){
+    var w=buildWeekly();
+    addLog('weekly','Týdenní souhrn — heistů: '+w.hs+', nezaplatilo: '+w.un+'.',{
+      embed:rich(C_BLUE,'📊 TÝDENNÍ SOUHRN FRAKCE',w.desc,w.fields,{by:manual?rosterWho():'Automaticky'}),icon:'📊'});
+    if(manual)toast('Týdenní souhrn odeslán na Discord','success');
+  }
+  var wkBusy=false;
+  async function weeklyTick(){
+    if(wkBusy||!currentMemberId||!sb||!DB.cache||DB.cache.members===undefined)return;
+    var cfg=wcfg();if(!cfg.on)return;
+    var now=new Date();if(now.getDay()!==cfg.day||now.getHours()<cfg.hour)return;
+    var today=ymd(now);if(cfg.last===today)return;
+    wkBusy=true;
+    try{
+      var r=await sb.from(TABLE).select('value').eq('key','weeklycfg').maybeSingle();
+      var fresh=(r.data&&r.data.value)||{on:cfg.on,day:cfg.day,hour:cfg.hour,last:''};
+      if(fresh.last===today){DB.cache.weeklycfg=fresh;}
+      else{
+        fresh.last=today;if(fresh.on===undefined)fresh.on=true;if(fresh.day==null)fresh.day=cfg.day;if(fresh.hour==null)fresh.hour=cfg.hour;
+        DB.set('weeklycfg',fresh);await DB.flush();sendWeekly(false);
+      }
+    }catch(e){console.error(e);}
+    wkBusy=false;
+  }
+  setInterval(weeklyTick,60000);setTimeout(weeklyTick,10000);
+
+  // nastavení (Admin → Nastavení)
+  var _rset=window.renderSettings;
+  window.renderSettings=function(){
+    _rset.apply(this,arguments);
+    var host=document.getElementById('at-settings');if(!host)return;
+    var cfg=wcfg(),p=document.getElementById('weeklyPanel');
+    if(!p){
+      p=document.createElement('div');p.id='weeklyPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+      var dn=['Neděle','Pondělí','Úterý','Středa','Čtvrtek','Pátek','Sobota'],h='';
+      for(var i=0;i<24;i++)h+='<option value="'+i+'">'+(i<10?'0':'')+i+':00</option>';
+      p.innerHTML='<div class="fp-title">// TÝDENNÍ SOUHRN NA DISCORD</div>'+
+        '<div class="up-set" style="margin:0 0 .7rem;padding:0;border:none"><label><input type="checkbox" id="wkOn"/> POSÍLAT AUTOMATICKY</label>'+
+        '<select id="wkDay" class="mc-pos-sel">'+dn.map(function(d,i){return '<option value="'+i+'">'+d+'</option>';}).join('')+'</select>'+
+        '<select id="wkHour" class="mc-pos-sel">'+h+'</select></div>'+
+        '<div class="att-sum">Souhrn za posledních 7 dní: heisty, odhad lootu, pochvaly, docházka, nejaktivnější a neplatiči. Posílá se do sekce „Týdenní souhrn“ (webhook jde nastavit níže). Odešle se, když je v zadaný čas někdo přihlášený.</div>'+
+        '<div class="fp-ftr"><button class="btn-acc small" id="wkNow">📤 POSLAT TEĎ</button></div>';
+      host.appendChild(p);
+      p.addEventListener('change',function(){
+        var c=wcfg();c.on=p.querySelector('#wkOn').checked;c.day=parseInt(p.querySelector('#wkDay').value)||0;c.hour=parseInt(p.querySelector('#wkHour').value)||0;
+        DB.set('weeklycfg',c);toast('Nastavení souhrnu uloženo','success');
+      });
+      p.querySelector('#wkNow').onclick=function(){sendWeekly(true);};
+    }
+    p.querySelector('#wkOn').checked=cfg.on;p.querySelector('#wkDay').value=String(cfg.day);p.querySelector('#wkHour').value=String(cfg.hour);
+  };
 })();
