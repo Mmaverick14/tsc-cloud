@@ -1955,7 +1955,7 @@ function changeItemImg(id){
   var v=prompt('URL fotky z Fivemanage (nebo název souboru v images/):',item.img||'');
   if(v===null)return;
   item.img=v.trim();DB.set('warehouse',items);
-  addLog('wh','Admin změnil foto: '+item.name,{img:item.img,pingCat:item.cat,plain:true,icon:'🖼'});
+  addLog('wh',rosterWho()+' změnil foto: '+item.name,{img:item.img,pingCat:item.cat,plain:true,icon:'🖼'});
   toast('Foto změněno','success');renderAdminWarehouse();renderMemberWarehouse();
 }
 function addItem(){
@@ -1970,7 +1970,7 @@ function addItem(){
   var items=DB.get('warehouse')||[];
   items.push({id:uid(),name:name,cat:cat,qty:qty,min:min,img:img,note:note});
   DB.set('warehouse',items);
-  addLog('wh','Admin přidal novou položku: '+name+' ('+qty+' ks)',{img:img,pingCat:cat,plain:true,icon:'🆕',extraPing:pingBox('ping-additem')});
+  addLog('wh',rosterWho()+' přidal novou položku: '+name+' ('+qty+' ks)',{img:img,pingCat:cat,plain:true,icon:'🆕',extraPing:pingBox('ping-additem')});
   ['wi-name','wi-img','wi-note'].forEach(function(i){document.getElementById(i).value='';});
   document.getElementById('wi-qty').value='1';document.getElementById('wi-min').value='0';
   document.getElementById('wi-preview').innerHTML='—';
@@ -1981,14 +1981,14 @@ function adminAddQty(id){
   var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});if(!item)return;
   var el=document.getElementById('aqty-'+id);var amt=parseInt(el?el.value:1)||1;
   var before=item.qty;item.qty+=amt;DB.set('warehouse',items);
-  addLog('wh','Admin přidal '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📥'});
+  addLog('wh',rosterWho()+' přidal '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📥'});
   toast('+'+amt+' přidáno','success');renderAdminWarehouse();renderMemberWarehouse();
 }
 function adminSubQty(id){
   var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});if(!item)return;
   var el=document.getElementById('aqty-'+id);var amt=parseInt(el?el.value:1)||1;
   var before=item.qty;item.qty=Math.max(0,item.qty-amt);DB.set('warehouse',items);
-  addLog('wh','Admin odebral '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤'});
+  addLog('wh',rosterWho()+' odebral '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤'});
   stockAlert(item,before);
   toast('-'+amt+' odebráno','info');renderAdminWarehouse();renderMemberWarehouse();
 }
