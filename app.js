@@ -893,13 +893,12 @@ function renderMemberWarehouse(){
   el.innerHTML=filtered.map(function(item){
     var qc=item.qty===0?'empty':(item.min>0&&item.qty<=item.min?'low':'');
     var imgH=item.img?'<div class="wh-img"><img src="'+esc(imgSrc(item.img))+'" onerror="this.parentElement.innerHTML=\'<span class=wh-icon>?</span>\'"/></div>':'<div class="wh-img"><span class="wh-icon">?</span></div>';
-    return '<div class="wh-item">'+imgH+
+    return '<div class="wh-item'+(item.qty===0?' wh-empty':'')+'">'+imgH+
       '<div class="wh-cat">'+(CAT[item.cat]||item.cat)+'</div>'+
       '<div class="wh-name">'+esc(item.name)+'</div>'+
       (item.note?'<div class="wh-note-text">'+esc(item.note)+'</div>':'')+
       '<div class="wh-qty-row"><span class="wh-qty '+qc+'">'+item.qty+'</span><span class="wh-unit"> KS</span></div>'+
-      (item.qty===0?'<div class="wh-alert critical">Ve skladu nic není. Je potřeba doplnit.</div>':'')+
-      (item.min>0&&item.qty>0&&item.qty<=item.min?'<div class="wh-alert">NÍZKÁ ZÁSOBA</div>':'')+
+            (item.min>0&&item.qty>0&&item.qty<=item.min?'<div class="wh-alert">NÍZKÁ ZÁSOBA</div>':'')+
       '<div class="wh-pickup"><input class="wh-ev-input" type="text" placeholder="Vaše jméno..." id="pn-'+item.id+'"/>'+
       '<div class="wh-pickup-row"><input class="wh-ev-input small" type="number" value="1" min="1" max="'+item.qty+'" id="pa-'+item.id+'"/>'+
       '<button class="btn-pickup'+(item.qty===0?' btn-pickup-disabled':'')+'" onclick="pickupItem(\''+item.id+'\')"'+(item.qty===0?' disabled':'')+'>⬇ VYZVEDL</button>'+
@@ -1929,13 +1928,12 @@ function renderAdminWarehouse(){
   el.innerHTML=filtered.map(function(item){
     var qc=item.qty===0?'empty':(item.min>0&&item.qty<=item.min?'low':'');
     var imgH=item.img?'<div class="wh-img"><img src="'+esc(imgSrc(item.img))+'" onerror="this.parentElement.innerHTML=\'<span class=wh-icon>?</span>\'"/></div>':'<div class="wh-img"><span class="wh-icon">?</span></div>';
-    return '<div class="wh-item">'+imgH+
+    return '<div class="wh-item'+(item.qty===0?' wh-empty':'')+'">'+imgH+
       '<div class="wh-cat">'+(CAT[item.cat]||item.cat)+'</div>'+
       '<div class="wh-name">'+esc(item.name)+'</div>'+
       (item.note?'<div class="wh-note-text">'+esc(item.note)+'</div>':'')+
       '<div class="wh-qty-row"><span class="wh-qty '+qc+'">'+item.qty+'</span><span class="wh-unit"> KS</span></div>'+
-      (item.qty===0?'<div class="wh-alert critical">VYPRODÁNO</div>':'')+
-      (item.min>0&&item.qty>0&&item.qty<=item.min?'<div class="wh-alert">NÍZKÁ ZÁSOBA</div>':'')+
+            (item.min>0&&item.qty>0&&item.qty<=item.min?'<div class="wh-alert">NÍZKÁ ZÁSOBA</div>':'')+
       '<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;">'+
         '<input class="wh-ev-input small" type="number" value="1" min="1" id="aqty-'+item.id+'"/>'+
         '<button class="btn-pickup" onclick="adminAddQty(\''+item.id+'\')">+ PŘIDAT</button>'+
