@@ -837,3 +837,6 @@ input,select,textarea,button{font-family:'Rajdhani',sans-serif;}
 /* prázdná položka skladu: bez textu, jen červený pruh + ztlumená fotka */
 .wh-item.wh-empty{box-shadow:inset 0 3px 0 var(--red);}
 .wh-item.wh-empty .wh-img img{opacity:.4;filter:grayscale(.7);}
+
+/* nízká zásoba: žlutý pruh */
+.wh-item.wh-low{box-shadow:inset 0 3px 0 #f1c40f;}

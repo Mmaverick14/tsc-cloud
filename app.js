@@ -893,7 +893,7 @@ function renderMemberWarehouse(){
   el.innerHTML=filtered.map(function(item){
     var qc=item.qty===0?'empty':(item.min>0&&item.qty<=item.min?'low':'');
     var imgH=item.img?'<div class="wh-img"><img src="'+esc(imgSrc(item.img))+'" onerror="this.parentElement.innerHTML=\'<span class=wh-icon>?</span>\'"/></div>':'<div class="wh-img"><span class="wh-icon">?</span></div>';
-    return '<div class="wh-item'+(item.qty===0?' wh-empty':'')+'">'+imgH+
+    return '<div class="wh-item'+(item.qty===0?' wh-empty':(item.min>0&&item.qty<=item.min?' wh-low':''))+'">'+imgH+
       '<div class="wh-cat">'+(CAT[item.cat]||item.cat)+'</div>'+
       '<div class="wh-name">'+esc(item.name)+'</div>'+
       (item.note?'<div class="wh-note-text">'+esc(item.note)+'</div>':'')+
@@ -1928,7 +1928,7 @@ function renderAdminWarehouse(){
   el.innerHTML=filtered.map(function(item){
     var qc=item.qty===0?'empty':(item.min>0&&item.qty<=item.min?'low':'');
     var imgH=item.img?'<div class="wh-img"><img src="'+esc(imgSrc(item.img))+'" onerror="this.parentElement.innerHTML=\'<span class=wh-icon>?</span>\'"/></div>':'<div class="wh-img"><span class="wh-icon">?</span></div>';
-    return '<div class="wh-item'+(item.qty===0?' wh-empty':'')+'">'+imgH+
+    return '<div class="wh-item'+(item.qty===0?' wh-empty':(item.min>0&&item.qty<=item.min?' wh-low':''))+'">'+imgH+
       '<div class="wh-cat">'+(CAT[item.cat]||item.cat)+'</div>'+
       '<div class="wh-name">'+esc(item.name)+'</div>'+
       (item.note?'<div class="wh-note-text">'+esc(item.note)+'</div>':'')+
