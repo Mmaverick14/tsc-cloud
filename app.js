@@ -2169,7 +2169,7 @@ function heistCard(h,admin){
   return '<div class="heist-card '+(ok?'ok':'fail')+'">'+
     '<div class="heist-top"><span class="heist-target">'+esc(h.target)+'</span>'+
       '<span class="heist-chip '+(ok?'ok':'fail')+'">'+(ok?'✓ UJELI':'✗ NEUJELI')+'</span></div>'+
-    '<div class="heist-meta"><span>👥 Lidí: <b>'+esc(h.people)+'</b></span><span>💰 Loot: <b>'+esc(h.loot)+'</b></span></div>'+
+    '<div class="heist-meta"><span>👥 Lidí: <b>'+esc(h.people)+(heistCrewText(h)?' ('+esc(heistCrewText(h))+')':'')+'</b></span><span>💰 Loot: <b>'+esc(h.loot)+'</b></span></div>'+
     '<div class="heist-desc">'+esc(h.desc)+'</div>'+
     '<div class="heist-by">// '+esc(h.memberName)+' — '+esc(h.date)+
       (admin?' <button class="btn-micro del" style="float:right" onclick="delHeist(\''+h.id+'\')">✕ SMAZAT</button>':'')+'</div>'+
@@ -2192,21 +2192,55 @@ function splitText(s,n){
   }
   out.push(s);return out;
 }
+// ── Výběr účastníků heistu (podle přezdívek) ──
+function memberLabel(m){var n=rosterNames(m);return n.nick||m.displayName;}
+function heistCrewIds(){
+  var el=document.getElementById('hs-crew');if(!el)return [];
+  return Array.prototype.map.call(el.querySelectorAll('input[type=checkbox]:checked'),function(c){return c.value;});
+}
+function heistCrewUpdate(){
+  var ids=heistCrewIds(),ms=DB.get('members')||[];
+  setText('hs-crew-n','('+ids.length+')');
+  setText('hs-crew-names',ids.map(function(id){var x=ms.find(function(y){return y.id===id;});return x?memberLabel(x):'?';}).join(', '));
+}
+function renderHeistCrew(){
+  var el=document.getElementById('hs-crew');if(!el)return;
+  var me=getMember(),sel;
+  if(!el.dataset.init){sel=me?[me.id]:[];el.dataset.init='1';}else sel=heistCrewIds();
+  var det=el.querySelector('details');var open=det?det.open:true;
+  var ms=(DB.get('members')||[]).slice().sort(function(a,b){return memberLabel(a).localeCompare(memberLabel(b),'cs');});
+  el.innerHTML='<details class="pick-det"'+(open?' open':'')+'><summary>👥 Vybrat lidi <span class="pick-count" id="hs-crew-n">(0)</span></summary>'+
+    '<div class="pick-list">'+ms.map(function(m){
+      var lb=memberLabel(m);
+      return '<label class="pick-item"><input type="checkbox" value="'+esc(m.id)+'"'+(sel.indexOf(m.id)!==-1?' checked':'')+' onchange="heistCrewUpdate()"/><span>'+esc(lb)+(lb!==m.displayName?' <em>('+esc(m.displayName)+')</em>':'')+'</span></label>';
+    }).join('')+'</div></details><div id="hs-crew-names" class="smsg" style="color:var(--textb);padding:.35rem 0 0;"></div>';
+  heistCrewUpdate();
+}
+function heistCrewText(h){
+  if(!h.crew||!h.crew.length)return '';
+  var ms=DB.get('members')||[];
+  return h.crew.map(function(id){var x=ms.find(function(y){return y.id===id;});return x?memberLabel(x):'(smazaný člen)';}).join(', ');
+}
+// účast na heistu: nové reporty = podle výběru, staré (bez výběru) = jen vedoucí
+function heistParticipated(h,id){
+  return (h.crew&&h.crew.length)?h.crew.indexOf(id)!==-1:h.memberId===id;
+}
 function submitHeist(){
   var m=getMember();if(!m)return;
   var t=document.getElementById('hs-target').value;
   var detail=document.getElementById('hs-detail').value.trim();
-  var people=parseInt(document.getElementById('hs-people').value)||0;
+  var crew=heistCrewIds();var people=crew.length;
   var loot=document.getElementById('hs-loot').value.trim();
   var escaped=document.getElementById('hs-escaped').value==='yes';
   var desc=document.getElementById('hs-desc').value.trim();
   var st=document.getElementById('hsStatus');
   if(t==='Jiné'&&!detail){st.style.color='var(--red)';st.textContent='// UPŘESNĚTE, CO SE VYKRÁDALO';return;}
-  if(people<1){st.style.color='var(--red)';st.textContent='// ZADEJTE POČET LIDÍ';return;}
+  if(people<1){st.style.color='var(--red)';st.textContent='// VYBERTE ALESPOŇ JEDNOHO ÚČASTNÍKA';return;}
   if(!loot){st.style.color='var(--red)';st.textContent='// ZADEJTE LOOT (nebo napište „nic“)';return;}
   if(!desc){st.style.color='var(--red)';st.textContent='// NAPIŠTE POPIS PRŮBĚHU';return;}
   var target=(t==='Jiné')?detail:(detail?(t+' — '+detail):t);
-  var h={id:uid(),memberId:m.id,memberName:m.displayName,target:target,people:people,loot:loot,escaped:escaped,desc:desc,date:nowStr()};
+  var h={id:uid(),memberId:m.id,memberName:m.displayName,target:target,people:people,crew:crew,loot:loot,escaped:escaped,desc:desc,date:nowStr()};
+  var crewTxt=heistCrewText(h);
   var list=DB.get('heists')||[];list.push(h);DB.set('heists',list);
   var story=cut(desc,1850);
   if(desc.length>1850)story+='\n*… zkráceno — celý report je na webu (Admin → Heisty)*';
@@ -2220,13 +2254,15 @@ function submitHeist(){
       {name:'👥 Lidí',value:String(people),inline:true},
       {name:'🏃 Ujeli?',value:escaped?'**Ano**':'**Ne**',inline:true},
       {name:'🧑 Vedl',value:cut(m.displayName,200),inline:true},
-      {name:'💰 Loot',value:cut(loot,1000),inline:false}
+      {name:'💰 Loot',value:cut(loot,1000),inline:false},
+      {name:'🧑‍🤝‍🧑 Parta',value:cut(crewTxt||'—',1000),inline:false}
     ].concat(storyFields),
     footer:{text:'Heist report'},
     timestamp:new Date().toISOString()
   };
-  addLog('heist',m.displayName+' nahlásil heist: '+target+' — '+(escaped?'ujeli':'neujeli')+', lidí: '+people+', loot: '+loot+'.',{embed:em,icon:'💎',extraPing:pingBox('ping-heist')});
-  ['hs-detail','hs-people','hs-loot','hs-desc'].forEach(function(i){document.getElementById(i).value='';});
+  addLog('heist',m.displayName+' nahlásil heist: '+target+' — '+(escaped?'ujeli':'neujeli')+', lidí: '+people+' ('+crewTxt+'), loot: '+loot+'.',{embed:em,icon:'💎',extraPing:pingBox('ping-heist')});
+  ['hs-detail','hs-loot','hs-desc'].forEach(function(i){document.getElementById(i).value='';});
+  var cel=document.getElementById('hs-crew');if(cel){cel.dataset.init='';renderHeistCrew();}
   document.getElementById('hs-target').selectedIndex=0;document.getElementById('hs-escaped').value='yes';
   st.style.color='';st.textContent='// REPORT ODESLÁN';setTimeout(function(){st.textContent='';},3000);
   toast('Heist report odeslán ✓','success');
@@ -2234,10 +2270,10 @@ function submitHeist(){
 }
 function renderMyHeists(){
   var m=getMember();if(!m)return;
-  populateHeistTargets();
+  populateHeistTargets();renderHeistCrew();
   var el=document.getElementById('myHeists');if(!el)return;
-  var list=(DB.get('heists')||[]).filter(function(h){return h.memberId===m.id;});
-  el.innerHTML=list.length?list.slice().reverse().map(function(h){return heistCard(h,false);}).join(''):'<div class="empty-s">// Zatím jste nenahlásili žádný heist</div>';
+  var list=(DB.get('heists')||[]).filter(function(h){return h.memberId===m.id||heistParticipated(h,m.id);});
+  el.innerHTML=list.length?list.slice().reverse().map(function(h){return heistCard(h,false);}).join(''):'<div class="empty-s">// Zatím žádný heist</div>';
 }
 function renderAdminHeists(){
   renderHeistTargets();
@@ -3268,18 +3304,19 @@ function renderStats(){
   // členové
   var tasks=DB.get('tasks')||{};
   var rows=members.map(function(x){
-    var hc=heists.filter(function(h){return h.memberId===x.id;}).length;
+    var hc=heists.filter(function(h){return heistParticipated(h,x.id);}).length;
+    var led=heists.filter(function(h){return h.memberId===x.id;}).length;
     var tl=tasks[x.id]||[],td=tl.filter(function(t){return t.done;}).length;
     var mny=sum(pay.filter(function(p){return p.memberId===x.id;}))+sum(inc.filter(function(i){return i.memberId===x.id;}));
     var seen=DB.cache['seen_'+x.id];
-    return {n:x.displayName,pos:x.position,hc:hc,td:td,tt:tl.length,mny:mny,seen:(typeof seen==='number')?seen:0};
+    return {n:x.displayName,pos:x.position,hc:hc,led:led,td:td,tt:tl.length,mny:mny,seen:(typeof seen==='number')?seen:0};
   }).sort(function(a,b){return b.hc-a.hc||b.mny-a.mny;});
   var earners=rows.filter(function(r){return r.mny>0;}).sort(function(a,b){return b.mny-a.mny;}).slice(0,8).map(function(r){return {l:r.n,v:r.mny,c:'gold'};});
   var hLead=rows.filter(function(r){return r.hc>0;}).slice(0,8).map(function(r){return {l:r.n,v:r.hc};});
-  var table='<div class="st-table-wrap"><table class="st-table"><thead><tr><th>ČLEN</th><th>HODNOST</th><th>HEISTY</th><th>ÚKOLY</th><th>PŘÍJMY</th><th>NAPOSLED</th></tr></thead><tbody>'+
+  var table='<div class="st-table-wrap"><table class="st-table"><thead><tr><th>ČLEN</th><th>HODNOST</th><th>HEISTY (ÚČAST)</th><th>VEDL</th><th>ÚKOLY</th><th>PŘÍJMY</th><th>NAPOSLED</th></tr></thead><tbody>'+
     rows.map(function(r){
       var on=r.seen&&Date.now()-r.seen<PRESENCE_MS;
-      return '<tr><td data-l="Člen">'+esc(r.n)+'</td><td data-l="Hodnost">'+esc(r.pos)+'</td><td data-l="Heisty">'+r.hc+'</td><td data-l="Úkoly">'+r.td+' / '+r.tt+'</td><td data-l="Příjmy">'+stUsd(r.mny)+'</td><td data-l="Naposledy">'+(on?'<span class="st-on">● online</span>':(r.seen?agoStr(r.seen):'—'))+'</td></tr>';
+      return '<tr><td data-l="Člen">'+esc(r.n)+'</td><td data-l="Hodnost">'+esc(r.pos)+'</td><td data-l="Heisty">'+r.hc+'</td><td data-l="Vedl">'+r.led+'</td><td data-l="Úkoly">'+r.td+' / '+r.tt+'</td><td data-l="Příjmy">'+stUsd(r.mny)+'</td><td data-l="Naposledy">'+(on?'<span class="st-on">● online</span>':(r.seen?agoStr(r.seen):'—'))+'</td></tr>';
     }).join('')+'</tbody></table></div>';
   var box=function(t,b){return '<div class="st-box"><div class="st-bt-title">'+t+'</div>'+b+'</div>';};
   el.innerHTML=kpi+
