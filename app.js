@@ -1172,7 +1172,7 @@ function renderAdminFinance(){
         '<span class="fa-pay-name">'+esc(m.displayName)+'</span>'+
         '<div style="display:flex;gap:.5rem;align-items:center;">'+
           '<span class="fa-pay-status '+(paid?'paid':'unpaid')+'">'+(paid?'✓ ZAPLACENO':'✗ NEZAPLACENO')+'</span>'+
-          (!paid?'<button class="btn-record-pay" onclick="recordPayment(\''+m.id+'\',\''+m.displayName+'\')">EVIDOVAT</button>':'')+
+          (!paid?'<button class="btn-record-pay" onclick="recordPayment(\''+m.id+'\')">EVIDOVAT</button>':'')+
         '</div></div>';
     }).join('')+
   '</div>';
@@ -1186,7 +1186,7 @@ function renderAdminFinance(){
           '<span class="fa-pay-name">'+esc(m.displayName)+'</span>'+
           '<div style="display:flex;gap:.5rem;align-items:center;">'+
             '<span class="fa-pay-status '+(paid?'paid':'unpaid')+'">'+(paid?'✓ ZAPLATIL':'— NEZAPLATIL')+'</span>'+
-            (!paid?'<button class="btn-record-pay" onclick="recordOptionalPayment(\''+m.id+'\',\''+m.displayName+'\',\''+e.id+'\',\''+esc(e.name)+'\','+e.amount+')">EVIDOVAT</button>':'')+
+            (!paid?'<button class="btn-record-pay" onclick="recordOptionalPayment2(\''+m.id+'\',\''+e.id+'\')">EVIDOVAT</button>':'')+
           '</div></div>';
       }).join('')+
     '</div>';

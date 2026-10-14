@@ -1,0 +1,20 @@
+/* ── UPGRADE: vizuální vylepšení ── */
+.sel-logo{animation:logoGlow 3.5s ease-in-out infinite}
+@keyframes logoGlow{0%,100%{text-shadow:0 0 18px var(--acc-glow)}50%{text-shadow:0 0 38px var(--acc),0 0 8px var(--acc)}}
+.sel-box{box-shadow:0 10px 40px rgba(0,0,0,.6);animation:tabIn .5s ease both}
+.btn-acc:active,.btn-pickup:active,.rsvp:active{transform:scale(.96)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.wh-item,.heist-card,.task-card,.board-post,.ev-card,.member-card{transition:transform .18s,box-shadow .18s,background .18s}
+.wh-item:hover,.board-post:hover,.heist-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.45)}
+::-webkit-scrollbar-thumb:hover{background:var(--acc-dim)}
+.dc-val{font-variant-numeric:tabular-nums}
+/* stav připojení */
+.net-pill{position:fixed;left:50%;top:.6rem;transform:translateX(-50%);z-index:9998;font:700 .65rem 'Share Tech Mono',monospace;letter-spacing:.1em;padding:.35rem .9rem;background:var(--red);color:#fff;display:none}
+.net-pill.on{display:block;animation:tabIn .3s ease}
+/* motivy */
+.tb.theme{font-size:.8rem}
+.theme-pop{position:fixed;z-index:1600;background:var(--card);border:1px solid var(--acc-dim);border-top:2px solid var(--acc);padding:.6rem;display:flex;gap:.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7)}
+.theme-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);cursor:pointer;transition:transform .15s}
+.theme-dot:hover{transform:scale(1.2)}.theme-dot.on{border-color:#fff}
+/* hledání v logu */
+.log-search{margin:.7rem 1.1rem 0;width:calc(100% - 2.2rem)}
