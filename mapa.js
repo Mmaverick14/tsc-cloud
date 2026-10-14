@@ -30,7 +30,7 @@
     root.innerHTML=
       '<div class="map-bar">'+chips+
       '<div class="iw" style="flex:1;min-width:150px;max-width:260px"><span class="ip">🔍</span><input type="text" id="mapQ" placeholder="Hledat lokaci…"/></div>'+
-      '<span class="spacer"></span><button class="btn-acc small" id="mapAddBtn">＋ PŘIDAT PIN</button></div>'+
+      '<span class="spacer"></span>'+(isAdmin()?'<button class="btn-ghost small" id="mapBaseBtn">🖼 PODKLAD MAPY</button>':'')+'<button class="btn-acc small" id="mapAddBtn">＋ PŘIDAT PIN</button></div>'+
       '<div class="map-hint" id="mapHint">📍 Klikni na mapu tam, kde má pin být. (Esc = zrušit)</div>'+
       '<div class="map-wrap" id="mapWrap"><div class="map-vp" id="mapVp"><div class="map-world" id="mapWorld"><div id="mapPins"></div></div></div>'+
       '<div class="map-attrib">KOLEČKO / PINCH = ZOOM · TÁHNI = POSUN</div>'+
@@ -44,34 +44,52 @@
   }
 
   function setWorld(w,h){W=w;H=h;world.style.width=W+'px';world.style.height=H+'px';}
+  function cfgImg(){return String((DB.get('mapCfg')||{}).img||'').trim();}
+  var cfgLoaded=null;
   function loadBase(){
-    var i=0;
-    setWorld(W,H);
+    cfgLoaded=cfgImg();
+    var srcs=(cfgLoaded?[imgSrc(cfgLoaded)]:[]).concat(IMGS),i=0;
+    var gen=++loadGen;
+    Array.prototype.forEach.call(world.querySelectorAll(':scope>img,:scope>svg'),function(n){n.remove();});
+    setWorld(1000,1300);
     placeholder();
+    fit();
     (function tryNext(){
-      if(i>=IMGS.length)return;
-      var im=new Image(),src=IMGS[i++];
+      if(gen!==loadGen||i>=srcs.length)return;
+      var im=new Image(),src=srcs[i++];
       im.onload=function(){
-        var old=world.querySelector(':scope>img,:scope>svg');
+        if(gen!==loadGen)return;
+        Array.prototype.forEach.call(world.querySelectorAll(':scope>img,:scope>svg'),function(n){n.remove();});
         setWorld(im.naturalWidth,im.naturalHeight);
         im.draggable=false;world.insertBefore(im,world.firstChild);
-        if(old)old.remove();
         fit();render();
       };
       im.onerror=tryNext;
       im.src=src;
     })();
   }
-  // schematická mapa, dokud není nahraný images/mapa.jpg
+  var loadGen=0;
+  // prázdný podklad, dokud není nastavená skutečná mapa
   function placeholder(){
     var g='';for(var i=1;i<10;i++){g+='<line x1="'+i*100+'" y1="0" x2="'+i*100+'" y2="1300" /><line x1="0" y1="'+i*130+'" x2="1000" y2="'+i*130+'"/>';}
     var d=document.createElement('div');
     d.innerHTML='<svg viewBox="0 0 1000 1300" xmlns="http://www.w3.org/2000/svg"><rect width="1000" height="1300" fill="#0d1b24"/>'+
       '<g stroke="#15283a" stroke-width="1">'+g+'</g>'+
-      '<path d="M120 60 L420 40 L700 120 L900 230 L880 420 L800 560 L700 700 L640 900 L560 1000 L420 980 L300 930 L220 820 L120 700 L70 520 L90 300 Z" fill="#1c2a1f" stroke="#2e4a35" stroke-width="3"/>'+
-      '<path d="M250 640 L650 600 L700 760 L560 960 L330 920 Z" fill="#22252b" stroke="#3a3f48" stroke-width="2"/>'+
-      '</svg>';
+      '<text x="500" y="640" fill="#c49a14" font-family="Share Tech Mono,monospace" font-size="26" text-anchor="middle" letter-spacing="3">PODKLADOVÁ MAPA NENÍ NASTAVENA</text>'+
+      '<text x="500" y="685" fill="#6b7c88" font-family="Share Tech Mono,monospace" font-size="20" text-anchor="middle" letter-spacing="2">ADMIN: TLAČÍTKO 🖼 PODKLAD MAPY</text></svg>';
     world.insertBefore(d.firstChild,world.firstChild);
+  }
+  function setBase(){
+    var cur=cfgImg(),val=cur;
+    function go(v){
+      v=String(v||'').trim();
+      var c=DB.get('mapCfg')||{};c.img=v;DB.set('mapCfg',c);
+      addLog('map','Admin '+(v?'nastavil':'odebral')+' podkladovou mapu.',{noDiscord:true});
+      toast(v?'Podklad mapy uložen':'Podklad mapy odebrán','success');loadBase();
+    }
+    var txt='Vlož odkaz na obrázek mapy (https://… .jpg/.png/.webp), např. z Fivemanage, Imgur nebo Discordu. Prázdné = odebrat.';
+    if(window.tscDialog)tscDialog({title:'🖼 PODKLAD MAPY',text:esc(txt),input:true,value:val,ok:'ULOŽIT',cancel:'ZRUŠIT'},go);
+    else{var r=prompt(txt,val);if(r!==null)go(r);}
   }
 
   // ── pohled (zoom / posun) ──
@@ -146,6 +164,7 @@
     });
     document.getElementById('mapQ').addEventListener('input',function(){q=normS(this.value);render();});
     document.getElementById('mapAddBtn').onclick=function(){setAdd(!addMode);};
+    var bb=document.getElementById('mapBaseBtn');if(bb)bb.onclick=setBase;
     listEl.addEventListener('click',function(e){
       var li=e.target.closest('[data-id]');if(!li)return;
       var p=find(li.getAttribute('data-id'));if(!p)return;
@@ -185,6 +204,7 @@
   // ── vykreslení pinů + seznamu ──
   function render(){
     if(!built)return;
+    if(cfgLoaded!==null&&cfgImg()!==cfgLoaded)loadBase();
     var all=pins(),vis=all.filter(function(p){
       if(!TYPES[p.type]||!filt[p.type])return false;
       return !q||normS(p.name+' '+(p.note||'')+' '+(p.by||'')).indexOf(q)!==-1;
