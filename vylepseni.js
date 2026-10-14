@@ -211,7 +211,14 @@
   window.submitHeist=function(){
     syncLootBtn();
     if(!lootValid()){toast('Nejdřív vyplň loot přes „ROZDĚLIT LOOT“','error',4000);return;}
-    return _sh.apply(this,arguments);
+    var lc=window.__lootCalc,me=getMember(),n0=(DB.get('heists')||[]).length;
+    var r=_sh.apply(this,arguments);
+    var arr=DB.get('heists')||[];
+    if(lc&&me&&arr.length>n0){ // k novému reportu přidá přesnou částku a podíl frakce (pro statistiky a týdenní souhrn)
+      var h=arr[arr.length-1];
+      if(h&&h.memberId===me.id){h.lootTotal=lc.amount;h.lootFac=lc.fac;h.lootFacPct=lc.facPct;DB.set('heists',arr);}
+    }
+    return r;
   };
 
   function openLoot(){
@@ -227,7 +234,7 @@
         '<div class="field-group"><label class="fl">PODÍL FRAKCE (%)'+(boss?'':' 🔒')+'</label><div class="iw"><span class="ip">%</span><input type="number" id="lcFac" min="0" max="100" step="1"'+(boss?'':' disabled')+'/></div></div>'+
         '<div class="field-group"><label class="fl">BONUS PRO VEDOUCÍHO (% ze zbytku)</label><div class="iw"><span class="ip">%</span><input type="number" id="lcBon" min="0" max="100" step="1"/></div></div>'+
         '<div class="field-group"><label class="fl">POČET LIDÍ (podle výběru)</label><div class="iw"><span class="ip">#</span><input type="number" id="lcN" value="'+names.length+'" disabled/></div></div>'+
-      '</div>'+(boss?'<div class="loot-warn" style="color:var(--acc)">// Jako Mastermind měníš podíl frakce pro všechny.</div>':'<div class="loot-warn" style="color:var(--text)">// Podíl frakce nastavuje Mastermind.</div>')+
+      '</div>'+(boss?'<div class="loot-warn" style="color:var(--acc)">// Jako Mastermind měníš podíl frakce pro všechny.</div>':'<div class="loot-warn" style="color:var(--text)">// Podíl frakce nastavuje Mastermind — nyní '+lootFac()+' %'+((DB.get('lootcfg')||{}).by?' (nastavil '+esc((DB.get('lootcfg')||{}).by)+', '+esc((DB.get('lootcfg')||{}).date||'')+')':'')+'.</div>')+
       '<div id="lcRes"></div>'+
       '<div class="modal-ftr"><button class="btn-acc small" id="lcPut">VLOŽIT DO LOOTU</button><button class="btn-ghost small" id="lcNo">ZAVŘÍT</button></div></div>';
     document.body.appendChild(ov);
@@ -241,13 +248,19 @@
       last=calcLoot(parseFloat(A.value),fac,B.value,names,leaderIdx);
       last.facPct=Math.min(100,Math.max(0,+fac||0));last.bonPct=Math.min(100,Math.max(0,+B.value||0));
       lsSet('tsc_loot_bon',B.value||0);
+      var pc=function(v){return last.amount?' <small style="color:var(--text)">'+(Math.round(v/last.amount*1000)/10)+' %</small>':'';};
       R.innerHTML='<div class="loot-res">'+
-        last.shares.map(function(s,i){return '<div class="r"><span>'+esc(s.name)+(i===leaderIdx&&last.bonus?' ⭐ vedoucí':'')+'</span><b>'+money(s.amt)+'</b></div>';}).join('')+
-        '<div class="r fac"><span>🏛 Frakce'+(last.rem?' (vč. zbytku '+money(last.rem)+')':'')+'</span><b>'+money(last.fac)+'</b></div>'+
+        last.shares.map(function(s,i){return '<div class="r"><span>'+esc(s.name)+(i===leaderIdx&&last.bonus?' ⭐ vedoucí':'')+pc(s.amt)+'</span><b>'+money(s.amt)+'</b></div>';}).join('')+
+        '<div class="r fac"><span>🏛 Frakce'+(last.rem?' (vč. zbytku '+money(last.rem)+')':'')+pc(last.fac)+'</span><b>'+money(last.fac)+'</b></div>'+
         '<div class="r tot"><span>CELKEM</span><b>'+money(last.amount)+'</b></div></div>'+
         (leaderIdx!==-1?'':'<div class="loot-warn">// Nejsi v partě, bonus vedoucího propadá frakci.</div>');
     }
     [A,F,B].forEach(function(i){i.oninput=calc;});calc();
+    [A,F,B].forEach(function(i){i.addEventListener('keydown',function(e){
+      if(e.key!=='Enter')return;e.preventDefault();
+      if(i===F&&boss)F.dispatchEvent(new Event('change'));
+      ov.querySelector('#lcPut').click();
+    });});
     if(boss)F.onchange=function(){
       var v=Math.min(100,Math.max(0,parseFloat(F.value)||0));F.value=v;
       DB.set('lootcfg',{fac:v,by:me.displayName,date:nowStr()});
@@ -278,6 +291,15 @@
     if(f){f.readOnly=true;f.placeholder='Klikni na „🧮 ROZDĚLIT LOOT“ a vyplň rozdělení…';f.style.cursor='pointer';f.onclick=openLoot;}
     syncLootBtn();
   })();
+  var _rah=window.renderAdminHeists;
+  window.renderAdminHeists=function(){
+    _rah.apply(this,arguments);
+    var st=document.querySelector('#aHeists .heist-stats');if(!st)return;
+    var tot=0,fac=0;
+    (DB.get('heists')||[]).forEach(function(h){if(typeof h.lootTotal==='number'){tot+=h.lootTotal;fac+=(h.lootFac||0);}});
+    st.insertAdjacentHTML('beforeend','<div class="inc-sum-card"><div class="inc-sum-title">LOOT CELKEM <small>(nové reporty)</small></div><div class="inc-sum-val acc">'+money(tot)+'</div></div>'+
+      '<div class="inc-sum-card"><div class="inc-sum-title">FRAKCI PŘIPADLO</div><div class="inc-sum-val green">'+money(fac)+'</div></div>');
+  };
 
   // ═════════ 4) PROFIL ČLENA ═════════
   function tile(k,v,cls){return '<div class="prof-tile"><div class="k">'+k+'</div><div class="v '+(cls||'')+'">'+v+'</div></div>';}
@@ -442,8 +464,8 @@
   function buildWeekly(){
     var now=new Date(),from=now.getTime()-7*864e5,ms=members();
     var hs=(DB.get('heists')||[]).filter(function(h){var d=parseCz(h.date);return d&&d.getTime()>=from;});
-    var esc_=hs.filter(function(h){return h.escaped;}).length,loot=0,cnt={};
-    hs.forEach(function(h){loot+=lootSum(h.loot);((h.crew&&h.crew.length)?h.crew:[h.memberId]).forEach(function(id){cnt[id]=(cnt[id]||0)+1;});});
+    var esc_=hs.filter(function(h){return h.escaped;}).length,loot=0,facSum=0,cnt={};
+    hs.forEach(function(h){loot+=(typeof h.lootTotal==='number'?h.lootTotal:lootSum(h.loot));facSum+=(typeof h.lootFac==='number'?h.lootFac:0);((h.crew&&h.crew.length)?h.crew:[h.memberId]).forEach(function(id){cnt[id]=(cnt[id]||0)+1;});});
     var top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a];}).slice(0,3).map(function(id){var m=memById(id);return m?memberLabel(m)+' ('+cnt[id]+'×)':null;}).filter(Boolean);
     var ws=weeksList(8),wk=wkKey(now),un=unpaidFor(wk,ws);
     var evs=(DB.get('events')||[]).filter(function(e){var d=evStart(e);return d&&d.getTime()>=from&&d.getTime()<=now.getTime()&&e.att&&Object.keys(e.att).length;});
@@ -453,7 +475,8 @@
     var pr=praises().filter(function(x){return x.ts>=from;});
     var fields=[
       ['💎 Heisty',hs.length?hs.length+' (ujeli '+esc_+', neujeli '+(hs.length-esc_)+')':'žádné'],
-      ['💰 Loot (odhad)',loot?money(loot):'—'],
+      ['💰 Loot',loot?money(loot):'—'],
+      ['🏛 Frakci připadlo',facSum?money(facSum):'—'],
       ['⭐ Pochvaly',String(pr.length)],
       ['📋 Docházka',evs.length?(came+abs?Math.round(came/(came+abs)*100)+' % na '+evs.length+' '+(evs.length===1?'akci':'akcích'):'zapsána bez údajů'):'žádná zapsaná'],
       ['🏆 Nejaktivnější',top.join(', ')||'—',false],

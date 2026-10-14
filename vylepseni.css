@@ -79,3 +79,10 @@
 .btn-acc:disabled:hover{color:var(--acc)}
 #hs-loot[readonly]{cursor:pointer}
 .iw input:disabled{opacity:.6;cursor:not-allowed}
+
+/* ── čitelnější „ghost“ tlačítka (ZAVŘÍT, ZRUŠIT…) ── */
+.btn-ghost{color:#c8b988;border-color:var(--acc-dim)}
+.btn-ghost:hover{color:var(--acc);border-color:var(--acc)}
+/* statistiky heistů: víc karet vedle sebe */
+.heist-stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.inc-sum-title small{color:var(--muted);letter-spacing:0}
