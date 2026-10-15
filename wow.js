@@ -126,8 +126,73 @@
       prev[x.k]=p;
     });
   }
+
+  /* ═══ 4) FILMOVÝ UVÍTACÍ VSTUP ═══ */
+  function intro(){
+    if(reduce||document.getElementById('wowIntro'))return;
+    var m=getMember();if(!m)return;
+    var h=new Date().getHours(),g=h<10?'Dobré ráno':(h<18?'Dobrý den':'Dobrý večer');
+    var ov=document.createElement('div');ov.id='wowIntro';
+    ov.innerHTML='<div class="wi-in"><div class="wi-logo">T<span class="acc">S</span>C</div><div class="wi-line"></div><div class="wi-hi"></div><div class="wi-name"></div><div class="wi-pos"></div><div class="wi-st">// PŘÍSTUP POVOLEN</div></div>';
+    ov.querySelector('.wi-hi').textContent=g+',';
+    ov.querySelector('.wi-name').textContent=m.displayName;
+    ov.querySelector('.wi-pos').textContent=String(m.position||'').toUpperCase();
+    document.body.appendChild(ov);
+    var done=false;
+    function close(){if(done)return;done=true;ov.classList.add('out');setTimeout(function(){if(ov.parentNode)ov.parentNode.removeChild(ov);},650);}
+    ov.addEventListener('click',close);
+    setTimeout(close,3100);
+  }
+  var _ep=window.enterPortal;
+  if(typeof _ep==='function'){
+    window.enterPortal=async function(session,fresh){
+      var r=await _ep.apply(this,arguments);
+      if(r&&fresh){try{intro();}catch(e){}}
+      return r;
+    };
+  }
+
+  /* ═══ 5) MAPA AKTIVITY + PÓDIUM (Statistiky) ═══ */
+  var WEEKS=16;
+  function heatmap(){
+    var cnt={},tot=0;
+    (DB.get('heists')||[]).forEach(function(h){var d=parseCz(h.date);if(d){var k=ymd(d);cnt[k]=(cnt[k]||0)+1;}});
+    (DB.get('events')||[]).forEach(function(e){var d=evStart(e);if(d){var k=ymd(d);cnt[k]=(cnt[k]||0)+1;}});
+    var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    var mon=new Date(today);mon.setDate(mon.getDate()-((today.getDay()+6)%7)-(WEEKS-1)*7);
+    var cells='',DN=['po','út','st','čt','pá','so','ne'];
+    for(var w=0;w<WEEKS;w++)for(var r=0;r<7;r++){
+      var d=new Date(mon);d.setDate(mon.getDate()+w*7+r);
+      if(d>today){cells+='<i class="n"></i>';continue;}
+      var k=ymd(d),c=cnt[k]||0,l=c===0?0:(c===1?1:(c===2?2:(c<5?3:4)));tot+=c;
+      cells+='<i class="l'+l+(k===ymd(today)?' today':'')+'" title="'+DN[r]+' '+d.getDate()+'. '+(d.getMonth()+1)+'. — '+c+(c===1?' záznam':(c>1&&c<5?' záznamy':' záznamů'))+'"></i>';
+    }
+    return '<div class="hm">'+cells+'</div><div class="hm-leg">méně <i style="background:var(--surf)"></i><i style="background:color-mix(in srgb,var(--acc) 25%,var(--surf))"></i><i style="background:color-mix(in srgb,var(--acc) 48%,var(--surf))"></i><i style="background:color-mix(in srgb,var(--acc) 72%,var(--surf))"></i><i style="background:var(--acc)"></i> více<b>'+tot+' záznamů za '+WEEKS+' týdnů</b></div>';
+  }
+  function podium(){
+    var hs=(DB.get('heists')||[]).filter(function(h){return inRange(parseCz(h.date));});
+    var rows=(DB.get('members')||[]).filter(function(m){return !m.hidden;}).map(function(m){
+      return {n:m.displayName,v:hs.filter(function(h){return heistParticipated(h,m.id);}).length};
+    }).filter(function(r){return r.v>0;}).sort(function(a,b){return b.v-a.v;}).slice(0,3);
+    if(!rows.length)return '<div class="empty-s">// Zatím žádné heisty v tomto období</div>';
+    var max=rows[0].v,medals=['🥇','🥈','🥉'],order=rows.length===3?[1,0,2]:(rows.length===2?[1,0]:[0]);
+    return '<div class="pod">'+order.map(function(i){
+      var r=rows[i],hgt=i===0?100:Math.max(38,Math.round(r.v/max*85));
+      return '<div class="pod-c p'+(i+1)+'"><div class="pod-n" title="'+esc(r.n)+'">'+esc(r.n)+'</div><div class="pod-v">'+r.v+' heistů</div><div class="pod-b" style="--h:'+Math.round(hgt*.62)+'%">'+medals[i]+'</div></div>';
+    }).join('')+'</div>';
+  }
+  function renderExtras(){
+    var host=document.getElementById('statsBody');if(!host||typeof DB==='undefined'||!getMember())return;
+    var old=document.getElementById('wowrow');if(old)old.remove();
+    var row=document.createElement('div');row.id='wowrow';row.className='st-grid wowrow';
+    row.innerHTML='<div class="st-box"><div class="st-bt-title">// MAPA AKTIVITY <small>(heisty + akce, posledních '+WEEKS+' týdnů)</small></div>'+heatmap()+'</div>'+
+      '<div class="st-box"><div class="st-bt-title">// PÓDIUM — NEJVÍC HEISTŮ</div>'+podium()+'</div>';
+    var pulse=document.getElementById('pulse');
+    host.insertBefore(row,pulse?pulse.nextSibling:host.firstChild);
+  }
+
   var _rs=window.renderStats;
   if(typeof _rs==='function'){
-    window.renderStats=function(){var r=_rs.apply(this,arguments);try{renderPulse();}catch(e){console.error('pulse',e);}return r;};
+    window.renderStats=function(){var r=_rs.apply(this,arguments);try{renderPulse();renderExtras();}catch(e){console.error('wow',e);}return r;};
   }
 })();
