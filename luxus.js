@@ -132,7 +132,7 @@
     if(el.dataset.t!==t){el.dataset.t=t;el.innerHTML='';
       var b=document.createElement('b');b.textContent=nm.textContent.trim();
       el.appendChild(document.createTextNode(g+', '));el.appendChild(b);
-      var s=document.createElement('medium');s.textContent='ALT + 1–9 PŘEPÍNÁ ZÁLOŽKY · CTRL + K HLEDÁ';el.appendChild(s);}
+      var s=document.createElement('small');s.textContent='ALT + 1–9 PŘEPÍNÁ ZÁLOŽKY · CTRL + K HLEDÁ';el.appendChild(s);}
   }
   setInterval(function(){indicator();hello();},800);
   // Alt + číslo = záložka podle pořadí v menu
