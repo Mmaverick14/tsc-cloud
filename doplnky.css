@@ -49,8 +49,10 @@
 .bank-num{font:900 1.7rem 'Orbitron',sans-serif;letter-spacing:.06em;color:var(--textb);word-break:break-all;font-variant-numeric:tabular-nums}
 .bank-meta{display:flex;gap:.6rem;align-items:baseline;margin-top:.5rem;font:.58rem 'Share Tech Mono',monospace;color:var(--text);letter-spacing:.1em}
 .bank-meta b{font:700 1rem 'Rajdhani',sans-serif;color:var(--textb);letter-spacing:.03em}
-.bank-ref{margin-top:.8rem;padding:.6rem .8rem;background:var(--surf);border:1px dashed var(--acc-dim)}
-.bank-ref>span{font:.52rem 'Share Tech Mono',monospace;letter-spacing:.14em;color:var(--acc-dim)}
+.bank-ref{margin-top:1rem;padding:.9rem 1.1rem;background:color-mix(in srgb,var(--acc) 14%,var(--surf));border:1px solid var(--acc);border-left:5px solid var(--acc);box-shadow:0 0 22px -8px var(--acc)}
+.bank-ref>span{display:block;font:700 .95rem 'Rajdhani',sans-serif;letter-spacing:.1em;color:var(--textb)}
+.bank-ref .bank-refrow{margin-top:.5rem;gap:1rem}
+.bank-ref code{font:700 1.7rem/1.2 'Share Tech Mono',monospace;color:var(--acc);letter-spacing:.04em;text-shadow:0 0 14px var(--acc-glow);word-break:break-word}
 .bank-refrow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.3rem}
 .bank-card code,.bank-prev code{font:700 1rem 'Share Tech Mono',monospace;color:var(--acc);word-break:break-word}
 .bank-note{margin-top:.7rem;padding-top:.5rem;border-top:1px solid var(--border);color:var(--textb);font-size:.92rem;line-height:1.5;white-space:pre-wrap}
@@ -65,4 +67,4 @@
 .bank-hint{font:.55rem 'Share Tech Mono',monospace;color:var(--text);line-height:1.5;margin-top:.35rem}
 .bank-hint b{color:var(--acc)}
 .bank-prev{margin-top:.35rem;font:.6rem 'Share Tech Mono',monospace;color:var(--text)}
-@media(max-width:700px){.bank-card{margin:0 .7rem 1rem}.bank-num{font-size:1.3rem}.bank-li .n{flex-basis:32%}}
+@media(max-width:700px){.bank-card{margin:0 .7rem 1rem}.bank-num{font-size:1.3rem}.bank-ref code{font-size:1.3rem}.bank-li .n{flex-basis:32%}}
