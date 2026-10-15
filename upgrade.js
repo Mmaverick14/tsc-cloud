@@ -181,6 +181,7 @@
   }
   wrapPrompt('setItemMin','🔔 LIMIT NÍZKÉ ZÁSOBY');
   wrapPrompt('changeItemImg','🖼 ZMĚNIT FOTO');
+  wrapPrompt('renameItem','✏️ PŘEJMENOVAT POLOŽKU');
 
   window.alert=function(m){tscDialog({title:'// UPOZORNĚNÍ',text:esc(m),ok:'OK',single:true});};
 

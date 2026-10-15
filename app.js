@@ -1949,6 +1949,7 @@ function renderAdminWarehouse(){
         '<button class="btn-pickup" onclick="adminAddQty(\''+item.id+'\')">+ PŘIDAT</button>'+
         '<button class="btn-pickup" onclick="adminSubQty(\''+item.id+'\')" style="background:rgba(220,60,60,.15);border-color:var(--red)">− UBRAT</button>'+
         '<button class="btn-micro" title="Limit nízké zásoby" onclick="setItemMin(\''+item.id+'\')">🔔</button>'+
+        '<button class="btn-micro" title="Přejmenovat položku" onclick="renameItem(\''+item.id+'\')">✏️</button>'+
         '<button class="btn-micro" title="Změnit foto" onclick="changeItemImg(\''+item.id+'\')">🖼</button>'+
         '<button class="btn-micro del" onclick="deleteItem(\''+item.id+'\')">✕</button>'+
       '</div></div>';
@@ -1959,6 +1960,17 @@ function previewImg(val){
   var el=document.getElementById('wi-preview');if(!el)return;
   var src=imgSrc(val);
   el.innerHTML=src?'<img src="'+esc(src)+'" style="max-height:60px;max-width:100%;object-fit:contain;" onerror="this.parentElement.innerHTML=\'nenalezeno\'"/>':'—';
+}
+function renameItem(id){
+  var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});if(!item)return;
+  var v=prompt('Nový název položky:',item.name||'');
+  if(v===null)return;
+  v=v.trim();
+  if(!v){toast('Název nesmí být prázdný','error');return;}
+  if(v===item.name)return;
+  var old=item.name;item.name=v;DB.set('warehouse',items);
+  addLog('wh',rosterWho()+' přejmenoval položku: '+old+' → '+v,{img:item.img,pingCat:item.cat,plain:true,icon:'✏️'});
+  toast('Položka přejmenována','success');renderAdminWarehouse();renderMemberWarehouse();
 }
 function changeItemImg(id){
   var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});if(!item)return;
