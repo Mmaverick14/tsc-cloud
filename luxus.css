@@ -1,0 +1,88 @@
+/* ── LUXUS: prémiová vizuální vrstva (načítat jako poslední; barvy se řídí motivem přes --acc) ── */
+:root{
+  --lux-hi:color-mix(in srgb,var(--acc) 55%,#fff);
+  --lux-lo:var(--acc-dim);
+  --lux-line:linear-gradient(160deg,var(--lux-hi),var(--acc-dim) 38%,var(--border) 68%,var(--acc-dim));
+  --lux-serif:'Cormorant Garamond',Georgia,serif;
+}
+::selection{background:var(--acc);color:#080808}
+body::before{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;opacity:.045;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:linear-gradient(var(--acc-dim),var(--brite));border-radius:3px}
+
+/* hlavní plocha a hlavičky stránek */
+.main{background:radial-gradient(900px 420px at 88% -8%,color-mix(in srgb,var(--acc) 8%,transparent),transparent 70%),var(--deep)}
+.ph{background:rgba(18,18,18,.78);backdrop-filter:blur(10px) saturate(1.2);-webkit-backdrop-filter:blur(10px) saturate(1.2);
+  border-bottom:0;box-shadow:0 1px 0 var(--border),0 12px 24px -18px rgba(0,0,0,.9);position:sticky}
+.ph::after{content:'';position:absolute;left:0;bottom:0;width:140px;height:1px;background:linear-gradient(90deg,var(--acc),transparent)}
+.pt{font-family:var(--lux-serif);font-size:1.3rem;font-weight:700;letter-spacing:.07em;
+  background:linear-gradient(180deg,var(--lux-hi),var(--acc) 55%,var(--acc-dim));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.pclock{letter-spacing:.12em}
+
+/* postranní panel */
+@media(min-width:701px){
+  .sidebar{background:linear-gradient(180deg,#171717,#0e0e0e);border-right:1px solid transparent;
+    border-image:linear-gradient(180deg,var(--acc-dim),var(--border) 30%,var(--border) 70%,var(--acc-dim)) 1}
+}
+.sb-logo{text-shadow:0 0 14px var(--acc-glow)}
+.nb.active{background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 20%,transparent),transparent);box-shadow:inset 3px 0 0 var(--acc),0 0 18px -8px var(--acc)}
+.sb-name{font-family:var(--lux-serif);font-size:.95rem;font-weight:700}
+.lux-k{display:flex;width:100%;align-items:center;justify-content:space-between;margin-bottom:.5rem;padding:.4rem .5rem;background:var(--card);
+  border:1px solid var(--brite);color:var(--text);font:.56rem 'Share Tech Mono',monospace;letter-spacing:.1em;cursor:pointer;transition:border-color .2s,color .2s}
+.lux-k:hover{border-color:var(--acc-dim);color:var(--acc)}
+.lux-k kbd{font:inherit;padding:.05rem .3rem;border:1px solid var(--brite);color:var(--acc-dim)}
+
+/* přihlášení: logo jako zlatá folie */
+.sel-bg{background:radial-gradient(600px 400px at 50% 38%,color-mix(in srgb,var(--acc) 10%,transparent),transparent 70%),
+  repeating-linear-gradient(0deg,transparent,transparent 59px,rgba(196,154,20,.02) 59px,rgba(196,154,20,.02) 60px),
+  repeating-linear-gradient(90deg,transparent,transparent 59px,rgba(196,154,20,.02) 59px,rgba(196,154,20,.02) 60px)}
+.sel-logo{text-shadow:none;background:linear-gradient(100deg,var(--acc-dim) 20%,var(--lux-hi) 45%,var(--acc) 55%,var(--acc-dim) 80%);
+  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:luxFoil 6s ease-in-out infinite;filter:drop-shadow(0 0 18px var(--acc-glow))}
+.sel-logo .acc{-webkit-text-fill-color:transparent}
+@keyframes luxFoil{0%,100%{background-position:100% 0}50%{background-position:0 0}}
+#luxDust{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+
+/* rámečky se zlatým lemem */
+.sel-box,.modal-box{border:1px solid transparent;border-top-width:2px;
+  background:linear-gradient(var(--card),var(--card)) padding-box,var(--lux-line) border-box;box-shadow:0 24px 70px rgba(0,0,0,.75),0 0 40px -20px var(--acc)}
+.tsc-cbox.danger{border-color:var(--red-dim);border-top-color:var(--red)}
+.modal-ov{backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal-title{font-family:var(--lux-serif);font-size:1.25rem;letter-spacing:.08em}
+
+/* karty: jemné světlo sledující kurzor */
+.dc,.board-post,.heist-card,.task-card,.ev-card,.member-card,.form-panel{position:relative}
+.dc::after,.board-post::after,.heist-card::after,.task-card::after,.ev-card::after,.member-card::after,.wh-item::after,.form-panel::after{
+  content:'';position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--acc) 13%,transparent),transparent 70%)}
+.dc:hover::after,.board-post:hover::after,.heist-card:hover::after,.task-card:hover::after,.ev-card:hover::after,.member-card:hover::after,.wh-item:hover::after,.form-panel:hover::after{opacity:1}
+.dc,.form-panel{box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.dc:not(.warn):not(.ok) .dc-val{background:linear-gradient(180deg,var(--lux-hi),var(--acc) 60%,var(--acc-dim));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.dc-lb{letter-spacing:.2em}
+
+/* ovládací prvky */
+.btn-acc:hover{box-shadow:0 0 22px -4px var(--acc),inset 0 0 0 1px var(--acc)}
+.iw:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-glow),0 0 18px -6px var(--acc)}
+.wf.active,.ttab.active,.ctab.active{box-shadow:0 0 14px -6px var(--acc)}
+.toast{background:rgba(17,17,17,.92);backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.mx tbody tr:hover td{background:color-mix(in srgb,var(--acc) 7%,transparent)}
+.log-entry:hover{background:color-mix(in srgb,var(--acc) 5%,transparent)}
+
+/* vyhledávací paleta (Ctrl + K) */
+.lux-pal{position:fixed;inset:0;z-index:9600;display:flex;justify-content:center;align-items:flex-start;padding:14vh 1rem 1rem;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);animation:tabIn .15s ease both}
+.lux-pal-box{width:min(520px,100%);border:1px solid transparent;background:linear-gradient(var(--card),var(--card)) padding-box,var(--lux-line) border-box;
+  box-shadow:0 30px 80px rgba(0,0,0,.85);display:flex;flex-direction:column;max-height:60vh}
+.lux-pal-in{background:transparent;border:0;border-bottom:1px solid var(--border);padding:.9rem 1rem;color:var(--textb);
+  font:1.1rem var(--lux-serif);letter-spacing:.04em;outline:0;caret-color:var(--acc)}
+.lux-pal-list{overflow-y:auto;padding:.3rem}
+.lux-pal-it{display:flex;align-items:center;gap:.7rem;width:100%;padding:.55rem .7rem;background:transparent;border:0;color:var(--textb);
+  font:600 .9rem 'Rajdhani',sans-serif;letter-spacing:.08em;text-align:left;cursor:pointer}
+.lux-pal-it.on{background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 18%,transparent),transparent);box-shadow:inset 2px 0 0 var(--acc);color:var(--acc)}
+.lux-pal-it span:first-child{width:1.4rem;text-align:center}
+.lux-pal-none{padding:1rem;text-align:center;font:.62rem 'Share Tech Mono',monospace;color:var(--muted)}
+.lux-pal-foot{padding:.4rem .8rem;border-top:1px solid var(--border);font:.52rem 'Share Tech Mono',monospace;color:var(--muted);letter-spacing:.08em}
+
+@media(max-width:700px){.lux-k{display:none}.pt{font-size:1.1rem}.lux-pal{padding-top:8vh}}
+@media(prefers-reduced-motion:reduce){.sel-logo{animation:none}.dc::after,.board-post::after,.heist-card::after,.task-card::after,.ev-card::after,.member-card::after,.wh-item::after,.form-panel::after{display:none}}
