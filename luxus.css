@@ -86,3 +86,25 @@ body::before{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 
 @media(max-width:700px){.lux-k{display:none}.pt{font-size:1.1rem}.lux-pal{padding-top:8vh}}
 @media(prefers-reduced-motion:reduce){.sel-logo{animation:none}.dc::after,.board-post::after,.heist-card::after,.task-card::after,.ev-card::after,.member-card::after,.wh-item::after,.form-panel::after{display:none}}
+
+/* ── LUXUS 2: plovoucí indikátor, uvítání, jemné detaily ── */
+.sel-divider{height:1px;background:linear-gradient(90deg,transparent,var(--acc-dim),transparent)}
+.board-post{line-height:1.6}
+.board-post,.task-card,.heist-card,.ev-card{border-top:1px solid color-mix(in srgb,var(--acc) 14%,var(--border))}
+.lux-hello{padding:1.3rem 1.3rem .2rem;font:italic 600 1.7rem/1.2 var(--lux-serif);color:var(--textb);letter-spacing:.02em}
+.lux-hello b{font-style:normal;font-weight:700;background:linear-gradient(180deg,var(--lux-hi),var(--acc));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lux-hello small{display:block;margin-top:.25rem;font:.56rem 'Share Tech Mono',monospace;letter-spacing:.18em;color:var(--acc-dim);font-style:normal}
+.sb-nav{position:relative}
+.lux-ind{display:none}
+@media(min-width:701px){
+  .nb.active{box-shadow:none;border-color:transparent}
+  .lux-ind{display:block;position:absolute;left:.35rem;top:0;width:3px;pointer-events:none;opacity:0;
+    background:linear-gradient(180deg,var(--lux-hi),var(--acc));box-shadow:0 0 14px var(--acc);
+    transition:transform .38s cubic-bezier(.3,1.2,.4,1),height .3s,opacity .2s}
+}
+.mt.active .dc{animation:luxRise .5s cubic-bezier(.2,.8,.2,1) both}
+.mt.active .dc:nth-child(2){animation-delay:.05s}.mt.active .dc:nth-child(3){animation-delay:.1s}
+.mt.active .dc:nth-child(4){animation-delay:.15s}.mt.active .dc:nth-child(5){animation-delay:.2s}
+.mt.active .dc:nth-child(n+6){animation-delay:.25s}
+@keyframes luxRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.mt.active .dc{animation:none}.lux-ind{transition:none}}

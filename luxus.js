@@ -101,3 +101,44 @@
     })(0);
   }
 })();
+
+// ── LUXUS 2 ──
+(function(){
+  // plovoucí zlatý indikátor aktivní záložky
+  function indicator(){
+    var nav=document.querySelector('#memberScreen .sb-nav');if(!nav)return;
+    var ind=nav.querySelector('.lux-ind');
+    if(!ind){
+      ind=document.createElement('i');ind.className='lux-ind';nav.appendChild(ind);
+      ind._mv=function(){
+        var a=nav.querySelector('.nb.active');
+        if(!a||!a.offsetHeight){ind.style.opacity=0;return;}
+        ind.style.opacity=1;ind.style.height=a.offsetHeight+'px';ind.style.transform='translateY('+a.offsetTop+'px)';
+      };
+      new MutationObserver(ind._mv).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
+      addEventListener('resize',ind._mv);
+    }
+    ind._mv();
+  }
+  // uvítání podle denní doby
+  function hello(){
+    var ph=document.querySelector('#mt-board .ph'),nm=document.getElementById('sbName');
+    if(!ph||!nm||!nm.textContent.trim())return;
+    var h=new Date().getHours(),g=h<5?'Dobrou noc':h<10?'Dobré ráno':h<18?'Dobrý den':'Dobrý večer';
+    var el=document.querySelector('.lux-hello');
+    if(!el){el=document.createElement('div');el.className='lux-hello';ph.after(el);}
+    var t=g+', '+nm.textContent.trim();
+    if(el.dataset.t!==t){el.dataset.t=t;el.innerHTML='';
+      var b=document.createElement('b');b.textContent=nm.textContent.trim();
+      el.appendChild(document.createTextNode(g+', '));el.appendChild(b);
+      var s=document.createElement('small');s.textContent='ALT + 1–9 PŘEPÍNÁ ZÁLOŽKY · CTRL + K HLEDÁ';el.appendChild(s);}
+  }
+  setInterval(function(){indicator();hello();},800);
+  // Alt + číslo = záložka podle pořadí v menu
+  document.addEventListener('keydown',function(e){
+    if(!e.altKey||e.ctrlKey||e.metaKey||!/^[1-9]$/.test(e.key))return;
+    var ms=document.getElementById('memberScreen');if(!ms||ms.classList.contains('hidden'))return;
+    var b=[].slice.call(ms.querySelectorAll('.sb-nav .nb')).filter(function(x){return !x.classList.contains('hidden');})[+e.key-1];
+    if(b){e.preventDefault();b.click();}
+  });
+})();
