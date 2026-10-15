@@ -163,7 +163,7 @@
     };
   }
   ['triggerPanic','delCloth','delExpense','delPayment','delPost','deleteItem','delBoost','delHeistTarget','delHeist','clearLog',
-   'delTaskAdmin','delMsgAdmin','delExcuse','delReport','delIncome','deleteMember','regenRadios','approvePromo','delEvent'].forEach(wrapConfirm);
+   'delTaskAdmin','delMsgAdmin','delExcuse','delReport','delIncome','deleteMember','regenRadios','approvePromo','delEvent','delWhCat'].forEach(wrapConfirm);
 
   // totéž pro prompt()
   function wrapPrompt(name,title){
@@ -182,6 +182,7 @@
   wrapPrompt('setItemMin','🔔 LIMIT NÍZKÉ ZÁSOBY');
   wrapPrompt('changeItemImg','🖼 ZMĚNIT FOTO');
   wrapPrompt('renameItem','✏️ PŘEJMENOVAT POLOŽKU');
+  wrapPrompt('addWhCat','🗂 NOVÁ KATEGORIE');
 
   window.alert=function(m){tscDialog({title:'// UPOZORNĚNÍ',text:esc(m),ok:'OK',single:true});};
 

@@ -73,6 +73,71 @@ function syncAdminForPos(m,oldPos){
 }
 var VEDENI_POS=['Mastermind','Overseer','Counselor',"Devil's Advocate",'Advisor'];
 var CAT={weapons:'ZBRANĚ',ammo:'MUNICE',drugs:'DROGY',equipment:'VYBAVENÍ',vehicles:'VOZIDLA',other:'OSTATNÍ'};
+// ── vlastní kategorie skladu (ukládají se v DB 'whcats' jako [{key,name}]) ──
+var BASE_CAT_KEYS=Object.keys(CAT);
+function customCats(){return DB.get('whcats')||[];}
+function syncCats(){
+  var list=customCats();
+  Object.keys(CAT).forEach(function(k){if(BASE_CAT_KEYS.indexOf(k)===-1)delete CAT[k];});
+  list.forEach(function(c){CAT[c.key]=String(c.name).toUpperCase();});
+  function has(k){return k==='all'||CAT[k]!==undefined;}
+  if(!has(mWhCat))mWhCat='all';
+  if(!has(aWhCat))aWhCat='all';
+  if(typeof logCat!=='undefined'&&!has(logCat))logCat='all';
+  // tlačítka filtrů
+  [['#mt-warehouse .wh-filters','mWhFilter',function(){return mWhCat;},false,''],
+   ['#at-warehouse .wh-filters','aWhFilter',function(){return aWhCat;},true,''],
+   ['#logFilters','logFilter',function(){return typeof logCat!=='undefined'?logCat:'all';},false,'SKLAD: ']
+  ].forEach(function(f){
+    var host=document.querySelector(f[0]);if(!host)return;
+    host.querySelectorAll('.wf-custom,.wf-add').forEach(function(n){n.remove();});
+    list.forEach(function(c){
+      var b=document.createElement('button');b.className='wf wf-custom'+(f[2]()===c.key?' active':'');
+      b.appendChild(document.createTextNode(f[4]+CAT[c.key]));
+      b.onclick=function(){window[f[1]](c.key,b);};
+      if(f[3]){
+        var x=document.createElement('span');x.className='wf-del';x.textContent=' ✕';x.title='Smazat kategorii';
+        x.onclick=function(e){e.stopPropagation();delWhCat(c.key);};b.appendChild(x);
+      }
+      host.appendChild(b);
+    });
+    if(f[3]){
+      var add=document.createElement('button');add.className='wf-add';add.textContent='+ KATEGORIE';
+      add.onclick=addWhCat;host.appendChild(add);
+    }
+  });
+  // výběr kategorie při přidávání položky
+  var sel=document.getElementById('wi-cat');
+  if(sel){
+    var cur=sel.value;
+    sel.querySelectorAll('option.opt-custom').forEach(function(o){o.remove();});
+    list.forEach(function(c){var o=document.createElement('option');o.className='opt-custom';o.value=c.key;o.textContent=c.name;sel.appendChild(o);});
+    if(cur&&CAT[cur]!==undefined)sel.value=cur;
+  }
+}
+function addWhCat(){
+  var v=prompt('Název nové kategorie skladu:','');
+  if(v===null)return;
+  v=v.trim().replace(/\s+/g,' ');
+  if(!v){toast('Název nesmí být prázdný','error');return;}
+  if(v.length>24){toast('Název je příliš dlouhý (max. 24 znaků)','error');return;}
+  var up=v.toUpperCase();
+  if(Object.keys(CAT).some(function(k){return CAT[k]===up;})){toast('Taková kategorie už existuje','error');return;}
+  var list=customCats().slice();var key='c_'+uid();
+  list.push({key:key,name:v});DB.set('whcats',list);
+  addLog('wh',rosterWho()+' vytvořil novou kategorii skladu: '+v,{plain:true,icon:'🗂'});
+  toast('Kategorie "'+v+'" vytvořena','success');
+  renderAdminWarehouse();renderMemberWarehouse();
+}
+function delWhCat(key){
+  var list=customCats(),c=list.find(function(x){return x.key===key;});if(!c)return;
+  var used=(DB.get('warehouse')||[]).filter(function(i){return i.cat===key;}).length;
+  if(used){toast('Kategorie "'+c.name+'" obsahuje '+used+' položek — nejdřív je přesuň jinam','error',4000);return;}
+  if(!confirm('Smazat kategorii "'+c.name+'"?'))return;
+  DB.set('whcats',list.filter(function(x){return x.key!==key;}));
+  addLog('wh',rosterWho()+' smazal kategorii skladu: '+c.name,{plain:true,icon:'🗂'});
+  toast('Kategorie smazána','info');renderAdminWarehouse();renderMemberWarehouse();
+}
 var PRIO={low:'LOW',normal:'NORMAL',high:'HIGH',urgent:'URGENT'};
 var CLOTH_CAT={masks:'Masky & Vousy',jackets:'Bundy & Trička',pants:'Kalhoty & Boty',acc:'Doplňky',sets:'Sety'};
 
@@ -894,6 +959,7 @@ function whView(items,cat,q,sort){
 function whSearch(scope,v){if(scope==='m'){mWhQ=v;renderMemberWarehouse();}else{aWhQ=v;renderAdminWarehouse();}}
 function whSort(scope,v){if(scope==='m'){mWhSort=v;renderMemberWarehouse();}else{aWhSort=v;renderAdminWarehouse();}}
 function renderMemberWarehouse(){
+  syncCats();
   var items=DB.get('warehouse')||[];
   var filtered=whView(items,mWhCat,mWhQ,mWhSort);
   var el=document.getElementById('mWhGrid');
@@ -1931,6 +1997,7 @@ function aWhFilter(cat,btn){
   aWhCat=cat;document.querySelectorAll('#at-warehouse .wf').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderAdminWarehouse();
 }
 function renderAdminWarehouse(){
+  syncCats();
   var items=DB.get('warehouse')||[];
   var filtered=whView(items,aWhCat,aWhQ,aWhSort);
   var el=document.getElementById('aWhGrid');if(!el)return;
@@ -2364,6 +2431,7 @@ function logFilter(cat,btn){
   if(btn)btn.classList.add('active');renderLog();
 }
 function renderLog(){
+  syncCats();
   var log=DB.get('syslog')||[];var el=document.getElementById('aLog');
   var rows=[];
   log.forEach(function(e,idx){
