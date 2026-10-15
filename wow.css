@@ -1,0 +1,52 @@
+/* ── WOW: holografický průkaz, zlatý déšť, puls frakce (načítat jako poslední; barvy podle motivu) ── */
+
+/* 1) PRŮKAZ ČLENA */
+.prof-ov .modal-box.prof-box{
+  position:relative;
+  transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+  transition:transform .18s ease-out;will-change:transform;
+  background:
+    linear-gradient(105deg,transparent 36%,rgba(255,255,255,.05) 44%,color-mix(in srgb,var(--acc) 22%,transparent) 50%,rgba(255,255,255,.05) 56%,transparent 64%) var(--fx,-30%) 0/260% 100% no-repeat padding-box,
+    radial-gradient(420px circle at var(--hx,50%) var(--hy,0%),color-mix(in srgb,var(--acc) 15%,transparent),transparent 62%) padding-box,
+    linear-gradient(var(--card),var(--card)) padding-box,
+    var(--lux-line) border-box;
+  animation:wowCard .55s cubic-bezier(.2,.9,.3,1.15) backwards;
+}
+@keyframes wowCard{from{opacity:0;transform:perspective(1000px) translateY(18px) rotateX(14deg) scale(.94)}}
+.prof-ov .prof-hex{box-shadow:0 0 0 0 var(--acc-glow),0 0 24px -4px var(--acc);animation:wowHex 3s ease-in-out infinite;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--acc) 22%,transparent),var(--acc-dark))}
+@keyframes wowHex{50%{box-shadow:0 0 0 8px transparent,0 0 34px -2px var(--acc)}}
+.prof-ov .prof-name{font-family:var(--lux-serif);font-size:1.6rem;letter-spacing:.03em;
+  background:linear-gradient(180deg,var(--lux-hi),var(--acc));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.prof-ov .prof-tile{position:relative;overflow:hidden;transition:transform .2s,border-color .2s}
+.prof-ov .prof-tile:hover{transform:translateY(-2px);border-color:var(--acc-dim)}
+.prof-ov .prof-tile::before{content:'';position:absolute;left:0;top:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc),transparent)}
+
+/* 2) ZLATÝ DÉŠŤ */
+#wowConfetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999}
+
+/* 3) PULS FRAKCE */
+.pulse{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.6rem}
+.pulse-t{grid-column:1/-1;font:700 .6rem 'Share Tech Mono',monospace;letter-spacing:.2em;color:var(--acc);padding:.3rem 0 .1rem;
+  border-bottom:1px solid var(--border);position:relative}
+.pulse-t::after{content:'';position:absolute;left:0;bottom:-1px;width:90px;height:1px;background:linear-gradient(90deg,var(--acc),transparent)}
+.pr{position:relative;display:flex;align-items:center;gap:.8rem;padding:.7rem .8rem;background:var(--card);border:1px solid var(--border);
+  border-top:2px solid var(--acc-dim);overflow:hidden;transition:transform .2s,border-color .2s}
+.pr:hover{transform:translateY(-2px);border-color:var(--acc-dim)}
+.pr::after{content:'';position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--acc) 14%,transparent),transparent 70%);pointer-events:none}
+.pr svg{width:78px;height:78px;flex-shrink:0;overflow:visible}
+.pr .t{fill:none;stroke:var(--border);stroke-width:9}
+.pr .g{fill:none;stroke:var(--acc);stroke-width:9;stroke-linecap:round;stroke-dasharray:251.33;
+  transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1),stroke .4s;filter:drop-shadow(0 0 5px var(--acc))}
+.pr.mid .g{stroke:orange;filter:drop-shadow(0 0 5px orange)}
+.pr.bad .g{stroke:var(--red);filter:drop-shadow(0 0 5px var(--red))}
+.pr.na .g{stroke:var(--brite);filter:none}
+.pr.good{border-top-color:var(--acc)}.pr.mid{border-top-color:orange}.pr.bad{border-top-color:var(--red)}
+.pr-in{min-width:0;position:relative;z-index:1}
+.pr-l{font:.52rem 'Share Tech Mono',monospace;letter-spacing:.13em;color:var(--text)}
+.pr-v{display:block;font:700 1.55rem/1.1 'Orbitron',sans-serif;color:var(--textb);margin:.15rem 0;font-variant-numeric:tabular-nums}
+.pr.good .pr-v{color:var(--acc)}.pr.mid .pr-v{color:orange}.pr.bad .pr-v{color:var(--red)}
+.pr-s{font:.52rem 'Share Tech Mono',monospace;color:var(--text)}
+@media(max-width:700px){.pulse{grid-template-columns:1fr 1fr}.pr{flex-direction:column;align-items:flex-start;gap:.4rem}.pr svg{width:64px;height:64px}}
+@media(prefers-reduced-motion:reduce){.prof-ov .modal-box.prof-box,.prof-ov .prof-hex{animation:none;transition:none}.pr .g{transition:none}}
