@@ -435,14 +435,15 @@
 
 // ── DOPLNKY 4: bankovní účet frakce + předepsaný text do poznámky (mění jen Mastermind) ──
 (function(){
-  var DEF_TPL='Příspěvek – {jmeno}';
+  var DEF_TPL='{prezdivka} - {tyden}';
   function acc(){return DB.get('bankacc')||{};}
   function boss(){var m=getMember();return !!m&&m.position==='Mastermind';}
   function tplOf(a){return a.tpl===undefined?DEF_TPL:String(a.tpl||'');}
-  // {jmeno} = IC jméno, {prezdivka} = přezdívka (jinak IC jméno), {tyden} = aktuální týden
+  // {jmeno} = IC jméno, {prezdivka} = přezdívka (jinak IC jméno), {tyden} = číslo týdne jako W42 (stejné týdny jako v příspěvcích)
+  function wk(){var w=(getWeekKey().split('W')[1]||'');return 'W'+(w.length<2?'0'+w:w);}
   function fill(tpl,m){
     var n=(typeof rosterNames==='function')?rosterNames(m):{nick:''};
-    return String(tpl||'').replace(/\{jmeno\}/gi,m.displayName).replace(/\{prezdivka\}/gi,n.nick||m.displayName).replace(/\{tyden\}/gi,getWeekKey()).trim();
+    return String(tpl||'').replace(/\{jmeno\}/gi,m.displayName).replace(/\{prezdivka\}/gi,n.nick||m.displayName).replace(/\{tyden\}/gi,wk()).trim();
   }
   function copyTxt(txt,msg){
     function ok(){toast(msg,'success');}
@@ -495,7 +496,7 @@
       '<div class="field-group"><label class="fl">ČÍSLO ÚČTU *</label><div class="iw"><span class="ip">#</span><input type="text" id="bkNum" maxlength="60"/></div></div>'+
       '<div class="field-group" style="margin-top:.7rem"><label class="fl">MAJITEL / NÁZEV ÚČTU</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bkHolder" maxlength="80"/></div></div>'+
       '<div class="field-group" style="margin-top:.7rem"><label class="fl">TEXT DO POZNÁMKY PLATBY (šablona pro každého člena)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bkTpl" maxlength="100"/></div>'+
-        '<div class="bank-hint">Zástupné znaky: <b>{jmeno}</b> = IC jméno, <b>{prezdivka}</b> = přezdívka, <b>{tyden}</b> = aktuální týden. Prázdné = bez předepsaného textu.</div>'+
+        '<div class="bank-hint">Zástupné znaky: <b>{jmeno}</b> = IC jméno, <b>{prezdivka}</b> = přezdívka, <b>{tyden}</b> = číslo aktuálního týdne, např. W42. Příklad: <b>{prezdivka} - {tyden}</b> → Šéf - W42. Prázdné = bez předepsaného textu.</div>'+
         '<div class="bank-prev" id="bkPrev"></div></div>'+
       '<div class="field-group" style="margin-top:.7rem"><label class="fl">POZNÁMKA PRO ČLENY</label><textarea id="bkNote" class="adm-ta" maxlength="300" style="min-height:70px" placeholder="např. Platbu pošli do 24 hodin."></textarea></div>'+
       '<label style="display:flex;gap:.4rem;align-items:center;margin-top:.6rem;font:.6rem \'Share Tech Mono\',monospace;color:var(--text);cursor:pointer"><input type="checkbox" id="bkDc" checked/> OZNÁMIT ZMĚNU NA DISCORDU</label>'+
