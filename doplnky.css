@@ -70,7 +70,6 @@
 @media(max-width:700px){.bank-card{margin:0 .7rem 1rem}.bank-num{font-size:1.3rem}.bank-ref code{font-size:1.3rem}.bank-li .n{flex-basis:32%}}
 
 /* sklad: vlastní kategorie */
-.wf-add{background:transparent;border:1px dashed var(--brite);color:var(--text);font:700 .62rem 'Share Tech Mono',monospace;letter-spacing:.08em;padding:.5rem .8rem;cursor:pointer;white-space:nowrap;transition:border-color .2s,color .2s}
-.wf-add:hover{border-color:var(--acc);color:var(--acc)}
+.wf-add{border-style:dashed}
 .wf-del{opacity:.55;margin-left:.25rem}
 .wf-del:hover{opacity:1;color:var(--red)}

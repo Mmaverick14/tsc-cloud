@@ -102,7 +102,7 @@ function syncCats(){
       host.appendChild(b);
     });
     if(f[3]){
-      var add=document.createElement('button');add.className='wf-add';add.textContent='+ KATEGORIE';
+      var add=document.createElement('button');add.className='wf wf-add';add.textContent='+ KATEGORIE';
       add.onclick=addWhCat;host.appendChild(add);
     }
   });
