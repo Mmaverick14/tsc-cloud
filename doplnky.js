@@ -432,3 +432,81 @@
     return r;
   };
 })();
+
+// ── DOPLNKY 4: bankovní účet frakce (mění jen Mastermind, ostatní vidí kam poslat peníze) ──
+(function(){
+  function acc(){return DB.get('bankacc')||{};}
+  function boss(){var m=getMember();return !!m&&m.position==='Mastermind';}
+  function copyTxt(txt,msg){
+    function ok(){toast(msg,'success');}
+    function fb(){var t=document.createElement('textarea');t.value=txt;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();try{document.execCommand('copy');ok();}catch(e){}t.remove();}
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
+  }
+
+  function cardHtml(){
+    var a=acc(),num=String(a.number||'').trim();
+    var head='<div class="bank-head"><span class="bank-t">🏦 // BANKOVNÍ ÚČET FRAKCE</span>'+
+      (boss()?'<button class="btn-acc small" data-bank="edit">✎ UPRAVIT</button>':'')+'</div>';
+    if(!num)return head+'<div class="bank-empty">'+(boss()?'Účet zatím není nastavený — klikni na „UPRAVIT“.':'Vedení zatím nenastavilo číslo účtu.')+'</div>';
+    return head+
+      '<div class="bank-row"><div class="bank-num">'+esc(num)+'</div><button class="btn-micro" data-bank="copy">📋 KOPÍROVAT</button></div>'+
+      (a.holder?'<div class="bank-meta"><span>MAJITEL</span><b>'+esc(a.holder)+'</b></div>':'')+
+      (a.note?'<div class="bank-note">'+esc(a.note)+'</div>':'')+
+      (a.by?'<div class="bank-by">// naposledy upravil '+esc(a.by)+(a.date?' — '+esc(a.date):'')+'</div>':'');
+  }
+  function paint(id,beforeId){
+    var before=document.getElementById(beforeId);if(!before)return;
+    var c=document.getElementById(id);
+    if(!c){c=document.createElement('div');c.id=id;c.className='bank-card';before.parentNode.insertBefore(c,before);}
+    c.innerHTML=cardHtml();
+  }
+  function paintAll(){paint('bankCardM','myFinance');paint('bankCardA','financeAdminPanel');}
+
+  var _rmf=window.renderMyFinance;
+  if(typeof _rmf==='function')window.renderMyFinance=function(){var r=_rmf.apply(this,arguments);paint('bankCardM','myFinance');return r;};
+  var _raf=window.renderAdminFinance;
+  if(typeof _raf==='function')window.renderAdminFinance=function(){var r=_raf.apply(this,arguments);paint('bankCardA','financeAdminPanel');return r;};
+
+  function openEdit(){
+    if(!boss()){toast('Číslo účtu může měnit jen Mastermind','error');return;}
+    var a=acc(),old=document.querySelector('.bank-ov');if(old)old.remove();
+    var ov=document.createElement('div');ov.className='modal-ov bank-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="modal-box" style="max-width:440px;width:94vw"><div class="modal-title">🏦 BANKOVNÍ ÚČET FRAKCE</div>'+
+      '<div class="field-group"><label class="fl">ČÍSLO ÚČTU *</label><div class="iw"><span class="ip">#</span><input type="text" id="bkNum" maxlength="60"/></div></div>'+
+      '<div class="field-group" style="margin-top:.7rem"><label class="fl">MAJITEL / NÁZEV ÚČTU</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bkHolder" maxlength="80"/></div></div>'+
+      '<div class="field-group" style="margin-top:.7rem"><label class="fl">POZNÁMKA PRO ČLENY</label><textarea id="bkNote" class="adm-ta" maxlength="300" style="min-height:70px" placeholder="např. Do poznámky platby napiš svoje jméno."></textarea></div>'+
+      '<label style="display:flex;gap:.4rem;align-items:center;margin-top:.6rem;font:.6rem \'Share Tech Mono\',monospace;color:var(--text);cursor:pointer"><input type="checkbox" id="bkDc" checked/> OZNÁMIT ZMĚNU NA DISCORDU</label>'+
+      '<div id="bkMsg" class="smsg" style="margin-top:.4rem;min-height:1em;color:#e05555"></div>'+
+      '<div class="modal-ftr"><button class="btn-acc small" id="bkOk">ULOŽIT</button><button class="btn-ghost small" id="bkNo">ZRUŠIT</button></div></div>';
+    document.body.appendChild(ov);
+    var N=ov.querySelector('#bkNum'),H=ov.querySelector('#bkHolder'),T=ov.querySelector('#bkNote');
+    N.value=a.number||'';H.value=a.holder||'';T.value=a.note||'';
+    function close(){document.removeEventListener('keydown',key,true);ov.remove();}
+    function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
+    document.addEventListener('keydown',key,true);
+    ov.querySelector('#bkNo').onclick=close;
+    ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
+    ov.querySelector('#bkOk').onclick=function(){
+      if(!boss()){toast('Číslo účtu může měnit jen Mastermind','error');return;}
+      var num=N.value.trim();
+      if(!num){ov.querySelector('#bkMsg').textContent='// ZADEJ ČÍSLO ÚČTU';N.focus();return;}
+      var me=getMember(),prev=acc().number||'';
+      var data={number:num,holder:H.value.trim(),note:T.value.trim(),by:me.displayName,date:nowStr()};
+      DB.set('bankacc',data);
+      var dc=ov.querySelector('#bkDc').checked;
+      addLog('fin',me.displayName+' změnil bankovní účet frakce'+(prev&&prev!==num?' ('+prev+' → '+num+')':'')+'.',dc?{
+        embed:rich(C_YELLOW,'🏦 BANKOVNÍ ÚČET FRAKCE',data.note||null,[['🔢 Číslo účtu','`'+num+'`'],['👤 Majitel',data.holder||'—'],['🧑 Změnil',me.displayName]],{by:me.displayName})
+      }:{noDiscord:true});
+      toast('Bankovní účet uložen ✓','success');
+      close();paintAll();
+    };
+    N.focus();
+  }
+
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('[data-bank]');if(!b)return;
+    var k=b.getAttribute('data-bank');
+    if(k==='edit')openEdit();
+    else if(k==='copy'){var n=String(acc().number||'').trim();if(n)copyTxt(n,'Číslo účtu zkopírováno ✓');}
+  });
+})();

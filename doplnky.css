@@ -40,3 +40,16 @@
 .cred-ov{z-index:9550}
 .cred-ta{width:100%;box-sizing:border-box;resize:none;background:var(--surf);border:1px solid var(--brite);color:var(--textb);font:.82rem/1.5 'Share Tech Mono',monospace;padding:.7rem;outline:0}
 .cred-ta:focus{border-color:var(--acc)}
+
+/* ── bankovní účet frakce ── */
+.bank-card{margin:0 1.2rem 1rem;padding:1rem 1.1rem;background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 9%,var(--card)),var(--card));border:1px solid var(--acc-dim);border-left:3px solid var(--acc)}
+.bank-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.7rem}
+.bank-t{font:700 .62rem 'Share Tech Mono',monospace;letter-spacing:.16em;color:var(--acc)}
+.bank-row{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
+.bank-num{font:900 1.7rem 'Orbitron',sans-serif;letter-spacing:.06em;color:var(--textb);word-break:break-all;font-variant-numeric:tabular-nums}
+.bank-meta{display:flex;gap:.6rem;align-items:baseline;margin-top:.5rem;font:.58rem 'Share Tech Mono',monospace;color:var(--text);letter-spacing:.1em}
+.bank-meta b{font:700 1rem 'Rajdhani',sans-serif;color:var(--textb);letter-spacing:.03em}
+.bank-note{margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border);color:var(--textb);font-size:.92rem;line-height:1.5;white-space:pre-wrap}
+.bank-by{margin-top:.5rem;font:.5rem 'Share Tech Mono',monospace;color:var(--muted);letter-spacing:.08em}
+.bank-empty{font:.65rem 'Share Tech Mono',monospace;color:var(--text);letter-spacing:.06em}
+@media(max-width:700px){.bank-card{margin:0 .7rem 1rem}.bank-num{font-size:1.3rem}}
