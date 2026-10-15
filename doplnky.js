@@ -438,7 +438,12 @@
   var DEF_TPL='{prezdivka} - {tyden}';
   function acc(){return DB.get('bankacc')||{};}
   function boss(){var m=getMember();return !!m&&m.position==='Mastermind';}
-  function tplOf(a){return a.tpl===undefined?DEF_TPL:String(a.tpl||'');}
+  function tplOf(){return DEF_TPL;} // pevný formát poznámky platby, nejde měnit
+  function feeRow(){
+    var fs=DB.get('finsettings')||{},f=Number(fs.weeklyFee)||0;if(f<=0)return '';
+    var D=['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'];
+    return '<div class="bank-meta"><span>TÝDENNÍ PŘÍSPĚVEK</span><b>'+money(f)+' · splatnost: '+D[parseInt(fs.feeDay)||0]+'</b></div>';
+  }
   // {jmeno} = IC jméno, {prezdivka} = přezdívka (jinak IC jméno), {tyden} = číslo týdne jako W42 (stejné týdny jako v příspěvcích)
   function wk(){var w=(getWeekKey().split('W')[1]||'');return 'W'+(w.length<2?'0'+w:w);}
   function fill(tpl,m){
@@ -458,13 +463,13 @@
     if(!num)return head+'<div class="bank-empty">'+(boss()?'Účet zatím není nastavený — klikni na „UPRAVIT“.':'Vedení zatím nenastavilo číslo účtu.')+'</div>';
     var h=head+
       '<div class="bank-row"><div class="bank-num">'+esc(num)+'</div><button class="btn-micro" data-bank="copy">📋 KOPÍROVAT</button></div>'+
-      (a.holder?'<div class="bank-meta"><span>MAJITEL</span><b>'+esc(a.holder)+'</b></div>':'');
+      (a.holder?'<div class="bank-meta"><span>MAJITEL</span><b>'+esc(a.holder)+'</b></div>':'')+feeRow();
     var mine=(me&&tpl)?fill(tpl,me):'';
-    if(mine)h+='<div class="bank-ref"><span>TVŮJ TEXT DO POZNÁMKY PLATBY</span><div class="bank-refrow"><code>'+esc(mine)+'</code><button class="btn-micro" data-bank="copyref" data-ref="'+esc(mine)+'">📋 KOPÍROVAT</button></div></div>';
+    if(mine)h+='<div class="bank-ref"><span>POZNÁMKA PRO PLATBU — NAPIŠ PŘESNĚ TAKTO</span><div class="bank-refrow"><code>'+esc(mine)+'</code><button class="btn-micro" data-bank="copyref" data-ref="'+esc(mine)+'">📋 KOPÍROVAT</button></div></div>';
     if(a.note)h+='<div class="bank-note">'+esc(a.note)+'</div>';
     if(admin&&tpl){
       var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden;});
-      h+='<details class="bank-all"><summary>👥 TEXTY VŠECH ČLENŮ ('+ms.length+')</summary>'+ms.map(function(x){
+      h+='<details class="bank-all"><summary>👥 POZNÁMKY PLATEB VŠECH ČLENŮ ('+ms.length+')</summary>'+ms.map(function(x){
         var t=fill(tpl,x);
         return '<div class="bank-li"><span class="n">'+esc(x.displayName)+'</span><code>'+esc(t)+'</code><button class="btn-micro" data-bank="copyref" data-ref="'+esc(t)+'">📋</button></div>';
       }).join('')+'</details>';
@@ -495,18 +500,18 @@
     ov.innerHTML='<div class="modal-box" style="max-width:460px;width:94vw;max-height:92vh;overflow-y:auto"><div class="modal-title">🏦 BANKOVNÍ ÚČET FRAKCE</div>'+
       '<div class="field-group"><label class="fl">ČÍSLO ÚČTU *</label><div class="iw"><span class="ip">#</span><input type="text" id="bkNum" maxlength="60"/></div></div>'+
       '<div class="field-group" style="margin-top:.7rem"><label class="fl">MAJITEL / NÁZEV ÚČTU</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bkHolder" maxlength="80"/></div></div>'+
-      '<div class="field-group" style="margin-top:.7rem"><label class="fl">TEXT DO POZNÁMKY PLATBY (šablona pro každého člena)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bkTpl" maxlength="100"/></div>'+
-        '<div class="bank-hint">Zástupné znaky: <b>{jmeno}</b> = IC jméno, <b>{prezdivka}</b> = přezdívka, <b>{tyden}</b> = číslo aktuálního týdne, např. W42. Příklad: <b>{prezdivka} - {tyden}</b> → Šéf - W42. Prázdné = bez předepsaného textu.</div>'+
+      '<div class="field-group" style="margin-top:.7rem"><label class="fl">POZNÁMKA PRO PLATBY (pevná)</label>'+
+        '<div class="bank-hint">Každý člen píše do poznámky platby: <b>Přezdívka - WXX</b> (jeho přezdívka a číslo aktuálního týdne). Nastavuje se samo, nejde měnit.</div>'+
         '<div class="bank-prev" id="bkPrev"></div></div>'+
-      '<div class="field-group" style="margin-top:.7rem"><label class="fl">POZNÁMKA PRO ČLENY</label><textarea id="bkNote" class="adm-ta" maxlength="300" style="min-height:70px" placeholder="např. Platbu pošli do 24 hodin."></textarea></div>'+
+      '<div class="field-group" style="margin-top:.7rem"><label class="fl">DODATEČNÁ INFO PRO ČLENY (nepovinné)</label><textarea id="bkNote" class="adm-ta" maxlength="300" style="min-height:70px" placeholder="např. Částku neměň, platbu pošli nejpozději v neděli."></textarea></div>'+
       '<label style="display:flex;gap:.4rem;align-items:center;margin-top:.6rem;font:.6rem \'Share Tech Mono\',monospace;color:var(--text);cursor:pointer"><input type="checkbox" id="bkDc" checked/> OZNÁMIT ZMĚNU NA DISCORDU</label>'+
       '<div id="bkMsg" class="smsg" style="margin-top:.4rem;min-height:1em;color:#e05555"></div>'+
       '<div class="modal-ftr"><button class="btn-acc small" id="bkOk">ULOŽIT</button><button class="btn-ghost small" id="bkNo">ZRUŠIT</button></div></div>';
     document.body.appendChild(ov);
-    var N=ov.querySelector('#bkNum'),H=ov.querySelector('#bkHolder'),T=ov.querySelector('#bkNote'),P=ov.querySelector('#bkTpl'),V=ov.querySelector('#bkPrev');
-    N.value=a.number||'';H.value=a.holder||'';T.value=a.note||'';P.value=tplOf(a);
-    function prev(){var me=getMember(),t=me?fill(P.value,me):'';V.innerHTML=t?'Náhled pro tebe: <code>'+esc(t)+'</code>':'Náhled: bez předepsaného textu';}
-    P.oninput=prev;prev();
+    var N=ov.querySelector('#bkNum'),H=ov.querySelector('#bkHolder'),T=ov.querySelector('#bkNote'),V=ov.querySelector('#bkPrev');
+    N.value=a.number||'';H.value=a.holder||'';T.value=a.note||'';
+    function prev(){var me=getMember(),t=me?fill(DEF_TPL,me):'';V.innerHTML='Náhled pro tebe: <code>'+esc(t)+'</code>';}
+    prev();
     function close(){document.removeEventListener('keydown',key,true);ov.remove();}
     function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
     document.addEventListener('keydown',key,true);
@@ -517,11 +522,11 @@
       var num=N.value.trim();
       if(!num){ov.querySelector('#bkMsg').textContent='// ZADEJ ČÍSLO ÚČTU';N.focus();return;}
       var me=getMember(),prevNum=acc().number||'';
-      var data={number:num,holder:H.value.trim(),tpl:P.value.trim(),note:T.value.trim(),by:me.displayName,date:nowStr()};
+      var data={number:num,holder:H.value.trim(),note:T.value.trim(),by:me.displayName,date:nowStr()};
       DB.set('bankacc',data);
       var dc=ov.querySelector('#bkDc').checked;
       addLog('fin',me.displayName+' změnil bankovní účet frakce'+(prevNum&&prevNum!==num?' ('+prevNum+' → '+num+')':'')+'.',dc?{
-        embed:rich(C_YELLOW,'🏦 BANKOVNÍ ÚČET FRAKCE',data.note||null,[['🔢 Číslo účtu','`'+num+'`'],['👤 Majitel',data.holder||'—'],['📝 Text do poznámky',data.tpl?'`'+data.tpl+'`':'—'],['🧑 Změnil',me.displayName]],{by:me.displayName})
+        embed:rich(C_YELLOW,'🏦 BANKOVNÍ ÚČET FRAKCE',data.note||null,[['🔢 Číslo účtu','`'+num+'`'],['👤 Majitel',data.holder||'—'],['📝 Poznámka k platbě','`Přezdívka - WXX`'],['🧑 Změnil',me.displayName]],{by:me.displayName})
       }:{noDiscord:true});
       toast('Bankovní účet uložen ✓','success');
       close();paintAll();
