@@ -143,3 +143,72 @@
     if(b){e.preventDefault();b.click();}
   });
 })();
+
+// ── LUXUS 3: vysílačky (kopírování, odpočet, zvýraznění změny) ──
+(function(){
+  var prev=null; // poslední zobrazené frekvence, aby šlo poznat změnu
+
+  function nextChange(){
+    var n=new Date(),h=n.getHours(),t=new Date(n),day='dnes',hh=15;
+    t.setMinutes(0,0,0);
+    if(h<15)hh=15;else if(h<17)hh=17;else{t.setDate(t.getDate()+1);day='zítra';hh=15;}
+    t.setHours(hh);
+    return {at:t,text:day+' v '+hh+':00'};
+  }
+  function left(ms){
+    var m=Math.max(1,Math.ceil(ms/60000));
+    return m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min';
+  }
+  function tickCountdown(){
+    var el=document.querySelector('#radioDisplay .radio-info-next');
+    if(!el)return;
+    var n=nextChange(),ms=n.at-new Date();
+    el.textContent='// PŘÍŠTÍ ZMĚNA: '+n.text+' · za '+left(ms);
+    el.classList.toggle('soon',ms<=5*60000);
+  }
+
+  function copy(val){
+    function ok(){if(typeof toast==='function')toast('Frekvence '+val+' zkopírována ✓','success');}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(val).then(ok,fallback);}else fallback();
+    function fallback(){
+      var t=document.createElement('textarea');t.value=val;t.style.cssText='position:fixed;opacity:0';
+      document.body.appendChild(t);t.select();
+      try{document.execCommand('copy');ok();}catch(e){}
+      t.remove();
+    }
+  }
+
+  function enhance(){
+    var host=document.getElementById('radioDisplay');if(!host)return;
+    var now={};
+    host.querySelectorAll('.radio-card').forEach(function(c){
+      var lb=c.querySelector('.radio-label'),fr=c.querySelector('.radio-freq');
+      if(!lb||!fr)return;
+      var key=lb.textContent.trim(),val=fr.textContent.trim();
+      now[key]=val;
+      // barevný pruh podle frekvence
+      c.style.borderLeftColor=getComputedStyle(fr).color;
+      // zvýraznění změněné frekvence
+      if(prev&&prev[key]!==undefined&&prev[key]!==val)c.classList.add('radio-flash');
+      // kliknutí = zkopírovat
+      if(val&&val!=='—'){
+        c.classList.add('radio-copy');c.tabIndex=0;c.setAttribute('role','button');
+        c.title='Klikni pro zkopírování';
+        c.onclick=function(){copy(val);};
+        c.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();copy(val);}};
+      }
+    });
+    prev=now;
+    tickCountdown();
+  }
+
+  var orig=window.renderMyRadio;
+  if(typeof orig==='function'){
+    window.renderMyRadio=function(){
+      var r=orig.apply(this,arguments);
+      enhance();
+      return r;
+    };
+  }
+  setInterval(tickCountdown,15000);
+})();

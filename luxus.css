@@ -158,3 +158,24 @@ body::before{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 /* ── Vysílačky: čitelnější názvy ── */
 .radio-label{font-size:.85rem;font-weight:700;color:var(--textb);letter-spacing:.16em;margin-bottom:.6rem}
 .radio-desc{font-size:.75rem}
+
+/* ── LUXUS 3: vysílačky ── */
+.radio-card{transition:transform .15s,background .15s}
+.radio-card.radio-copy{cursor:pointer}
+.radio-card.radio-copy:hover{background:color-mix(in srgb,var(--acc) 6%,var(--card));transform:translateY(-1px)}
+.radio-card.radio-copy:active{transform:scale(.98)}
+.radio-card.radio-copy::after{content:'KLIKNI = KOPÍROVAT';display:block;margin-top:.2rem;font:.55rem 'Share Tech Mono',monospace;letter-spacing:.14em;color:var(--muted);opacity:0;transition:opacity .2s}
+.radio-card.radio-copy:hover::after,.radio-card.radio-copy:focus-visible::after{opacity:1}
+@media(hover:none){.radio-card.radio-copy::after{content:'KLEPNI = KOPÍROVAT';opacity:.7}}
+.radio-info-next.soon{color:orange;font-weight:700}
+.radio-flash{animation:radioFlash 1.2s ease-out 3}
+@keyframes radioFlash{0%,100%{box-shadow:none}35%{box-shadow:inset 0 0 0 1px var(--acc),0 0 22px -4px var(--acc);background:color-mix(in srgb,var(--acc) 14%,var(--card))}}
+.radio-flash .radio-freq{animation:radioPop 1.2s ease-out 3}
+@keyframes radioPop{35%{transform:scale(1.07)}}
+.radio-freq{transform-origin:left center}
+@media(max-width:700px){
+  .radio-card{padding:.9rem .8rem}
+  .radio-freq{font-size:clamp(1.35rem,7vw,1.9rem)}
+  .radio-label{font-size:.8rem}
+}
+@media(prefers-reduced-motion:reduce){.radio-flash,.radio-flash .radio-freq{animation:none}}
