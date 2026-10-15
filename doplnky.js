@@ -312,3 +312,51 @@
     };
   }
 })();
+// ── DOPLNKY 3: omluvenky — od/do datum → automaticky "Předpokládaná délka nepřítomnosti" ──
+(function(){
+  var from=document.getElementById('excDate'),len=document.getElementById('excLength');
+  if(!from||!len||document.getElementById('excDateTo'))return;
+
+  // pole „DATUM“ → „OD“, nové pole „DO“ hned za ním
+  var fg=from.closest('.field-group');
+  fg.querySelector('.fl').textContent='DATUM — OD';
+  var g=document.createElement('div');g.className='field-group';
+  g.innerHTML='<label class="fl">DATUM — DO (poslední den nepřítomnosti)</label><div class="iw"><span class="ip">&gt;_</span><input type="date" id="excDateTo"/></div>';
+  fg.after(g);
+  var evG=document.getElementById('excEvent').closest('.field-group');if(evG)evG.classList.add('fg-full');
+  var to=document.getElementById('excDateTo');
+  len.placeholder='doplní se samo z dat Od–Do (jde i přepsat ručně)';
+
+  function d(v){return v?new Date(v+'T12:00:00'):null;}
+  function fmt(x){return x.getDate()+'. '+(x.getMonth()+1)+'.';}
+  function word(n){return n===1?'den':(n>=2&&n<=4?'dny':'dní');}
+
+  function calc(){
+    to.min=from.value||'';
+    var a=d(from.value),b=d(to.value);
+    if(!a||!b)return;
+    if(b<a){len.value='';return;}
+    var days=Math.round((b-a)/86400000)+1;
+    len.value=days===1
+      ? '1 den ('+fmt(a)+' '+a.getFullYear()+')'
+      : days+' '+word(days)+' ('+fmt(a)+' – '+fmt(b)+' '+b.getFullYear()+')';
+  }
+  from.addEventListener('input',calc);from.addEventListener('change',calc);
+  to.addEventListener('input',calc);to.addEventListener('change',calc);
+
+  // kontrola Do ≥ Od a vyčištění pole Do po úspěšném odeslání
+  var _se=window.submitExcuse;
+  if(typeof _se==='function'){
+    window.submitExcuse=function(){
+      var a=d(from.value),b=d(to.value);
+      if(a&&b&&b<a){
+        var st=document.getElementById('excStatus');
+        if(st)st.textContent='// "DO" NESMÍ BÝT PŘED "OD"';
+        toast('Datum „Do“ je dřív než „Od“','error');return;
+      }
+      var r=_se.apply(this,arguments);
+      if(!from.value)to.value=''; // původní funkce vymazala formulář = odesláno
+      return r;
+    };
+  }
+})();
