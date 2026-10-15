@@ -1356,7 +1356,7 @@ function renderAdminReports(){
 function radioCardsHtml(f,withVedeni){
   var rows=[
     {label:'PRIMÁRNÍ',val:f.primary,color:'var(--acc)'},
-    {label:'SEKUNDÁRNÍ',val:f.secondary,color:'var(--acc)'},
+    {label:'SEKUNDÁRNÍ',val:f.secondary,color:'#38bdd8'},
     {label:'AKCE',val:f.action,color:'var(--green)'}
   ];
   if(withVedeni)rows.push({label:'VEDENÍ',val:f.vedeni,color:'var(--red)'});
@@ -2440,7 +2440,7 @@ function renderMyRadio(){
   var el=document.getElementById('radioDisplay');if(!el)return;
   var rows=[
     {label:'PRIMÁRNÍ',val:radios.primary,color:'var(--acc)'},
-    {label:'SEKUNDÁRNÍ',val:radios.secondary,color:'var(--acc)'},
+    {label:'SEKUNDÁRNÍ',val:radios.secondary,color:'#38bdd8'},
     {label:'AKCE',val:radios.action,color:'var(--green)'}
   ];
   if(m&&m.adminAccess)rows.push({label:'VEDENÍ',val:radios.vedeni,color:'var(--red)'});

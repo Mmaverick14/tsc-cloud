@@ -154,3 +154,7 @@ body::before{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 #adminScreen .log-search{margin-top:1rem}
 #adminScreen .btn-danger{transition:all .2s}
 #adminScreen .btn-danger:hover{box-shadow:0 0 18px -4px var(--red)}
+
+/* ── Vysílačky: čitelnější názvy ── */
+.radio-label{font-size:.85rem;font-weight:700;color:var(--textb);letter-spacing:.16em;margin-bottom:.6rem}
+.radio-desc{font-size:.75rem}
