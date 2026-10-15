@@ -132,7 +132,7 @@ var SECTIONS=[
   {key:'excuse_dec',label:'Omluvenky — rozhodnutí (jen vedení, bez webhooku se neposílá)'},
   {key:'report',label:'Hlášení'},
   {key:'radio',label:'Vysílačka'},
-  {key:'member',label:'Členové'},
+  {key:'member_adm',label:'Správa členů (registrace, jména, pozice) — jen vlastní webhook, bez něj se neposílá'},
   {key:'roster',label:'Crew List (strike, povýšení)'},
   {key:'panic',label:'Panic'}
 ];
@@ -184,6 +184,8 @@ function addLog(type,text,opts){
 }
 function sendToDiscord(type,msg,opts){
   opts=opts||{};
+  // logy správy členů mají vlastní sekci a nikdy nespadnou do hlavního webhooku
+  if(type==='member'){type='member_adm';opts.private=true;}
   var s=DB.get('settings')||{};
   var secs=s.sections||{};
   var sec=secs[type]||{};
