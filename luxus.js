@@ -125,14 +125,14 @@
   function hello(){
     var ph=document.querySelector('#mt-board .ph'),nm=document.getElementById('sbName');
     if(!ph||!nm||!nm.textContent.trim())return;
-    var h=new Date().getHours(),g=h<5?'Dobrou noc':h<10?'Dobré ráno':h<18?'Dobrý den':'Dobrý večer';
+    var h=new Date().getHours(),g=h<5?'Zdravím Vás':h<10?'Zdravím Vás':h<18?'Zdravím Vás':'Zdravím Vás';
     var el=document.querySelector('.lux-hello');
     if(!el){el=document.createElement('div');el.className='lux-hello';ph.after(el);}
     var t=g+', '+nm.textContent.trim();
     if(el.dataset.t!==t){el.dataset.t=t;el.innerHTML='';
       var b=document.createElement('b');b.textContent=nm.textContent.trim();
       el.appendChild(document.createTextNode(g+', '));el.appendChild(b);
-      var s=document.createElement('small');s.textContent='ALT + 1–9 PŘEPÍNÁ ZÁLOŽKY · CTRL + K HLEDÁ';el.appendChild(s);}
+      var s=document.createElement('medium');s.textContent='ALT + 1–9 PŘEPÍNÁ ZÁLOŽKY · CTRL + K HLEDÁ';el.appendChild(s);}
   }
   setInterval(function(){indicator();hello();},800);
   // Alt + číslo = záložka podle pořadí v menu
