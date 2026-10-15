@@ -49,7 +49,20 @@
 .bank-num{font:900 1.7rem 'Orbitron',sans-serif;letter-spacing:.06em;color:var(--textb);word-break:break-all;font-variant-numeric:tabular-nums}
 .bank-meta{display:flex;gap:.6rem;align-items:baseline;margin-top:.5rem;font:.58rem 'Share Tech Mono',monospace;color:var(--text);letter-spacing:.1em}
 .bank-meta b{font:700 1rem 'Rajdhani',sans-serif;color:var(--textb);letter-spacing:.03em}
-.bank-note{margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border);color:var(--textb);font-size:.92rem;line-height:1.5;white-space:pre-wrap}
-.bank-by{margin-top:.5rem;font:.5rem 'Share Tech Mono',monospace;color:var(--muted);letter-spacing:.08em}
+.bank-ref{margin-top:.8rem;padding:.6rem .8rem;background:var(--surf);border:1px dashed var(--acc-dim)}
+.bank-ref>span{font:.52rem 'Share Tech Mono',monospace;letter-spacing:.14em;color:var(--acc-dim)}
+.bank-refrow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.3rem}
+.bank-card code,.bank-prev code{font:700 1rem 'Share Tech Mono',monospace;color:var(--acc);word-break:break-word}
+.bank-note{margin-top:.7rem;padding-top:.5rem;border-top:1px solid var(--border);color:var(--textb);font-size:.92rem;line-height:1.5;white-space:pre-wrap}
+.bank-all{margin-top:.8rem;border:1px solid var(--border);background:var(--surf);padding:.4rem .6rem}
+.bank-all summary{cursor:pointer;font:700 .56rem 'Share Tech Mono',monospace;letter-spacing:.1em;color:var(--acc)}
+.bank-li{display:flex;align-items:center;gap:.6rem;padding:.3rem 0;border-bottom:1px solid var(--border)}
+.bank-li:last-child{border-bottom:none}
+.bank-li .n{flex:0 0 38%;min-width:0;color:var(--textb);font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bank-li code{flex:1;min-width:0;font-size:.8rem}
+.bank-by{margin-top:.6rem;font:.5rem 'Share Tech Mono',monospace;color:var(--muted);letter-spacing:.08em}
 .bank-empty{font:.65rem 'Share Tech Mono',monospace;color:var(--text);letter-spacing:.06em}
-@media(max-width:700px){.bank-card{margin:0 .7rem 1rem}.bank-num{font-size:1.3rem}}
+.bank-hint{font:.55rem 'Share Tech Mono',monospace;color:var(--text);line-height:1.5;margin-top:.35rem}
+.bank-hint b{color:var(--acc)}
+.bank-prev{margin-top:.35rem;font:.6rem 'Share Tech Mono',monospace;color:var(--text)}
+@media(max-width:700px){.bank-card{margin:0 .7rem 1rem}.bank-num{font-size:1.3rem}.bank-li .n{flex-basis:32%}}

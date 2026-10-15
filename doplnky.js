@@ -433,54 +433,79 @@
   };
 })();
 
-// ── DOPLNKY 4: bankovní účet frakce (mění jen Mastermind, ostatní vidí kam poslat peníze) ──
+// ── DOPLNKY 4: bankovní účet frakce + předepsaný text do poznámky (mění jen Mastermind) ──
 (function(){
+  var DEF_TPL='Příspěvek – {jmeno}';
   function acc(){return DB.get('bankacc')||{};}
   function boss(){var m=getMember();return !!m&&m.position==='Mastermind';}
+  function tplOf(a){return a.tpl===undefined?DEF_TPL:String(a.tpl||'');}
+  // {jmeno} = IC jméno, {prezdivka} = přezdívka (jinak IC jméno), {tyden} = aktuální týden
+  function fill(tpl,m){
+    var n=(typeof rosterNames==='function')?rosterNames(m):{nick:''};
+    return String(tpl||'').replace(/\{jmeno\}/gi,m.displayName).replace(/\{prezdivka\}/gi,n.nick||m.displayName).replace(/\{tyden\}/gi,getWeekKey()).trim();
+  }
   function copyTxt(txt,msg){
     function ok(){toast(msg,'success');}
     function fb(){var t=document.createElement('textarea');t.value=txt;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();try{document.execCommand('copy');ok();}catch(e){}t.remove();}
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
   }
 
-  function cardHtml(){
-    var a=acc(),num=String(a.number||'').trim();
+  function cardHtml(admin){
+    var a=acc(),num=String(a.number||'').trim(),me=getMember(),tpl=tplOf(a);
     var head='<div class="bank-head"><span class="bank-t">🏦 // BANKOVNÍ ÚČET FRAKCE</span>'+
       (boss()?'<button class="btn-acc small" data-bank="edit">✎ UPRAVIT</button>':'')+'</div>';
     if(!num)return head+'<div class="bank-empty">'+(boss()?'Účet zatím není nastavený — klikni na „UPRAVIT“.':'Vedení zatím nenastavilo číslo účtu.')+'</div>';
-    return head+
+    var h=head+
       '<div class="bank-row"><div class="bank-num">'+esc(num)+'</div><button class="btn-micro" data-bank="copy">📋 KOPÍROVAT</button></div>'+
-      (a.holder?'<div class="bank-meta"><span>MAJITEL</span><b>'+esc(a.holder)+'</b></div>':'')+
-      (a.note?'<div class="bank-note">'+esc(a.note)+'</div>':'')+
-      (a.by?'<div class="bank-by">// naposledy upravil '+esc(a.by)+(a.date?' — '+esc(a.date):'')+'</div>':'');
+      (a.holder?'<div class="bank-meta"><span>MAJITEL</span><b>'+esc(a.holder)+'</b></div>':'');
+    var mine=(me&&tpl)?fill(tpl,me):'';
+    if(mine)h+='<div class="bank-ref"><span>TVŮJ TEXT DO POZNÁMKY PLATBY</span><div class="bank-refrow"><code>'+esc(mine)+'</code><button class="btn-micro" data-bank="copyref" data-ref="'+esc(mine)+'">📋 KOPÍROVAT</button></div></div>';
+    if(a.note)h+='<div class="bank-note">'+esc(a.note)+'</div>';
+    if(admin&&tpl){
+      var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden;});
+      h+='<details class="bank-all"><summary>👥 TEXTY VŠECH ČLENŮ ('+ms.length+')</summary>'+ms.map(function(x){
+        var t=fill(tpl,x);
+        return '<div class="bank-li"><span class="n">'+esc(x.displayName)+'</span><code>'+esc(t)+'</code><button class="btn-micro" data-bank="copyref" data-ref="'+esc(t)+'">📋</button></div>';
+      }).join('')+'</details>';
+    }
+    if(a.by)h+='<div class="bank-by">// naposledy upravil '+esc(a.by)+(a.date?' — '+esc(a.date):'')+'</div>';
+    return h;
   }
-  function paint(id,beforeId){
+  var openAll=false;
+  function paint(id,beforeId,admin){
     var before=document.getElementById(beforeId);if(!before)return;
     var c=document.getElementById(id);
     if(!c){c=document.createElement('div');c.id=id;c.className='bank-card';before.parentNode.insertBefore(c,before);}
-    c.innerHTML=cardHtml();
+    var d=c.querySelector('.bank-all');if(d)openAll=d.open;
+    c.innerHTML=cardHtml(admin);
+    d=c.querySelector('.bank-all');if(d&&openAll)d.open=true;
   }
-  function paintAll(){paint('bankCardM','myFinance');paint('bankCardA','financeAdminPanel');}
+  function paintAll(){paint('bankCardM','myFinance',false);paint('bankCardA','financeAdminPanel',true);}
 
   var _rmf=window.renderMyFinance;
-  if(typeof _rmf==='function')window.renderMyFinance=function(){var r=_rmf.apply(this,arguments);paint('bankCardM','myFinance');return r;};
+  if(typeof _rmf==='function')window.renderMyFinance=function(){var r=_rmf.apply(this,arguments);paint('bankCardM','myFinance',false);return r;};
   var _raf=window.renderAdminFinance;
-  if(typeof _raf==='function')window.renderAdminFinance=function(){var r=_raf.apply(this,arguments);paint('bankCardA','financeAdminPanel');return r;};
+  if(typeof _raf==='function')window.renderAdminFinance=function(){var r=_raf.apply(this,arguments);paint('bankCardA','financeAdminPanel',true);return r;};
 
   function openEdit(){
     if(!boss()){toast('Číslo účtu může měnit jen Mastermind','error');return;}
     var a=acc(),old=document.querySelector('.bank-ov');if(old)old.remove();
     var ov=document.createElement('div');ov.className='modal-ov bank-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
-    ov.innerHTML='<div class="modal-box" style="max-width:440px;width:94vw"><div class="modal-title">🏦 BANKOVNÍ ÚČET FRAKCE</div>'+
+    ov.innerHTML='<div class="modal-box" style="max-width:460px;width:94vw;max-height:92vh;overflow-y:auto"><div class="modal-title">🏦 BANKOVNÍ ÚČET FRAKCE</div>'+
       '<div class="field-group"><label class="fl">ČÍSLO ÚČTU *</label><div class="iw"><span class="ip">#</span><input type="text" id="bkNum" maxlength="60"/></div></div>'+
       '<div class="field-group" style="margin-top:.7rem"><label class="fl">MAJITEL / NÁZEV ÚČTU</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bkHolder" maxlength="80"/></div></div>'+
-      '<div class="field-group" style="margin-top:.7rem"><label class="fl">POZNÁMKA PRO ČLENY</label><textarea id="bkNote" class="adm-ta" maxlength="300" style="min-height:70px" placeholder="např. Do poznámky platby napiš svoje jméno."></textarea></div>'+
+      '<div class="field-group" style="margin-top:.7rem"><label class="fl">TEXT DO POZNÁMKY PLATBY (šablona pro každého člena)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="bkTpl" maxlength="100"/></div>'+
+        '<div class="bank-hint">Zástupné znaky: <b>{jmeno}</b> = IC jméno, <b>{prezdivka}</b> = přezdívka, <b>{tyden}</b> = aktuální týden. Prázdné = bez předepsaného textu.</div>'+
+        '<div class="bank-prev" id="bkPrev"></div></div>'+
+      '<div class="field-group" style="margin-top:.7rem"><label class="fl">POZNÁMKA PRO ČLENY</label><textarea id="bkNote" class="adm-ta" maxlength="300" style="min-height:70px" placeholder="např. Platbu pošli do 24 hodin."></textarea></div>'+
       '<label style="display:flex;gap:.4rem;align-items:center;margin-top:.6rem;font:.6rem \'Share Tech Mono\',monospace;color:var(--text);cursor:pointer"><input type="checkbox" id="bkDc" checked/> OZNÁMIT ZMĚNU NA DISCORDU</label>'+
       '<div id="bkMsg" class="smsg" style="margin-top:.4rem;min-height:1em;color:#e05555"></div>'+
       '<div class="modal-ftr"><button class="btn-acc small" id="bkOk">ULOŽIT</button><button class="btn-ghost small" id="bkNo">ZRUŠIT</button></div></div>';
     document.body.appendChild(ov);
-    var N=ov.querySelector('#bkNum'),H=ov.querySelector('#bkHolder'),T=ov.querySelector('#bkNote');
-    N.value=a.number||'';H.value=a.holder||'';T.value=a.note||'';
+    var N=ov.querySelector('#bkNum'),H=ov.querySelector('#bkHolder'),T=ov.querySelector('#bkNote'),P=ov.querySelector('#bkTpl'),V=ov.querySelector('#bkPrev');
+    N.value=a.number||'';H.value=a.holder||'';T.value=a.note||'';P.value=tplOf(a);
+    function prev(){var me=getMember(),t=me?fill(P.value,me):'';V.innerHTML=t?'Náhled pro tebe: <code>'+esc(t)+'</code>':'Náhled: bez předepsaného textu';}
+    P.oninput=prev;prev();
     function close(){document.removeEventListener('keydown',key,true);ov.remove();}
     function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
     document.addEventListener('keydown',key,true);
@@ -490,12 +515,12 @@
       if(!boss()){toast('Číslo účtu může měnit jen Mastermind','error');return;}
       var num=N.value.trim();
       if(!num){ov.querySelector('#bkMsg').textContent='// ZADEJ ČÍSLO ÚČTU';N.focus();return;}
-      var me=getMember(),prev=acc().number||'';
-      var data={number:num,holder:H.value.trim(),note:T.value.trim(),by:me.displayName,date:nowStr()};
+      var me=getMember(),prevNum=acc().number||'';
+      var data={number:num,holder:H.value.trim(),tpl:P.value.trim(),note:T.value.trim(),by:me.displayName,date:nowStr()};
       DB.set('bankacc',data);
       var dc=ov.querySelector('#bkDc').checked;
-      addLog('fin',me.displayName+' změnil bankovní účet frakce'+(prev&&prev!==num?' ('+prev+' → '+num+')':'')+'.',dc?{
-        embed:rich(C_YELLOW,'🏦 BANKOVNÍ ÚČET FRAKCE',data.note||null,[['🔢 Číslo účtu','`'+num+'`'],['👤 Majitel',data.holder||'—'],['🧑 Změnil',me.displayName]],{by:me.displayName})
+      addLog('fin',me.displayName+' změnil bankovní účet frakce'+(prevNum&&prevNum!==num?' ('+prevNum+' → '+num+')':'')+'.',dc?{
+        embed:rich(C_YELLOW,'🏦 BANKOVNÍ ÚČET FRAKCE',data.note||null,[['🔢 Číslo účtu','`'+num+'`'],['👤 Majitel',data.holder||'—'],['📝 Text do poznámky',data.tpl?'`'+data.tpl+'`':'—'],['🧑 Změnil',me.displayName]],{by:me.displayName})
       }:{noDiscord:true});
       toast('Bankovní účet uložen ✓','success');
       close();paintAll();
@@ -508,5 +533,6 @@
     var k=b.getAttribute('data-bank');
     if(k==='edit')openEdit();
     else if(k==='copy'){var n=String(acc().number||'').trim();if(n)copyTxt(n,'Číslo účtu zkopírováno ✓');}
+    else if(k==='copyref'){var t=b.getAttribute('data-ref');if(t)copyTxt(t,'Text do poznámky zkopírován ✓');}
   });
 })();
