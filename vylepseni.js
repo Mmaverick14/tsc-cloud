@@ -11,7 +11,10 @@
   function memById(id){return members().filter(function(m){return m.id===id;})[0]||null;}
   function joinIdx(m,ws){if(!m.joined)return -1;var d=new Date(m.joined+'T12:00:00');if(isNaN(d))return -1;var k=wkKey(d);for(var i=0;i<ws.length;i++)if(ws[i].key===k)return i;return -1;}
   // člen platí za týden, jen pokud už byl ve frakci (podle data vstupu, je-li známé)
-  function liable(m,idx,ws){var j=joinIdx(m,ws);return j===-1||idx<=j;}
+  function liable(m,idx,ws){
+    if(window.onVacation&&ws[idx]&&window.onVacation(m.id,ws[idx].key))return false; // dovolená
+    var j=joinIdx(m,ws);return j===-1||idx<=j;
+  }
   function mention(m){var id=String(m.discordId||'').replace(/\D/g,'');return id?'<@'+id+'>':'';}
   var DAYS=['neděli','pondělí','úterý','středu','čtvrtek','pátek','sobotu'];
 

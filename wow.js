@@ -85,6 +85,7 @@
     var heists=DB.get('heists')||[],ok=heists.filter(function(h){return h.escaped;}).length;
     var ms=(DB.get('members')||[]).filter(function(m){return !m.hidden;});
     var fin=DB.get('finance')||{payments:[]},wk=getWeekKey();
+    ms=ms.filter(function(m){return !(window.onVacation&&onVacation(m.id,wk));});
     var paid=ms.filter(function(m){return (fin.payments||[]).some(function(p){return p.memberId===m.id&&p.weekKey===wk&&(p.expenseId==='weekly'||!p.expenseId);});}).length;
     var wh=DB.get('warehouse')||[],good=wh.filter(function(i){return !(i.qty===0||(i.min>0&&i.qty<=i.min));}).length;
     var came=0,abs=0;

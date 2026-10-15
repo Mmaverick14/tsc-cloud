@@ -312,51 +312,123 @@
     };
   }
 })();
-// ── DOPLNKY 3: omluvenky — od/do datum → automaticky "Předpokládaná délka nepřítomnosti" ──
+
+// ── DOPLNKY 3: omluvenky — od/do → délka; dovolená = týdenní příspěvek se nepočítá ──
 (function(){
+  var MIN_DAYS=4; // týden se neplatí, když dovolená pokrývá aspoň tolik jeho dní (Ne–So)
+
+  /* A) Je člen ten týden na (schválené) dovolené? */
+  window.onVacation=function(mid,wk){
+    var days=0;
+    (DB.get('excuses')||[]).forEach(function(e){
+      if(e.memberId!==mid||e.status!=='accepted'||!e.date)return;
+      var a=new Date(e.date+'T12:00:00'),b=new Date((e.dateTo||e.date)+'T12:00:00');
+      if(isNaN(a)||isNaN(b)||b<a||(b-a)/864e5>366)return;
+      for(var x=new Date(a);x<=b;x.setDate(x.getDate()+1))if(weekKeyOf(x)===wk)days++;
+    });
+    return days>=MIN_DAYS;
+  };
+
+  /* B) Formulář: pole Od/Do + automatická délka */
   var from=document.getElementById('excDate'),len=document.getElementById('excLength');
-  if(!from||!len||document.getElementById('excDateTo'))return;
+  if(from&&len&&!document.getElementById('excDateTo')){
+    var fg=from.closest('.field-group');
+    fg.querySelector('.fl').textContent='DATUM — OD';
+    var g=document.createElement('div');g.className='field-group';
+    g.innerHTML='<label class="fl">DATUM — DO (poslední den nepřítomnosti)</label><div class="iw"><span class="ip">&gt;_</span><input type="date" id="excDateTo"/></div>';
+    fg.after(g);
+    var evG=document.getElementById('excEvent').closest('.field-group');if(evG)evG.classList.add('fg-full');
+    var to=document.getElementById('excDateTo');
+    len.placeholder='doplní se samo z dat Od–Do (jde i přepsat ručně)';
 
-  // pole „DATUM“ → „OD“, nové pole „DO“ hned za ním
-  var fg=from.closest('.field-group');
-  fg.querySelector('.fl').textContent='DATUM — OD';
-  var g=document.createElement('div');g.className='field-group';
-  g.innerHTML='<label class="fl">DATUM — DO (poslední den nepřítomnosti)</label><div class="iw"><span class="ip">&gt;_</span><input type="date" id="excDateTo"/></div>';
-  fg.after(g);
-  var evG=document.getElementById('excEvent').closest('.field-group');if(evG)evG.classList.add('fg-full');
-  var to=document.getElementById('excDateTo');
-  len.placeholder='doplní se samo z dat Od–Do (jde i přepsat ručně)';
-
-  function d(v){return v?new Date(v+'T12:00:00'):null;}
-  function fmt(x){return x.getDate()+'. '+(x.getMonth()+1)+'.';}
-  function word(n){return n===1?'den':(n>=2&&n<=4?'dny':'dní');}
-
-  function calc(){
-    to.min=from.value||'';
-    var a=d(from.value),b=d(to.value);
-    if(!a||!b)return;
-    if(b<a){len.value='';return;}
-    var days=Math.round((b-a)/86400000)+1;
-    len.value=days===1
-      ? '1 den ('+fmt(a)+' '+a.getFullYear()+')'
-      : days+' '+word(days)+' ('+fmt(a)+' – '+fmt(b)+' '+b.getFullYear()+')';
-  }
-  from.addEventListener('input',calc);from.addEventListener('change',calc);
-  to.addEventListener('input',calc);to.addEventListener('change',calc);
-
-  // kontrola Do ≥ Od a vyčištění pole Do po úspěšném odeslání
-  var _se=window.submitExcuse;
-  if(typeof _se==='function'){
-    window.submitExcuse=function(){
+    var d=function(v){return v?new Date(v+'T12:00:00'):null;};
+    var fmt=function(x){return x.getDate()+'. '+(x.getMonth()+1)+'.';};
+    var word=function(n){return n===1?'den':(n>=2&&n<=4?'dny':'dní');};
+    var calc=function(){
+      to.min=from.value||'';
       var a=d(from.value),b=d(to.value);
-      if(a&&b&&b<a){
-        var st=document.getElementById('excStatus');
-        if(st)st.textContent='// "DO" NESMÍ BÝT PŘED "OD"';
-        toast('Datum „Do“ je dřív než „Od“','error');return;
-      }
-      var r=_se.apply(this,arguments);
-      if(!from.value)to.value=''; // původní funkce vymazala formulář = odesláno
-      return r;
+      if(!a||!b)return;
+      if(b<a){len.value='';return;}
+      var days=Math.round((b-a)/864e5)+1;
+      len.value=days===1?'1 den ('+fmt(a)+' '+a.getFullYear()+')'
+        :days+' '+word(days)+' ('+fmt(a)+' – '+fmt(b)+' '+b.getFullYear()+')';
     };
+    ['input','change'].forEach(function(ev){from.addEventListener(ev,calc);to.addEventListener(ev,calc);});
+
+    var _se=window.submitExcuse;
+    if(typeof _se==='function'){
+      window.submitExcuse=function(){
+        var a=d(from.value),b=d(to.value),toVal=to.value,n0=(DB.get('excuses')||[]).length;
+        if(a&&b&&b<a){
+          var st=document.getElementById('excStatus');
+          if(st)st.textContent='// "DO" NESMÍ BÝT PŘED "OD"';
+          toast('Datum „Do“ je dřív než „Od“','error');return;
+        }
+        var r=_se.apply(this,arguments);
+        var arr=DB.get('excuses')||[];
+        if(arr.length>n0){ // omluvenka se opravdu odeslala → uložit i datum Do
+          if(toVal){arr[arr.length-1].dateTo=toVal;DB.set('excuses',arr);}
+          to.value='';
+        }
+        return r;
+      };
+    }
   }
+
+  /* C) V kartách omluvenek ukázat rozsah Od–Do */
+  function paintRange(hostId,list){
+    var cards=document.querySelectorAll('#'+hostId+' .excuse-card');
+    list.slice().reverse().forEach(function(e,i){
+      var c=cards[i];if(!c||!e.dateTo||e.dateTo===e.date||c.querySelector('.exc-range'))return;
+      var det=c.querySelector('.excuse-detail');
+      if(det)det.insertAdjacentHTML('afterend','<div class="excuse-detail exc-range">🌴 Nepřítomnost do: <strong>'+esc(e.dateTo)+'</strong>'+(e.length?' · '+esc(e.length):'')+'</div>');
+    });
+  }
+  var _rae=window.renderAdminExcuses;
+  if(typeof _rae==='function')window.renderAdminExcuses=function(){
+    var r=_rae.apply(this,arguments);paintRange('allExcuses',DB.get('excuses')||[]);return r;
+  };
+  var _rme=window.renderMyExcuses;
+  if(typeof _rme==='function')window.renderMyExcuses=function(){
+    var r=_rme.apply(this,arguments),m=getMember();
+    if(m)paintRange('myExcuses',(DB.get('excuses')||[]).filter(function(e){return e.memberId===m.id;}));
+    return r;
+  };
+
+  /* D) Finance: dovolená = příspěvek se nepočítá */
+  var _rmf=window.renderMyFinance;
+  if(typeof _rmf==='function')window.renderMyFinance=function(){
+    var r=_rmf.apply(this,arguments),m=getMember();
+    if(m&&onVacation(m.id,getWeekKey())){
+      var row=document.querySelector('#myFinance .fa-pay-row');
+      if(row&&/Povinný týdenní/.test(row.textContent)){
+        row.className='fa-pay-row paid';
+        row.innerHTML='<span class="fa-pay-name">Povinný týdenní příspěvek</span><span class="fa-pay-status paid">🌴 DOVOLENÁ — NEPLATÍŠ</span>';
+      }
+    }
+    return r;
+  };
+  var _ub=window.updateBadges;
+  if(typeof _ub==='function')window.updateBadges=function(){
+    var r=_ub.apply(this,arguments),m=getMember();
+    if(m&&onVacation(m.id,getWeekKey())){var fb=document.getElementById('financeBadge');if(fb)fb.classList.remove('visible');}
+    return r;
+  };
+  var _raf=window.renderAdminFinance;
+  if(typeof _raf==='function')window.renderAdminFinance=function(){
+    var r=_raf.apply(this,arguments),wk=getWeekKey();
+    var box=[].slice.call(document.querySelectorAll('#financeAdminPanel .fa-member-payments')).filter(function(b){
+      var t=b.querySelector('.fa-exp-title');return t&&t.textContent.indexOf('// TÝDENNÍ PŘÍSPĚVEK')===0;})[0];
+    if(box)(DB.get('members')||[]).forEach(function(m){
+      if(!onVacation(m.id,wk))return;
+      [].forEach.call(box.querySelectorAll('.fa-pay-row.unpaid'),function(row){
+        var n=row.querySelector('.fa-pay-name');
+        if(n&&n.textContent===m.displayName){
+          row.className='fa-pay-row paid';
+          row.lastElementChild.innerHTML='<span class="fa-pay-status paid">🌴 DOVOLENÁ</span>';
+        }
+      });
+    });
+    return r;
+  };
 })();
