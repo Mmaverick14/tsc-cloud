@@ -1,0 +1,33 @@
+/* ── DOPLNKY: odznaky, .ics tlačítko, hledání, filtr zásob, vlastní barva (načítat jako poslední) ── */
+
+/* odznak s počtem novinek — nahrazuje červenou tečku */
+.nb.has-new .ni::after{display:none}
+.nbadge.unread{min-width:16px;font-size:.55rem;font-weight:700;padding:.1rem .3rem;border-radius:9px;line-height:1.1}
+
+/* přidat do kalendáře */
+.ev-ics{margin-top:.7rem}
+.ev-ics .btn-micro{letter-spacing:.1em}
+
+/* hledání v kontaktech a crew listu */
+.lux-find{display:block;margin:.2rem 1.2rem .8rem;width:calc(100% - 2.4rem);box-sizing:border-box}
+.lux-find-none{margin:0 1.2rem}
+@media(max-width:700px){.lux-find{margin:.2rem .7rem .8rem;width:calc(100% - 1.4rem)}}
+
+/* sklad: jen málo zásob */
+.wh-lowbtn{background:var(--card);border:1px solid var(--brite);color:var(--text);font:700 .62rem 'Share Tech Mono',monospace;
+  letter-spacing:.08em;padding:.5rem .8rem;cursor:pointer;transition:border-color .2s,color .2s,background .2s;white-space:nowrap}
+.wh-lowbtn:hover{border-color:orange;color:orange}
+.wh-lowbtn.on{border-color:orange;color:#080808;background:orange}
+
+/* vlastní barva v okně motivů */
+.theme-pop.has-custom{flex-wrap:wrap;width:232px;max-width:calc(100vw - 16px)}
+.theme-custom{flex-basis:100%;margin-top:.4rem;padding-top:.6rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.5rem}
+.tc-lbl{font:.52rem 'Share Tech Mono',monospace;letter-spacing:.16em;color:var(--acc-dim)}
+.tc-row{display:flex;gap:.4rem;align-items:center}
+.tc-pick{width:40px;height:32px;padding:0;border:1px solid var(--brite);background:transparent;cursor:pointer;flex:none}
+.tc-hex{flex:1;min-width:0;background:var(--surf);border:1px solid var(--brite);color:var(--textb);font:.75rem 'Share Tech Mono',monospace;padding:.4rem .5rem;outline:0}
+.tc-hex:focus,.tc-rgb input:focus{border-color:var(--acc)}
+.tc-rgb label{flex:1;display:flex;align-items:center;gap:.25rem;font:.6rem 'Share Tech Mono',monospace;color:var(--text)}
+.tc-rgb input{width:100%;min-width:0;background:var(--surf);border:1px solid var(--brite);color:var(--textb);font:.75rem 'Share Tech Mono',monospace;padding:.35rem .3rem;outline:0}
+.tc-reset{background:transparent;border:1px solid var(--brite);color:var(--text);font:.55rem 'Share Tech Mono',monospace;letter-spacing:.1em;padding:.4rem;cursor:pointer}
+.tc-reset:hover{border-color:var(--acc-dim);color:var(--acc)}
