@@ -31,3 +31,12 @@
 .tc-rgb input{width:100%;min-width:0;background:var(--surf);border:1px solid var(--brite);color:var(--textb);font:.75rem 'Share Tech Mono',monospace;padding:.35rem .3rem;outline:0}
 .tc-reset{background:transparent;border:1px solid var(--brite);color:var(--text);font:.55rem 'Share Tech Mono',monospace;letter-spacing:.1em;padding:.4rem;cursor:pointer}
 .tc-reset:hover{border-color:var(--acc-dim);color:var(--acc)}
+
+/* ── generátor hesel + okno s údaji ── */
+.gen-row{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem}
+.gen-b{background:var(--card);border:1px solid var(--brite);color:var(--text);font:.58rem 'Share Tech Mono',monospace;letter-spacing:.1em;padding:.4rem .6rem;cursor:pointer;transition:border-color .2s,color .2s}
+.gen-b:hover{border-color:var(--acc-dim);color:var(--acc)}
+.gen-go{border-color:var(--acc-dim);color:var(--acc)}
+.cred-ov{z-index:9550}
+.cred-ta{width:100%;box-sizing:border-box;resize:none;background:var(--surf);border:1px solid var(--brite);color:var(--textb);font:.82rem/1.5 'Share Tech Mono',monospace;padding:.7rem;outline:0}
+.cred-ta:focus{border-color:var(--acc)}

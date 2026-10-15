@@ -212,3 +212,103 @@
     });});
   }).observe(document.body,{childList:true});
 })();
+
+// ── DOPLNKY 2: generátor hesel + hotová zpráva s přihlašovacími údaji ──
+(function(){
+  var g=function(id){return document.getElementById(id);};
+
+  /*GEN_START*/
+  var UP='ABCDEFGHJKLMNPQRSTUVWXYZ',LO='abcdefghijkmnopqrstuvwxyz',DG='23456789'; // bez 0/O/1/l/I, ať se nespletou
+  function rnd(n){ // rovnoměrné náhodné číslo 0..n-1 (bez zkreslení)
+    var a=new Uint32Array(1),lim=Math.floor(4294967296/n)*n;
+    do{crypto.getRandomValues(a);}while(a[0]>=lim);
+    return a[0]%n;
+  }
+  function genPass(){
+    var all=UP+LO+DG,c=[UP[rnd(UP.length)],LO[rnd(LO.length)],DG[rnd(DG.length)]];
+    while(c.length<12)c.push(all[rnd(all.length)]);
+    for(var i=c.length-1;i>0;i--){var j=rnd(i+1),t=c[i];c[i]=c[j];c[j]=t;}
+    return c.slice(0,4).join('')+'-'+c.slice(4,8).join('')+'-'+c.slice(8).join('');
+  }
+  /*GEN_END*/
+
+  function copyText(txt,okMsg){
+    function ok(){if(typeof toast==='function')toast(okMsg,'success');}
+    function fb(){
+      var t=document.createElement('textarea');t.value=txt;t.style.cssText='position:fixed;opacity:0';
+      document.body.appendChild(t);t.select();try{document.execCommand('copy');ok();}catch(e){}t.remove();
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
+  }
+
+  // řádek tlačítek pod polem s heslem
+  function addGenRow(inputIds){
+    var first=g(inputIds[0]);if(!first||first.dataset.gen)return;
+    first.dataset.gen='1';
+    var fg=first.closest('.field-group');if(!fg)return;
+    var row=document.createElement('div');row.className='gen-row';
+    row.innerHTML='<button type="button" class="gen-b gen-go">🎲 GENEROVAT</button><button type="button" class="gen-b gen-eye">👁 ZOBRAZIT</button><button type="button" class="gen-b gen-cp">📋 KOPÍROVAT</button>';
+    fg.appendChild(row);
+    function els(){return inputIds.map(g).filter(Boolean);}
+    function show(v){els().forEach(function(e){e.type=v?'text':'password';});row.querySelector('.gen-eye').firstChild.nodeValue=v?'🙈 SKRÝT':'👁 ZOBRAZIT';}
+    row.querySelector('.gen-go').onclick=function(){var p=genPass();els().forEach(function(e){e.value=p;});show(true);};
+    row.querySelector('.gen-eye').onclick=function(){show(first.type==='password');};
+    row.querySelector('.gen-cp').onclick=function(){if(!first.value){toast('Nejdřív vygeneruj heslo','error');return;}copyText(first.value,'Heslo zkopírováno ✓');};
+  }
+  addGenRow(['nm-pass']);
+  addGenRow(['pw-new','pw-confirm']);
+
+  // okno s hotovou zprávou pro nového člena
+  function showCredentials(o){
+    var old=document.querySelector('.cred-ov');if(old)old.remove();
+    var msg='Ahoj'+(o.name?' '+o.name:'')+', tady jsou tvoje přihlašovací údaje do portálu:\n\n'+
+      '🌐 Web: '+location.origin+'\n📧 E-mail: '+o.email+'\n🔑 Heslo: '+o.pass+'\n\n'+
+      'Heslo je dočasné — po prvním přihlášení si ho změň na vlastní (okno se nabídne samo, jde i přes 🔑 v menu).';
+    var ov=document.createElement('div');ov.className='modal-ov cred-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="modal-box" style="max-width:460px;width:94vw">'+
+      '<div class="modal-title">'+(o.reset?'🔑 HESLO ZMĚNĚNO':'✅ ÚČET VYTVOŘEN')+'</div>'+
+      '<div style="font-size:.9rem;line-height:1.5;color:var(--textb);margin-bottom:.6rem">Zkopíruj zprávu a pošli ji člověku <b>v soukromé zprávě</b>. Po zavření okna se heslo už nezobrazí.</div>'+
+      '<textarea class="cred-ta" readonly rows="9"></textarea>'+
+      '<div class="modal-ftr"><button class="btn-acc small cred-cp">📋 KOPÍROVAT ZPRÁVU</button><button class="btn-ghost small cred-x">ZAVŘÍT</button></div></div>';
+    document.body.appendChild(ov);
+    var ta=ov.querySelector('.cred-ta');ta.value=msg;
+    function close(){document.removeEventListener('keydown',key,true);ov.remove();}
+    function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
+    document.addEventListener('keydown',key,true);
+    ov.querySelector('.cred-x').onclick=close;
+    ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
+    ov.querySelector('.cred-cp').onclick=function(){copyText(msg,'Zpráva zkopírována ✓');};
+    ta.focus();ta.select();
+  }
+
+  // nový člen: zachytit údaje dřív, než je formulář po úspěchu vymaže
+  var _cm=window.createMember;
+  if(typeof _cm==='function'){
+    window.createMember=async function(){
+      var email=((g('nm-email')||{}).value||'').trim().toLowerCase(),pass=(g('nm-pass')||{}).value||'',name=((g('nm-name')||{}).value||'').trim();
+      var had=(DB.get('members')||[]).some(function(m){return (m.email||'').toLowerCase()===email;});
+      var r=await _cm.apply(this,arguments);
+      try{
+        var ok=!had&&email&&(DB.get('members')||[]).some(function(m){return (m.email||'').toLowerCase()===email;});
+        if(ok&&pass)showCredentials({email:email,pass:pass,name:name});
+      }catch(e){}
+      return r;
+    };
+  }
+  // admin změna hesla existujícímu členovi
+  var _cp=window.changePassword;
+  if(typeof _cp==='function'){
+    window.changePassword=async function(){
+      var id=(g('pw-member')||{}).value,pass=(g('pw-new')||{}).value||'';
+      var r=await _cp.apply(this,arguments);
+      try{
+        var st=(g('pwStatus')||{}).textContent||'';
+        if(/^\/\/ HESLO ZMĚNĚNO/.test(st)){
+          var m=(DB.get('members')||[]).find(function(x){return x.id===id;});
+          if(m&&pass)showCredentials({email:m.email||'',pass:pass,name:m.displayName,reset:true});
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+})();
