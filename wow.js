@@ -78,7 +78,7 @@
     };
   }
 
-  /* ═══ 3) PULS FRAKCE (kruhové ukazatele na nástěnce vedení) ═══ */
+  /* ═══ 3) PULS FRAKCE (kruhové ukazatele ve Statistikách) ═══ */
   var prev={},C=251.33;
   function pct(a,b){return b?Math.round(a/b*100):null;}
   function data(){
@@ -106,7 +106,7 @@
     })(t0);
   }
   function renderPulse(){
-    var host=document.getElementById('dashA');if(!host||typeof DB==='undefined'||!getMember())return;
+    var host=document.getElementById('statsBody');if(!host||typeof DB==='undefined'||!getMember())return;
     var old=document.getElementById('pulse');if(old)old.remove();
     var d=data(),box=document.createElement('div');box.id='pulse';box.className='pulse';
     box.innerHTML='<div class="pulse-t">// PULS FRAKCE</div>'+d.map(function(x){
@@ -116,7 +116,7 @@
         '<circle class="g" cx="50" cy="50" r="40" transform="rotate(-90 50 50)" style="stroke-dashoffset:'+(C*(1-from/100))+'"/></svg>'+
         '<div class="pr-in"><div class="pr-l">'+x.ic+' '+x.l+'</div><b class="pr-v">'+(x.p==null?'—':from+'%')+'</b><div class="pr-s">'+x.s+'</div></div></div>';
     }).join('');
-    host.appendChild(box);
+    host.insertBefore(box,host.firstChild);
     void box.offsetWidth; // vynutí přepočet, aby se spustila animace
     d.forEach(function(x){
       var p=x.p==null?0:x.p,from=prev[x.k]==null?0:prev[x.k];
@@ -126,8 +126,8 @@
       prev[x.k]=p;
     });
   }
-  var _rd=window.renderDash;
-  if(typeof _rd==='function'){
-    window.renderDash=function(){var r=_rd.apply(this,arguments);try{renderPulse();}catch(e){console.error('pulse',e);}return r;};
+  var _rs=window.renderStats;
+  if(typeof _rs==='function'){
+    window.renderStats=function(){var r=_rs.apply(this,arguments);try{renderPulse();}catch(e){console.error('pulse',e);}return r;};
   }
 })();
