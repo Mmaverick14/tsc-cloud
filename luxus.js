@@ -19,12 +19,13 @@
   // 2) Paleta příkazů (Ctrl/Cmd + K): rychlý skok na libovolnou záložku
   var pal=null,prevFocus=null;
   function items(){
-    var ms=document.getElementById('memberScreen');
-    if(!ms||ms.classList.contains('hidden'))return [];
+    var ms=[].slice.call(document.querySelectorAll('#memberScreen,#adminScreen')).filter(function(x){return !x.classList.contains('hidden');})[0];
+    if(!ms)return [];
     var out=[].slice.call(ms.querySelectorAll('.sb-nav .nb')).filter(function(b){return !b.classList.contains('hidden');}).map(function(b){
       var i=b.querySelector('.ni'),l=b.querySelector('.nl');
       return {ic:i?i.textContent:'•',label:l?l.textContent:b.textContent,run:function(){b.click();}};
     });
+    if(ms.id==='adminScreen'&&typeof window.goBackToMember==='function')out.push({ic:'←',label:'ZPĚT NA PORTÁL',run:function(){window.goBackToMember();}});
     if(typeof window.openPwSelf==='function')out.push({ic:'🔑',label:'ZMĚNIT HESLO',run:function(){window.openPwSelf(false);}});
     return out;
   }
@@ -70,10 +71,10 @@
 
   // tlačítko v postranním panelu
   setInterval(function(){
-    var f=document.querySelector('#memberScreen .sb-foot');
-    if(!f||f.querySelector('.lux-k'))return;
-    var b=document.createElement('button');b.className='lux-k';b.innerHTML='<span>⌕ HLEDAT</span><kbd>Ctrl K</kbd>';
-    b.onclick=openPal;f.insertBefore(b,f.firstChild);
+    document.querySelectorAll('#memberScreen .sb-foot,#adminScreen .sb-foot').forEach(function(f){
+      if(f.querySelector('.lux-k'))return;
+      var b=document.createElement('button');b.className='lux-k';b.innerHTML='<span>⌕ HLEDAT</span><kbd>Ctrl K</kbd>';
+      b.onclick=openPal;f.insertBefore(b,f.firstChild);});
   },1000);
 
   // 3) Zlatý prach na přihlašovací obrazovce (běží jen když je vidět)
@@ -105,8 +106,8 @@
 // ── LUXUS 2 ──
 (function(){
   // plovoucí zlatý indikátor aktivní záložky
-  function indicator(){
-    var nav=document.querySelector('#memberScreen .sb-nav');if(!nav)return;
+  function indicator(){document.querySelectorAll('#memberScreen .sb-nav,#adminScreen .sb-nav').forEach(indicatorFor);}
+  function indicatorFor(nav){
     var ind=nav.querySelector('.lux-ind');
     if(!ind){
       ind=document.createElement('i');ind.className='lux-ind';nav.appendChild(ind);
@@ -137,7 +138,7 @@
   // Alt + číslo = záložka podle pořadí v menu
   document.addEventListener('keydown',function(e){
     if(!e.altKey||e.ctrlKey||e.metaKey||!/^[1-9]$/.test(e.key))return;
-    var ms=document.getElementById('memberScreen');if(!ms||ms.classList.contains('hidden'))return;
+    var ms=[].slice.call(document.querySelectorAll('#memberScreen,#adminScreen')).filter(function(x){return !x.classList.contains('hidden');})[0];if(!ms)return;
     var b=[].slice.call(ms.querySelectorAll('.sb-nav .nb')).filter(function(x){return !x.classList.contains('hidden');})[+e.key-1];
     if(b){e.preventDefault();b.click();}
   });

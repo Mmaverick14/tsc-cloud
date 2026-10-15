@@ -108,3 +108,49 @@ body::before{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 .mt.active .dc:nth-child(n+6){animation-delay:.25s}
 @keyframes luxRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.mt.active .dc{animation:none}.lux-ind{transition:none}}
+
+/* ══ ADMIN: „velín vedení" — karmínová autorita + zlato ══ */
+#adminScreen::before{content:'';position:fixed;top:0;left:0;right:0;height:2px;z-index:9996;pointer-events:none;
+  background:linear-gradient(90deg,var(--red),var(--acc) 45%,transparent 85%)}
+#adminScreen .main{background:radial-gradient(800px 460px at 6% 108%,rgba(192,57,43,.09),transparent 70%),
+  radial-gradient(900px 420px at 92% -8%,color-mix(in srgb,var(--acc) 8%,transparent),transparent 70%),var(--deep)}
+#adminScreen .ph{box-shadow:inset 3px 0 0 var(--red),0 1px 0 var(--border),0 12px 24px -18px rgba(0,0,0,.9)}
+#adminScreen .ph::after{background:linear-gradient(90deg,var(--red),var(--acc),transparent)}
+@media(min-width:701px){
+  #adminScreen .sidebar{background:linear-gradient(180deg,#1a1212,#0e0e0e 45%);
+    border-image:linear-gradient(180deg,var(--red-dim),var(--border) 35%,var(--border) 70%,var(--red-dim)) 1}
+  #adminScreen .lux-ind{background:linear-gradient(180deg,#e8695a,var(--red));box-shadow:0 0 14px var(--red)}
+}
+#adminScreen .admin-badge{display:flex;align-items:center;gap:.45rem;margin:0 .6rem .6rem;padding:.35rem .55rem;border:1px solid var(--red-dim);
+  background:linear-gradient(90deg,rgba(192,57,43,.18),transparent);color:#e8695a;letter-spacing:.22em}
+#adminScreen .admin-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:pp 2s ease-in-out infinite}
+#adminScreen .nb.active{background:linear-gradient(90deg,rgba(192,57,43,.2),transparent)}
+#adminScreen .nb.active .nl{text-shadow:0 0 8px rgba(192,57,43,.4)}
+
+/* formuláře: panel s červeno-zlatým pruhem */
+#adminScreen .form-panel{border-top:0;margin:1.1rem;padding:1.3rem 1.4rem;
+  background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(90deg,var(--red),var(--acc) 40%,var(--border) 75%) border-box;
+  border:1px solid transparent;border-width:2px 1px 1px}
+#adminScreen .fp-title{font-family:var(--lux-serif);font-size:1.15rem;letter-spacing:.1em;border-bottom-color:color-mix(in srgb,var(--acc) 25%,var(--border))}
+#adminScreen .adm-ta:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-glow)}
+
+/* členové: průkazy místo mřížky 1px */
+#adminScreen .member-grid{background:transparent;gap:.85rem;padding:0}
+#adminScreen .member-card{border:1px solid var(--border);border-top:2px solid var(--acc-dim);
+  background:linear-gradient(180deg,rgba(255,255,255,.025),transparent 40%),var(--card);box-shadow:0 8px 24px -14px #000;transition:transform .2s,border-color .2s}
+#adminScreen .member-card:hover{transform:translateY(-3px);border-color:var(--acc-dim);background:linear-gradient(180deg,rgba(255,255,255,.035),transparent 40%),var(--card)}
+#adminScreen .member-card.panic-card{border-top-color:var(--red);box-shadow:inset 3px 0 0 var(--red),0 8px 24px -14px #000}
+.cap-bar{background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 8%,var(--card)),var(--card));border-radius:0;box-shadow:0 8px 24px -16px #000}
+
+/* sklad a ostatní mřížky ve správě */
+#adminScreen .wh-grid{background:transparent;gap:.8rem;padding:0}
+#adminScreen .wh-item{border:1px solid var(--border);border-top:2px solid var(--acc-dim);box-shadow:0 8px 24px -16px #000}
+
+/* log jako časová osa */
+#aLog .log-entry{margin-left:1.2rem;padding-left:.9rem;border-bottom-color:transparent;border-left:2px solid var(--brite);position:relative;transition:border-color .2s,background .2s}
+#aLog .log-entry::before{content:'';position:absolute;left:-6px;top:.75rem;width:8px;height:8px;border-radius:50%;background:var(--deep);border:2px solid var(--acc-dim);transition:background .2s,border-color .2s}
+#aLog .log-entry:hover{border-left-color:var(--acc)}
+#aLog .log-entry:hover::before{background:var(--acc);border-color:var(--acc)}
+#adminScreen .log-search{margin-top:1rem}
+#adminScreen .btn-danger{transition:all .2s}
+#adminScreen .btn-danger:hover{box-shadow:0 0 18px -4px var(--red)}
