@@ -1654,7 +1654,7 @@ async function changePassword(){
   st.style.color='var(--acc)';st.textContent='// UKLÁDÁM...';
   try{await adminApi({action:'setPassword',authId:m.authId,password:newPass});}
   catch(e){st.style.color='#e05555';st.textContent='// CHYBA: '+e.message;return;}
-  addLog('member','Admin změnil heslo člena "'+m.displayName+'".');
+  addLog('member','Admin změnil heslo člena "'+m.displayName+'".',{embed:rich(C_ORANGE,'🔑 HESLO ZMĚNĚNO','**'+m.displayName+'**',[['🎖️ Hodnost',m.position]],{by:rosterWho()})});
   document.getElementById('pw-new').value='';
   document.getElementById('pw-confirm').value='';
   st.textContent='// HESLO ZMĚNĚNO PRO: '+m.displayName;
@@ -1689,7 +1689,7 @@ async function createMember(){
   members=DB.get('members')||[];
   members.push({id:uid(),authId:res.authId,email:email,displayName:name,position:pos,adminAccess:admin||ADMIN_POS.indexOf(pos)!==-1,note:note,discordId:discordId,firstName:firstName,lastName:lastName,nick:nick,strikes:0,panic:false,hidden:hidden});
   DB.set('members',members);
-  addLog('member','Admin registroval nového člena: "'+name+'" ('+pos+').');
+  addLog('member','Admin registroval nového člena: "'+name+'" ('+pos+').',{embed:rich(C_GREEN,'🆕 NOVÝ ČLEN','**'+name+'**',[['🎖️ Hodnost',pos],['🛡 Admin přístup',(admin||ADMIN_POS.indexOf(pos)!==-1)?'Ano':'Ne'],['🏷 Přezdívka',nick||'—']],{by:rosterWho()})});
   st.textContent='// ČLEN REGISTROVÁN';
   setTimeout(function(){st.textContent='';},3000);
   ['nm-email','nm-name','nm-pass','nm-note','nm-discord','nm-first','nm-last','nm-nick'].forEach(function(i){document.getElementById(i).value='';});
@@ -1711,7 +1711,7 @@ function changeName(id){
   if(!name){toast('Zadejte IC jméno','error');return;}
   if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return;}
   var old=m.displayName;m.displayName=name;DB.set('members',members);
-  addLog('member','Admin změnil jméno "'+old+'" na "'+name+'".');
+  addLog('member','Admin změnil jméno "'+old+'" na "'+name+'".',{embed:rich(C_BLUE,'✏️ ZMĚNA JMÉNA','**'+old+'** → **'+name+'**',[['🎖️ Hodnost',m.position]],{by:rosterWho()})});
   toast('Jméno změněno','success');renderMemberGrid();populatePwMember();
 }
 function changePosition(id){
@@ -1723,7 +1723,7 @@ function changePosition(id){
   if(sel.value==='Mastermind'&&!(me&&me.position==='Mastermind')){toast('Pozici Mastermind může přidělit jen Mastermind','error');return;}
   if(m.position==='Mastermind'&&sel.value!=='Mastermind'&&!members.some(function(x){return x.id!==m.id&&x.position==='Mastermind';})){toast('Musí zůstat alespoň jeden Mastermind','error');return;}
   var oldPos0=m.position;m.position=sel.value;syncAdminForPos(m,oldPos0);DB.set('members',members);
-  addLog('member','Admin změnil pozici "'+m.displayName+'" na "'+m.position+'".');
+  addLog('member','Admin změnil pozici "'+m.displayName+'" na "'+m.position+'".',{embed:rich(C_PURPLE,'🎖️ ZMĚNA POZICE','**'+m.displayName+'**',[['Původní',oldPos0],['➡️ Nová',m.position]],{by:rosterWho()})});
   toast('Pozice aktualizována','success');renderMemberGrid();
 }
 function toggleAdminAccess(id){
@@ -1731,7 +1731,7 @@ function toggleAdminAccess(id){
   if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return;}
   if(ADMIN_POS.indexOf(m.position)!==-1){toast('Mastermind, Overseer a Counselor mají admin napevno','error');return;}
   m.adminAccess=!m.adminAccess;DB.set('members',members);
-  addLog('member','Admin '+(m.adminAccess?'přidělil':'odebral')+' admin přístup "'+m.displayName+'".');
+  addLog('member','Admin '+(m.adminAccess?'přidělil':'odebral')+' admin přístup "'+m.displayName+'".',{embed:rich(m.adminAccess?C_GREEN:C_RED,m.adminAccess?'🛡 ADMIN PŘÍSTUP PŘIDĚLEN':'🛡 ADMIN PŘÍSTUP ODEBRÁN','**'+m.displayName+'**',[['🎖️ Hodnost',m.position]],{by:rosterWho()})});
   toast('Admin přístup '+(m.adminAccess?'přidělen':'odebrán'),'info');renderMemberGrid();
 }
 async function deleteMember(id){
