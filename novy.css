@@ -8,12 +8,13 @@
 
 /* ── 1) Základ ── */
 :root{
+  color-scheme:dark;
   --bg:#050505;--deep:#070707;--card:#0d0d0c;--surf:#131311;
   --border:#2a2417;--brite:#3d3522;
   --text:#bcb08e;--textb:#f3ead0;--muted:#7f7658;--dim:#3a3320;
   --lux-serif:'Cormorant Garamond',Georgia,serif;
   --sans:'Jost','Rajdhani',system-ui,sans-serif;
-  --rail:236px;
+  --rail:14.75rem;
   --corner:linear-gradient(var(--acc),var(--acc));
 }
 html body,html body *{font-family:var(--sans)!important}
@@ -22,13 +23,21 @@ html body code,html body kbd,html body .cred-ta,html body .tc-hex{font-family:ui
 html body .pt,html body .modal-title,html body .fp-title,html body .sel-logo,html body .sb-logo,html body .lux-hello,html body .lux-hello b,
 html body .prof-name,html body .dc-val,html body .pr-v,html body .radio-freq,html body .bank-num,html body .st-dt,html body .wi-logo,
 html body .wi-name,html body .wi-hi,html body .lux-pal-in,html body .sel-label,html body .panic-title{font-family:'Cormorant Garamond',Georgia,serif!important;font-feature-settings:'lnum' 1,'tnum' 1}
-body{background:var(--bg);color:var(--text);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+html{font-size:var(--ui,100%)}
+body{background:var(--bg);color:var(--text);font-size:1rem;line-height:1.55;-webkit-font-smoothing:antialiased}
 body::before,#luxDust{display:none!important}   /* zrnění a prach pryč */
 ::selection{background:var(--acc);color:#080808}
-::-webkit-scrollbar{width:8px;height:8px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--brite);border:2px solid var(--bg)}
-::-webkit-scrollbar-thumb:hover{background:var(--acc-dim)}
+/* posuvník: tenký, tmavý se zlatým jezdcem (bez šipek) */
+*{scrollbar-width:thin;scrollbar-color:var(--acc-dim) var(--bg)}
+html{scrollbar-color:var(--acc-dim) var(--bg)}
+@supports not (scrollbar-color:auto){
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--acc-dim);border:2px solid var(--bg);border-radius:6px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--acc)}
+  ::-webkit-scrollbar-button{display:none}
+  ::-webkit-scrollbar-corner{background:var(--bg)}
+}
 .main,#adminScreen .main{
   background:
     radial-gradient(900px 380px at 50% -10%,color-mix(in srgb,var(--acc) 9%,transparent),transparent 70%),
@@ -108,7 +117,7 @@ body::before,#luxDust{display:none!important}   /* zrnění a prach pryč */
 #adminScreen::before{display:none!important}
 .pt{background:none!important;-webkit-text-fill-color:var(--acc)!important;color:var(--acc);font-size:2.1rem!important;font-weight:600;letter-spacing:.08em!important}
 .pclock{position:absolute;right:1.6rem;top:1rem;font-size:.75rem!important;color:var(--muted)!important;letter-spacing:.1em}
-.mt,.at{max-width:1320px;margin-left:auto;margin-right:auto}
+.mt,.at{max-width:82rem;margin-left:auto;margin-right:auto}
 .lux-hello{padding:1.4rem 1.6rem .2rem;font-size:1.9rem!important;font-weight:600;font-style:italic;color:var(--textb)}
 .lux-hello b{background:none!important;-webkit-text-fill-color:var(--acc)!important;color:var(--acc);font-style:normal}
 .lux-hello small{font-size:.7rem!important;letter-spacing:.2em;color:var(--muted)!important;font-style:normal}
@@ -236,3 +245,15 @@ body::before,#luxDust{display:none!important}   /* zrnění a prach pryč */
   .dc-val,.dc:not(.warn):not(.ok) .dc-val{font-size:2rem!important}
 }
 @media(prefers-reduced-motion:reduce){.sidebar{transition:none}}
+
+/* ── Velikost webu (tlačítko Aa v postranním panelu) ── */
+.size-pop{position:fixed;z-index:1700;width:15.5rem;max-width:calc(100vw - 16px);background:var(--card);border:1px solid var(--acc-dim);padding:1rem 1.1rem;box-shadow:0 18px 50px rgba(0,0,0,.7)}
+.size-pop .sp-t{font-size:.72rem;font-weight:600;letter-spacing:.18em;color:var(--acc);text-transform:uppercase;margin-bottom:.8rem}
+.size-pop .sp-row{display:flex;align-items:center;gap:.6rem}
+.size-pop .sp-b{flex:none;width:2.1rem;height:2.1rem;background:transparent;border:1px solid var(--brite);color:var(--textb);font-size:1rem;cursor:pointer;transition:all .2s}
+.size-pop .sp-b:hover{border-color:var(--acc);color:var(--acc)}
+.size-pop input[type=range]{flex:1;min-width:0;accent-color:var(--acc);background:transparent;border:0;padding:0;box-shadow:none}
+.size-pop .sp-v{text-align:center;margin:.7rem 0 .2rem;font-size:1.5rem;font-weight:600;color:var(--textb)}
+.size-pop .sp-h{font-size:.7rem;line-height:1.5;color:var(--muted);margin-top:.5rem}
+.size-pop .sp-r{display:block;width:100%;margin-top:.8rem;padding:.5rem;background:transparent;border:1px solid var(--brite);color:var(--text);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.size-pop .sp-r:hover{border-color:var(--acc-dim);color:var(--acc)}
