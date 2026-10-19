@@ -1630,6 +1630,9 @@ async function radioTick(){
   try{
     var r=await sb.from(TABLE).select('value').eq('key','radioauto').maybeSingle();
     var fresh=(r.data&&r.data.value)||cfg;
+    // slot přepočítáme z ČERSTVÉ konfigurace (časy + hold) z DB, ne z místní, případně zastaralé kopie —
+    // jinak se dva klienty s různými časy donekonečna přebíjejí a spamují Discord
+    slot=radioSlot(null,fresh);
     if(fresh.lastSlot===slot){DB.cache.radioauto=fresh;}
     else{
       fresh.lastSlot=slot;DB.set('radioauto',fresh);
