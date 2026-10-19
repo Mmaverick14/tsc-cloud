@@ -73,7 +73,7 @@
   };
 
   // 5) Barevné motivy (pamatuje si prohlížeč)
-  var TH=[['Zlatá','#c49a14','#7a6010'],['Červená','#d44a3a','#8a2a20'],['Modrá','#4a90d9','#2a5a8a'],['Zelená','#27ae60','#1a5e30'],['Fialová','#b070d9','#6a3a8a']];
+  var TH=[['Indigo','#5b7cfa','#4a62c8'],['Tyrkys','#14a38b','#0f7d6b'],['Zelená','#2f9e63','#237a4c'],['Růžová','#e2557f','#b53f64'],['Jantar','#d98a1f','#a96a12'],['Grafit','#7d8594','#5d6471']];
   function applyTheme(i){
     var t=TH[i]||TH[0],r=document.documentElement.style;
     r.setProperty('--acc',t[1]);r.setProperty('--acc-dim',t[2]);
