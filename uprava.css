@@ -70,3 +70,18 @@ html body .wf.active[onclick*="BoostFilter('S+',"]{
   background:color-mix(in srgb,var(--tc) 22%,transparent)!important;
   border-color:var(--tc)!important;
 }
+
+/* 6) Rozbalovací seznamy (výběr období, řazení, pozice…): tmavé místo bílého */
+html body select,
+html body .st-range,
+html body .wh-sort{color-scheme:dark}
+html body select option,
+html body select optgroup{
+  background-color:#0d0d0c!important;
+  color:#f3ead0!important;
+}
+html body select option:checked,
+html body select option:hover{
+  background-color:#3d3522!important;
+  color:var(--acc)!important;
+}
