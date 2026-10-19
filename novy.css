@@ -1,0 +1,247 @@
+/* ══════════════════════════════════════════════════════════════
+   NOVÝ VZHLED — „ART DECO NOIR“
+   Černá + mosazné zlato, serifové nadpisy, rámy s rohovými ozdobami,
+   podtržená pole, menu jako úzká lišta (rozbalí se po najetí myší).
+   Načítá se jako POSLEDNÍ. Smazáním řádku v index.html se vše vrátí.
+   Barvu zlata řídí motiv (🎨) přes --acc.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1) Základ ── */
+:root{
+  --bg:#050505;--deep:#070707;--card:#0d0d0c;--surf:#131311;
+  --border:#2a2417;--brite:#3d3522;
+  --text:#bcb08e;--textb:#f3ead0;--muted:#7f7658;--dim:#3a3320;
+  --lux-serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Jost','Rajdhani',system-ui,sans-serif;
+  --rail:72px;--rail-open:240px;
+  --corner:linear-gradient(var(--acc),var(--acc));
+}
+html body,html body *{font-family:var(--sans)!important}
+html body code,html body kbd,html body .cred-ta,html body .tc-hex{font-family:ui-monospace,Menlo,Consolas,monospace!important}
+/* serifové nadpisy a velká čísla */
+html body .pt,html body .modal-title,html body .fp-title,html body .sel-logo,html body .sb-logo,html body .lux-hello,html body .lux-hello b,
+html body .prof-name,html body .dc-val,html body .pr-v,html body .radio-freq,html body .bank-num,html body .st-dt,html body .wi-logo,
+html body .wi-name,html body .wi-hi,html body .lux-pal-in,html body .sel-label,html body .panic-title{font-family:'Cormorant Garamond',Georgia,serif!important;font-feature-settings:'lnum' 1,'tnum' 1}
+body{background:var(--bg);color:var(--text);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body::before,#luxDust{display:none!important}   /* zrnění a prach pryč */
+::selection{background:var(--acc);color:#080808}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--brite);border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:var(--acc-dim)}
+.main,#adminScreen .main{
+  background:
+    radial-gradient(900px 380px at 50% -10%,color-mix(in srgb,var(--acc) 9%,transparent),transparent 70%),
+    repeating-linear-gradient(45deg,rgba(255,255,255,.012) 0 1px,transparent 1px 14px),
+    var(--deep)!important}
+
+/* ── 2) Ozdobné rámy: tenký okraj + zlaté rohy ── */
+.dc,.st-box,.form-panel,#adminScreen .form-panel,.modal-box,.sel-box,.bank-card{
+  background:
+    var(--corner) 0 0/14px 1px no-repeat,var(--corner) 0 0/1px 14px no-repeat,
+    var(--corner) 100% 0/14px 1px no-repeat,var(--corner) 100% 0/1px 14px no-repeat,
+    var(--corner) 0 100%/14px 1px no-repeat,var(--corner) 0 100%/1px 14px no-repeat,
+    var(--corner) 100% 100%/14px 1px no-repeat,var(--corner) 100% 100%/1px 14px no-repeat,
+    var(--card)!important;
+  border:1px solid var(--border)!important;border-radius:0!important;
+  box-shadow:inset 0 0 0 4px var(--card),inset 0 0 0 5px color-mix(in srgb,var(--acc) 10%,transparent)!important}
+.board-post,.heist-card,.task-card,.ev-card,.member-card,.wh-item,.radio-card,.pr,.att-box,.bank-all,.cap-bar,#unpaidBox,
+#adminScreen .member-card,#adminScreen .wh-item{
+  background:var(--card)!important;border:1px solid var(--border)!important;border-radius:0!important;box-shadow:none!important;transform:none!important}
+.board-post,.heist-card,.task-card,.ev-card,.radio-card{border-left:3px solid var(--acc-dim)!important}
+.board-post.warning{border-left-color:orange!important}.board-post.urgent{border-left-color:var(--red)!important}.board-post.confirm{border-left-color:#4a90d9!important}
+.task-card.low{border-left-color:var(--muted)!important}.task-card.high{border-left-color:var(--acc)!important}.task-card.urgent{border-left-color:var(--red)!important}
+.heist-card.ok{border-left-color:var(--green)!important}.heist-card.fail{border-left-color:var(--red)!important}
+.board-post:hover,.heist-card:hover,.task-card:hover,.ev-card:hover,.wh-item:hover,#adminScreen .member-card:hover,#adminScreen .wh-item:hover,.member-card:hover{
+  border-color:var(--brite)!important;border-left-color:inherit;background:var(--surf)!important;transform:none!important;box-shadow:none!important}
+.board-post.urgent,.task-card.urgent,.nbadge.visible,.nb.has-new .ni::after{animation:none!important}
+.dc::after,.board-post::after,.heist-card::after,.task-card::after,.ev-card::after,.member-card::after,.wh-item::after,.form-panel::after,.pr::after{display:none!important}
+.wh-item.wh-empty{box-shadow:inset 0 3px 0 var(--red)!important}
+.wh-item.wh-low{box-shadow:inset 0 3px 0 #f1c40f!important}
+.member-card.panic-card,#adminScreen .member-card.panic-card{box-shadow:inset 3px 0 0 var(--red)!important}
+.board-posts{gap:.8rem;padding:1.3rem 1.6rem}
+.board-post{padding:1.3rem 1.5rem}
+#adminScreen .member-grid,#adminScreen .wh-grid{background:transparent!important;gap:.9rem;padding:0 1.4rem}
+.form-panel,#adminScreen .form-panel{padding:1.6rem 1.8rem;margin:1.3rem 1.6rem}
+.fp-title,#adminScreen .fp-title{font-size:1.4rem!important;font-weight:600!important;color:var(--acc)!important;letter-spacing:.06em!important;
+  border-bottom:1px solid var(--border)!important;padding-bottom:.7rem;margin-bottom:1.2rem}
+.st-box{padding:1.3rem 1.5rem}
+.st-bt-title{font-size:.78rem!important;letter-spacing:.2em!important;color:var(--acc)!important}
+
+/* ── 3) Menu: úzká lišta, po najetí se rozbalí ── */
+@media(min-width:701px){
+  .layout{padding-left:var(--rail)}
+  .sidebar,#adminScreen .sidebar{
+    position:fixed!important;left:0;top:0;bottom:0;height:100vh!important;z-index:300;
+    width:var(--rail)!important;min-width:var(--rail)!important;overflow-x:hidden;overflow-y:auto;
+    background:linear-gradient(180deg,#0b0b0a,#050505)!important;border-right:1px solid var(--border)!important;border-image:none!important;
+    transition:width .28s cubic-bezier(.3,.9,.3,1),box-shadow .28s;padding:1rem 0}
+  .sidebar:hover,.sidebar:focus-within{width:var(--rail-open)!important;box-shadow:24px 0 60px rgba(0,0,0,.65)}
+  .sidebar::after{content:'';position:absolute;right:0;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--acc-dim) 25%,var(--acc-dim) 75%,transparent);pointer-events:none}
+  .sb-logo{justify-content:flex-start!important;padding:0 0 1rem 1.05rem;margin:0 0 .8rem;border-bottom:1px solid var(--border);white-space:nowrap;font-size:1.3rem;letter-spacing:.06em}
+  .sb-logo .sb-tools{display:none}
+  .sidebar:hover .sb-logo .sb-tools,.sidebar:focus-within .sb-logo .sb-tools{display:inline-flex;margin-left:auto;padding-right:1rem}
+  .sb-nav{padding:0 .6rem;gap:3px}
+  .nb{position:relative;padding:.7rem 1.1rem;font-size:.92rem;white-space:nowrap;border-radius:0}
+  .nb .ni{font-size:1.05rem;width:22px;flex-shrink:0}
+  .nb .nl{opacity:0;transition:opacity .2s;letter-spacing:.14em}
+  .sidebar:hover .nb .nl,.sidebar:focus-within .nb .nl{opacity:1}
+  .nbadge{position:absolute;top:4px;left:34px;margin:0}
+  .sidebar:hover .nbadge,.sidebar:focus-within .nbadge{left:auto;right:10px;top:50%;transform:translateY(-50%)}
+  .sb-foot{opacity:0;pointer-events:none;transition:opacity .2s;padding:.8rem 1rem;white-space:nowrap}
+  .sidebar:hover .sb-foot,.sidebar:focus-within .sb-foot{opacity:1;pointer-events:auto}
+  #adminScreen .admin-badge{opacity:0;transition:opacity .2s}
+  #adminScreen .sidebar:hover .admin-badge{opacity:1}
+  .lux-ind{left:0!important;width:2px!important}
+}
+.sb-logo{color:var(--acc);text-shadow:none!important;font-weight:700}
+.nb{border:0!important;color:var(--text)!important;background:transparent;font-weight:500}
+.nb .ni{color:var(--acc-dim)!important;filter:none!important}
+.nb:hover{background:color-mix(in srgb,var(--acc) 8%,transparent)!important;color:var(--acc)!important;transform:none!important}
+.nb:hover .ni{transform:none;color:var(--acc)!important}
+.nb.active,#adminScreen .nb.active{background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 16%,transparent),transparent)!important;color:var(--acc)!important;box-shadow:none!important}
+.nb.active .ni{color:var(--acc)!important}
+.nb.active .nl,#adminScreen .nb.active .nl{text-shadow:none!important}
+.nb.admin-only{border-top:1px solid var(--border)!important;margin-top:.5rem}
+.sb-name{font-size:.9rem!important;color:var(--textb)!important;font-weight:600}
+.sb-pos{font-size:.72rem!important;color:var(--acc)!important}
+.btn-back,.lux-k{border-radius:0!important}
+#adminScreen .admin-badge{background:rgba(192,57,43,.14)!important;border:1px solid var(--red-dim)!important;color:#e8695a!important;border-radius:0}
+
+/* ── 4) Hlavička stránky: vystředěný nadpis s ornamentem ── */
+.ph,#adminScreen .ph{position:relative!important;justify-content:center;background:transparent!important;backdrop-filter:none!important;border:0!important;box-shadow:none!important;
+  padding:2rem 1.5rem 1.7rem!important;text-align:center}
+.ph::before{content:'';position:absolute;left:50%;bottom:-4px;width:8px;height:8px;background:var(--acc);transform:translateX(-50%) rotate(45deg);z-index:2;box-shadow:0 0 0 4px var(--deep)}
+.ph::after,#adminScreen .ph::after{content:'';display:block!important;position:absolute;left:50%!important;bottom:0!important;width:min(380px,70%)!important;height:1px!important;
+  transform:translateX(-50%);background:linear-gradient(90deg,transparent,var(--acc),transparent)!important}
+#adminScreen::before{display:none!important}
+.pt{background:none!important;-webkit-text-fill-color:var(--acc)!important;color:var(--acc);font-size:2.1rem!important;font-weight:600;letter-spacing:.08em!important}
+.pclock{position:absolute;right:1.6rem;top:1rem;font-size:.75rem!important;color:var(--muted)!important;letter-spacing:.1em}
+.mt,.at{max-width:1320px;margin-left:auto;margin-right:auto}
+.lux-hello{padding:1.4rem 1.6rem .2rem;font-size:1.9rem!important;font-weight:600;font-style:italic;color:var(--textb)}
+.lux-hello b{background:none!important;-webkit-text-fill-color:var(--acc)!important;color:var(--acc);font-style:normal}
+.lux-hello small{font-size:.7rem!important;letter-spacing:.2em;color:var(--muted)!important;font-style:normal}
+
+/* ── 5) Přehled (dlaždice) ── */
+.dc{padding:1.2rem 1.3rem!important;border-top:1px solid var(--border)!important}
+.dc-lb{font-size:.72rem!important;letter-spacing:.2em!important;color:var(--text)!important}
+.dc-val,.dc:not(.warn):not(.ok) .dc-val{background:none!important;-webkit-text-fill-color:var(--acc)!important;color:var(--acc)!important;font-size:2.6rem!important;font-weight:600;line-height:1.05}
+.dc.warn .dc-val{-webkit-text-fill-color:var(--red)!important;color:var(--red)!important}
+.dc.ok .dc-val{-webkit-text-fill-color:var(--green)!important;color:var(--green)!important}
+.dc-val small{font-size:1.1rem!important;color:var(--muted)!important;-webkit-text-fill-color:var(--muted)!important}
+.dc-sub{font-size:.76rem!important;color:var(--muted)!important;letter-spacing:.06em}
+.dc[onclick]:hover{background:var(--surf)!important;transform:none!important}
+
+/* ── 6) Tlačítka a filtry ── */
+.btn-acc,.btn-ghost,.btn-back,.btn-danger,.btn-micro,.wf,.ttab,.ctab,.rsvp,.gen-b,.wh-lowbtn{border-radius:0!important;font-weight:500!important;text-transform:uppercase;letter-spacing:.16em!important;transition:all .2s}
+.btn-acc{background:transparent!important;border:1px solid var(--acc)!important;color:var(--acc)!important;font-size:.76rem!important;padding:.7rem 1.4rem;box-shadow:none!important}
+.btn-acc::before{background:var(--acc)!important}
+.btn-acc:hover{color:#080808!important;box-shadow:none!important}
+.btn-acc.small{font-size:.72rem!important;padding:.5rem 1rem}
+.btn-ghost,.btn-back{background:transparent!important;border:1px solid var(--brite)!important;color:var(--text)!important;font-size:.72rem!important;padding:.6rem 1.1rem}
+.btn-ghost:hover,.btn-back:hover{border-color:var(--acc-dim)!important;color:var(--acc)!important}
+.btn-danger{background:transparent!important;border:1px solid var(--red-dim)!important;color:var(--red)!important;font-size:.72rem!important;padding:.5rem 1rem}
+.btn-danger:hover{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important;box-shadow:none!important}
+.btn-micro{background:transparent!important;border:1px solid var(--border)!important;color:var(--text)!important;font-size:.68rem!important;padding:.3rem .65rem}
+.btn-micro:hover,.btn-micro.active-admin{border-color:var(--acc-dim)!important;color:var(--acc)!important}
+.btn-micro.del:hover{border-color:var(--red)!important;color:var(--red)!important}
+.wf,.ttab,.ctab,.wh-lowbtn{background:transparent!important;border:1px solid var(--border)!important;color:var(--text)!important;font-size:.72rem!important;padding:.42rem 1rem;box-shadow:none!important}
+.wf:hover,.ttab:hover,.ctab:hover{border-color:var(--acc-dim)!important;color:var(--acc)!important}
+.wf.active,.ttab.active,.ctab.active{background:color-mix(in srgb,var(--acc) 12%,transparent)!important;border-color:var(--acc)!important;color:var(--acc)!important;box-shadow:none!important}
+.wh-lowbtn.on{background:orange!important;border-color:orange!important;color:#080808!important}
+.rsvp{font-size:.72rem!important;border:1px solid var(--border)!important;background:transparent;color:var(--textb)!important}
+.panic-btn{border-radius:0!important;font-size:.7rem!important;letter-spacing:.2em!important}
+
+/* ── 7) Formuláře: podtržená pole ── */
+.fl{font-size:.74rem!important;font-weight:600!important;letter-spacing:.18em!important;color:var(--acc)!important}
+.field-group{gap:.2rem}
+.iw{background:transparent!important;border:0!important;border-bottom:1px solid var(--brite)!important;border-radius:0!important;box-shadow:none!important;transition:border-color .2s}
+.iw:focus-within{border-bottom-color:var(--acc)!important;box-shadow:0 1px 0 var(--acc)!important}
+.ip{color:var(--muted)!important;font-size:.8rem!important;opacity:.7}
+.iw input,.iw select{font-size:1rem!important;color:var(--textb)!important;padding:.65rem .5rem .65rem 0}
+.iw input::placeholder,.adm-ta::placeholder,.wh-search::placeholder{color:var(--muted)!important}
+.iw select option,.member-card select option{background:var(--card)!important;color:var(--textb)!important}
+.wh-search,.log-search,.lux-find,.adm-ta,.st-range,.cred-ta,.rt-in,.sel-search,textarea{
+  background:transparent!important;border:0!important;border-bottom:1px solid var(--brite)!important;border-radius:0!important;color:var(--textb)!important;padding:.6rem .2rem!important;outline:0}
+.wh-search:focus,.log-search:focus,.lux-find:focus,.adm-ta:focus,#adminScreen .adm-ta:focus,.st-range:focus,.sel-search:focus,textarea:focus{border-bottom-color:var(--acc)!important;box-shadow:0 1px 0 var(--acc)!important}
+.smsg{font-size:.82rem!important}
+
+/* ── 8) Přihlášení ── */
+.sel-bg{background:radial-gradient(700px 460px at 50% 35%,color-mix(in srgb,var(--acc) 11%,transparent),transparent 70%),var(--bg)!important}
+.sel-logo{font-size:3.6rem!important;font-weight:600;letter-spacing:.5em!important;padding-left:.5em;margin-bottom:.4rem}
+.sel-sub{font-size:.72rem!important;letter-spacing:.4em!important;color:var(--muted)!important}
+.sel-box{padding:2.2rem 2.4rem!important;min-width:340px}
+.sel-label{font-size:1.6rem!important;font-weight:600!important;letter-spacing:.08em!important;color:var(--acc)!important;margin-bottom:1.3rem}
+.sel-box .field-group{text-align:left;margin-bottom:1rem}
+.sel-box .btn-acc{width:100%}
+.sel-divider{background:linear-gradient(90deg,transparent,var(--acc-dim),transparent)!important}
+.member-btn{background:var(--card)!important;border:1px solid var(--border)!important;border-radius:0!important}
+.member-btn:hover{border-color:var(--acc-dim)!important;background:var(--surf)!important}
+.mb-name{font-size:1rem!important;font-weight:600!important;color:var(--textb)}
+.mb-pos{font-size:.72rem!important}
+
+/* ── 9) Okna ── */
+.modal-ov{background:rgba(0,0,0,.82)!important;backdrop-filter:blur(5px)}
+.modal-box{padding:2rem!important;width:400px}
+.modal-title{font-size:1.5rem!important;font-weight:600!important;color:var(--acc)!important;letter-spacing:.08em!important;margin-bottom:1.2rem;animation:none!important}
+.tsc-cbox.danger{border-color:var(--red-dim)!important}
+.tsc-cbox.danger .modal-title{color:var(--red)!important}
+.toast{background:var(--card)!important;border:1px solid var(--border)!important;border-left:3px solid var(--acc)!important;border-radius:0;font-size:.82rem!important;color:var(--textb)}
+.toast.success{border-left-color:var(--green)!important}.toast.error{border-left-color:var(--red)!important}
+.theme-pop{background:var(--card)!important;border:1px solid var(--acc-dim)!important;border-radius:0!important}
+.lux-pal-box{background:var(--card)!important;border:1px solid var(--acc-dim)!important;border-radius:0!important}
+.lux-pal-in{font-size:1.3rem!important;font-weight:500;color:var(--textb)!important;border-bottom:1px solid var(--border)!important;background:transparent!important}
+.lux-pal-it{font-size:.95rem!important;color:var(--text)!important;border-radius:0}
+.lux-pal-it.on{background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 16%,transparent),transparent)!important;color:var(--acc)!important}
+.prof-ov .modal-box.prof-box{transform:none!important;animation:none!important}
+.prof-ov .prof-name{background:none!important;-webkit-text-fill-color:var(--acc)!important;color:var(--acc);font-size:2rem!important;font-weight:600}
+.prof-ov .prof-tile{border-radius:0!important;background:var(--surf)!important;border:1px solid var(--border)!important}
+.prof-ov .prof-hex{animation:none!important;box-shadow:none!important}
+
+/* ── 10) Tabulky, statistiky, vysílačky, banka ── */
+.mx th,.st-table th{font-size:.7rem!important;letter-spacing:.14em!important;color:var(--acc)!important;border-bottom:1px solid var(--acc-dim)!important}
+.mx td,.mx th,.st-table td{border-bottom:1px solid var(--border)!important}
+.mx td,.st-table td{font-size:.9rem!important;color:var(--textb)}
+.mx tbody tr:hover td,.st-table tr:hover td{background:color-mix(in srgb,var(--acc) 7%,transparent)!important}
+.st-bt{background:var(--surf)!important;height:8px}
+.st-bf,.st-bf.gold{background:linear-gradient(90deg,var(--acc-dim),var(--acc))!important}
+.st-bl{font-size:.88rem!important}.st-bv,.st-leg{font-size:.8rem!important}
+.st-dt{font-size:22px!important;font-weight:600}
+.pulse-t{font-size:.78rem!important;letter-spacing:.2em!important;border-bottom:1px solid var(--border)!important}
+.pr{padding:1rem!important}
+.pr .t{stroke:var(--surf)!important}.pr .g{filter:none!important}
+.pr-v{font-size:1.9rem!important;font-weight:600}
+.pr-l{font-size:.68rem!important;letter-spacing:.14em!important}.pr-s{font-size:.7rem!important}
+.hm-leg{font-size:.7rem!important}
+.radio-card{padding:1.4rem 1.5rem!important}
+.radio-card.radio-copy:hover{background:var(--surf)!important;transform:none!important}
+.radio-label{font-size:.78rem!important;letter-spacing:.22em!important;color:var(--text)!important}
+.radio-freq{font-size:2.8rem!important;font-weight:600!important;text-shadow:none!important;line-height:1.1}
+.radio-desc{font-size:.8rem!important;color:var(--muted)!important}
+.bank-t{font-size:.78rem!important;letter-spacing:.2em!important}
+.bank-num{font-size:2.2rem!important;font-weight:600}
+.cap-bar{padding:.9rem 1.2rem}
+.cap-pips i{border:0!important;background:var(--surf)!important}.cap-pips i.on{background:var(--acc)!important}
+.rt-chip{border-radius:0!important}
+.nbadge,.nbadge.unread{background:var(--acc)!important;color:#080808!important;border-radius:0;font-size:.64rem!important;font-weight:700}
+.nbadge.red{background:var(--red)!important;color:#fff!important}
+.empty-s{font-size:.8rem!important;color:var(--muted)!important;letter-spacing:.14em}
+#aLog .log-entry{border-left:1px solid var(--brite)!important}
+#aLog .log-entry::before{background:var(--bg)!important;border:1px solid var(--acc)!important;border-radius:0!important;transform:rotate(45deg);width:7px!important;height:7px!important}
+
+/* ── 11) Mobil: dolní lišta jako dřív, jen v novém kabátě ── */
+@media(max-width:700px){
+  .sidebar,#adminScreen .sidebar{background:rgba(7,7,6,.96)!important;border-top:1px solid var(--acc-dim)!important;border-right:0!important}
+  .nb.active,#adminScreen .nb.active{background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 16%,transparent),transparent)!important;border-top:2px solid var(--acc)!important}
+  .ph,#adminScreen .ph{padding:1.3rem 1rem 1.2rem!important}
+  .pt{font-size:1.5rem!important}
+  .pclock{display:none}
+  .form-panel,#adminScreen .form-panel{margin:1rem .7rem;padding:1.2rem}
+  .board-posts{padding:.9rem .7rem}
+  .lux-hello{padding:1rem 1rem .2rem;font-size:1.5rem!important}
+  .sel-logo{font-size:2.6rem!important}
+  .sel-box{min-width:0;padding:1.6rem 1.3rem!important}
+  .modal-box{width:94vw}
+  .dc-val,.dc:not(.warn):not(.ok) .dc-val{font-size:2rem!important}
+}
+@media(prefers-reduced-motion:reduce){.sidebar{transition:none}}
