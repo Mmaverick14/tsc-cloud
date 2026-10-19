@@ -73,3 +73,15 @@
 .wf-add{border-style:dashed}
 .wf-del{opacity:.55;margin-left:.25rem}
 .wf-del:hover{opacity:1;color:var(--red)}
+
+/* vysílačky: vlastní časy automatické změny */
+.rt-wrap{margin-top:.8rem}
+.rt-lbl{font:700 .58rem 'Share Tech Mono',monospace;letter-spacing:.16em;color:var(--acc);margin-bottom:.45rem}
+.rt-list{display:flex;flex-wrap:wrap;gap:.4rem}
+.rt-chip{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .55rem;background:var(--card);border:1px solid var(--acc-dim);border-left:3px solid var(--acc);font:700 .85rem 'Share Tech Mono',monospace;color:var(--textb);letter-spacing:.06em}
+.rt-chip button{background:transparent;border:0;color:var(--text);cursor:pointer;font-size:.75rem;padding:0 .1rem;opacity:.6}
+.rt-chip button:hover{color:var(--red);opacity:1}
+.rt-add{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.6rem}
+.rt-in{background:var(--surf);border:1px solid var(--brite);color:var(--textb);font:.85rem 'Share Tech Mono',monospace;padding:.45rem .6rem;outline:0;color-scheme:dark}
+.rt-in:focus{border-color:var(--acc)}
+.rt-hint{margin-top:.5rem;font:.55rem/1.5 'Share Tech Mono',monospace;color:var(--muted);letter-spacing:.05em}

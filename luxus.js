@@ -149,6 +149,7 @@
   var prev=null; // poslední zobrazené frekvence, aby šlo poznat změnu
 
   function nextChange(){
+    if(typeof window.radioNextChange==='function')return window.radioNextChange();
     var n=new Date(),h=n.getHours(),t=new Date(n),day='dnes',hh=15;
     t.setMinutes(0,0,0);
     if(h<15)hh=15;else if(h<17)hh=17;else{t.setDate(t.getDate()+1);day='zítra';hh=15;}
