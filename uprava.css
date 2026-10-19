@@ -9,18 +9,12 @@ html body .member-grid{
   padding:0;
 }
 
-/* 2) Tlačítka v hlavičce stránky (NOVÝ ČLEN, HESLO, VYMAZAT, + PŘIDAT…) doprava, nadpis zůstane uprostřed */
-.ph>*:not(.pt):not(.pclock){
-  position:absolute;
-  right:1.6rem;
-  top:50%;
-  transform:translateY(-50%);
-  z-index:3;
-}
-@media(max-width:700px){
-  .ph{flex-wrap:wrap;gap:.7rem}
-  .ph>*:not(.pt):not(.pclock){position:static;transform:none}
-}
+/* 2) Tlačítka v hlavičkách stránek (NOVÝ ČLEN, HESLO, VYMAZAT, + PŘIDAT, rozsah statistik…):
+      nadpis nahoře, tlačítka pod ním uprostřed. Nic se nepřekrývá na žádné šířce. */
+.ph{flex-wrap:wrap!important;align-items:center;justify-content:center!important;gap:.9rem 1rem!important}
+.ph>.pt{flex:0 0 100%;text-align:center}
+.ph>*:not(.pt):not(.pclock){position:static!important;transform:none!important;margin:0!important}
+.ph>div:not(.pt):not(.pclock){display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center}
 
 /* 3) Pryč: tlačítko HLEDAT (Ctrl+K dál funguje) a ÚPRAVA MENU */
 .lux-k,
