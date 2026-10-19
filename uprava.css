@@ -11,10 +11,10 @@ html body .member-grid{
 
 /* 2) Tlačítka v hlavičkách stránek (NOVÝ ČLEN, HESLO, VYMAZAT, + PŘIDAT, rozsah statistik…):
       nadpis nahoře, tlačítka pod ním uprostřed. Nic se nepřekrývá na žádné šířce. */
-.ph{flex-wrap:wrap!important;align-items:center;justify-content:center!important;gap:.9rem 1rem!important}
-.ph>.pt{flex:0 0 100%;text-align:center}
-.ph>*:not(.pt):not(.pclock){position:static!important;transform:none!important;margin:0!important}
-.ph>div:not(.pt):not(.pclock){display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center}
+html body .ph{flex-wrap:wrap!important;align-items:center;justify-content:center!important;gap:.9rem 1rem!important}
+html body .ph>.pt{flex:0 0 100%;text-align:center}
+html body .ph>*:not(.pt):not(.pclock){position:static!important;transform:none!important;margin:0!important}
+html body .ph>div:not(.pt):not(.pclock){display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center}
 
 /* 3) Pryč: tlačítko HLEDAT (Ctrl+K dál funguje) a ÚPRAVA MENU */
 .lux-k,
