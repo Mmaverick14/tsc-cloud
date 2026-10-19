@@ -314,7 +314,16 @@ function initData(){
   DB.setDefault('radios',{primary:'',secondary:'',action:'',vedeni:''});
   DB.setDefault('contacts',{});
   DB.setDefault('incomes',[]);
-  DB.setDefault('radioauto',{on:true,salt:uid()+uid(),lastSlot:''});
+  // Nastavení automatické změny vysílaček je od teď v klíči 'radioauto2'. Starší verze webu (zapomenuté záložky,
+  // jiná zařízení) čtou jen starý klíč 'radioauto', takže se s novými klienty už nemají o co přebíjet.
+  (function(){
+    var oldCfg=DB.get('radioauto'),nw=DB.get('radioauto2');
+    if(nw===null){
+      if(oldCfg){nw=JSON.parse(JSON.stringify(oldCfg));delete nw.hold;nw.lastSlot=radioSlot(null,nw);nw.lastAt=Date.now();DB.set('radioauto2',nw);}
+      else DB.setDefault('radioauto2',{on:true,salt:uid()+uid(),lastSlot:''});
+    }
+    if(oldCfg&&oldCfg.on!==false){oldCfg.on=false;DB.set('radioauto',oldCfg);} // starým klientům se automatika vypne
+  })();
 }
 
 function defaultWarehouse(){
@@ -1441,7 +1450,7 @@ function radioCardsHtml(f,withVedeni){
 }
 function renderAdminRadio(){
   var radios=DB.get('radios')||{primary:'',secondary:'',action:'',vedeni:''};
-  var cfg=DB.get('radioauto')||{};
+  var cfg=DB.get('radioauto2')||{};
   document.getElementById('rPrimary').value=radios.primary||'';
   document.getElementById('rSecondary').value=radios.secondary||'';
   document.getElementById('rAction').value=radios.action||'';
@@ -1463,12 +1472,12 @@ function saveRadios(){
     vedeni:document.getElementById('rVedeni').value.trim()
   };
   DB.set('radios',radios);
-  var cfg=DB.get('radioauto')||{};
+  var cfg=DB.get('radioauto2')||{};
   if(!cfg.salt)cfg.salt=uid()+uid();
   var was=!!cfg.on;
   cfg.on=!!document.getElementById('rAuto').checked;
   if(cfg.on&&!was)cfg.lastSlot='';
-  DB.set('radioauto',cfg);
+  DB.set('radioauto2',cfg);
   var mm=getMember();var who=mm?mm.displayName:'Admin';
   addLog('radio','Admin aktualizoval frekvence vysílaček'+(cfg.on?' (automatická změna zapnuta: '+radioTimesText()+').':'.'),{embed:
     cfg.on?{title:'📻 Automatická změna frekvencí zapnuta',description:'Frekvence se budou měnit každý den v **'+radioTimesText()+'**.\nNastavil: **'+who+'**',color:0xc49a14,footer:{text:'Vysílačka'},timestamp:new Date().toISOString()}
@@ -1494,12 +1503,12 @@ function radioEmbed(title,desc,f){
 
 // Vygeneruje a uloží nové frekvence (vrací objekt s frekvencemi)
 function genNewRadios(){
-  var cfg=DB.get('radioauto')||{};
+  var cfg=DB.get('radioauto2')||{};
   var f;
   if(cfg.on){
     // nová sůl = okamžitě nové frekvence; automatická změna v nastavených časech běží dál
     cfg.salt=uid()+uid();cfg.lastSlot=radioSlot();
-    DB.set('radioauto',cfg);
+    DB.set('radioauto2',cfg);
     f=autoRadios(cfg,cfg.lastSlot);
   }else{
     var used={},out=[];
@@ -1530,7 +1539,7 @@ function rtFmt(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%6
 function rtParse(s){var p=/^(\d{1,2}):(\d{2})$/.exec(String(s||'').trim());if(!p)return null;var h=+p[1],m=+p[2];return(h>23||m>59)?null:h*60+m;}
 // časy změny v minutách od půlnoci (seřazené, bez duplicit); výchozí 15:00 a 17:00
 function radioTimes(cfg){
-  cfg=cfg||DB.get('radioauto')||{};
+  cfg=cfg||DB.get('radioauto2')||{};
   var src=(cfg.times&&cfg.times.length)?cfg.times:RADIO_DEF_TIMES,seen={},out=[];
   src.forEach(function(s){var m=rtParse(s);if(m!==null&&!seen[m]){seen[m]=1;out.push(m);}});
   if(!out.length)out=RADIO_DEF_TIMES.map(rtParse);
@@ -1546,7 +1555,7 @@ function radioTagMin(tag){tag=String(tag);return tag.indexOf(':')>-1?rtParse(tag
 function radioSlotLabel(slot){return rtFmt(radioTagMin(String(slot).split('-')[3]));}
 function radioSlotStart(slot){var sp=String(slot).split('-');return new Date(+sp[0],+sp[1]-1,+sp[2],0,radioTagMin(sp[3]),0);}
 function radioSlot(d,cfg){
-  d=d||new Date();cfg=cfg||DB.get('radioauto')||{};
+  d=d||new Date();cfg=cfg||DB.get('radioauto2')||{};
   var ts=radioTimes(cfg),nowM=d.getHours()*60+d.getMinutes(),pick=-1;
   var base=new Date(d.getFullYear(),d.getMonth(),d.getDate());
   ts.forEach(function(t){if(t<=nowM)pick=t;});
@@ -1571,7 +1580,7 @@ function autoRadios(cfg,slot){
   return {primary:out[0],secondary:out[1],action:out[2],vedeni:out[3]};
 }
 function currentRadios(){
-  var cfg=DB.get('radioauto')||{};
+  var cfg=DB.get('radioauto2')||{};
   if(cfg.on)return autoRadios(cfg,radioSlot());
   return DB.get('radios')||{primary:'',secondary:'',action:'',vedeni:''};
 }
@@ -1587,14 +1596,14 @@ function renderRadioTimes(){
     '<div class="rt-hint">Čas se ukládá hned. Přidáš-li čas, který dnes už uběhl, začne platit až od zítřka — aktuální frekvence se nezmění.</div>';
 }
 function changeRadioTimes(arr,msg){
-  var cfg=DB.get('radioauto')||{};
+  var cfg=DB.get('radioauto2')||{};
   var oldSlot=radioSlot(null,cfg);
   var next=JSON.parse(JSON.stringify(cfg));
   next.times=arr.map(rtFmt);delete next.hold;
   var newSlot=radioSlot(null,next);
   if(newSlot!==oldSlot)next.hold={bad:newSlot,keep:oldSlot};
   if(!next.salt)next.salt=uid()+uid();
-  DB.set('radioauto',next);
+  DB.set('radioauto2',next);
   addLog('radio',msg+' Časy změny: '+radioTimesText(next)+'.',{noDiscord:true});
   renderAdminRadio();
   var act=document.querySelector('#memberScreen.active .mt.active');
@@ -1622,33 +1631,33 @@ async function radioTick(){
   if(!currentMemberId||!sb)return;
   var act=document.querySelector('#memberScreen.active .mt.active');
   if(act&&act.id==='mt-radio')renderMyRadio();
-  var cfg=DB.get('radioauto')||{};
+  var cfg=DB.get('radioauto2')||{};
   if(!cfg.on||radioBusy)return;
   var slot=radioSlot();
   if(cfg.lastSlot===slot)return;
   radioBusy=true;
   try{
-    var r=await sb.from(TABLE).select('value').eq('key','radioauto').maybeSingle();
+    var r=await sb.from(TABLE).select('value').eq('key','radioauto2').maybeSingle();
     var fresh=(r.data&&r.data.value)||cfg;
     // slot přepočítáme z ČERSTVÉ konfigurace (časy + hold) z DB, ne z místní, případně zastaralé kopie —
     // jinak se dva klienty s různými časy donekonečna přebíjejí a spamují Discord
     slot=radioSlot(null,fresh);
-    if(fresh.lastSlot===slot){DB.cache.radioauto=fresh;}
+    if(fresh.lastSlot===slot){DB.cache.radioauto2=fresh;}
     else if(fresh.lastAt&&Date.now()-fresh.lastAt<600000){
       // pojistka proti přebíjení: změna slotu se právě oznámila (< 10 min) a někdo jiný (např. stará verze webu)
       // ji přepsal — nepřepisujeme zpět a neposíláme nic, aby se nespamoval Discord
-      DB.cache.radioauto=fresh;
+      DB.cache.radioauto2=fresh;
       console.warn('radioTick: přebíjení slotu potlačeno',fresh.lastSlot,'vs',slot);
     }
     else{
-      fresh.lastSlot=slot;fresh.lastAt=Date.now();DB.set('radioauto',fresh);
+      fresh.lastSlot=slot;fresh.lastAt=Date.now();DB.set('radioauto2',fresh);
       var f=autoRadios(fresh,slot);
       var hh=radioSlotLabel(slot);
       var start=radioSlotStart(slot);
       var lateMin=Math.round((Date.now()-start.getTime())/60000);
       var nowHM=new Date().toTimeString().slice(0,5);
       var note=lateMin>5?' (oznámeno až v **'+nowHM+'**, nikdo nebyl online)':'';
-      addLog('radio','Automatická změna frekvencí ('+hh+(lateMin>5?', oznámeno v '+nowHM:'')+', build 20261019b) — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.',
+      addLog('radio','Automatická změna frekvencí ('+hh+(lateMin>5?', oznámeno v '+nowHM:'')+', build 20261019c) — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.',
         {embed:radioEmbed('📻 Automatická změna frekvencí','Platí od **'+hh+'**'+note+' — předchozí frekvence už nefungují.',f)});
     }
   }catch(e){console.error(e);}
