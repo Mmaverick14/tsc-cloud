@@ -1648,7 +1648,7 @@ async function radioTick(){
       var lateMin=Math.round((Date.now()-start.getTime())/60000);
       var nowHM=new Date().toTimeString().slice(0,5);
       var note=lateMin>5?' (oznámeno až v **'+nowHM+'**, nikdo nebyl online)':'';
-      addLog('radio','Automatická změna frekvencí ('+hh+(lateMin>5?', oznámeno v '+nowHM:'')+') — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.',
+      addLog('radio','Automatická změna frekvencí ('+hh+(lateMin>5?', oznámeno v '+nowHM:'')+', build 20261019b) — Primární: '+f.primary+', Sekundární: '+f.secondary+', Akce: '+f.action+'.',
         {embed:radioEmbed('📻 Automatická změna frekvencí','Platí od **'+hh+'**'+note+' — předchozí frekvence už nefungují.',f)});
     }
   }catch(e){console.error(e);}
