@@ -13,7 +13,7 @@
   --text:#bcb08e;--textb:#f3ead0;--muted:#7f7658;--dim:#3a3320;
   --lux-serif:'Cormorant Garamond',Georgia,serif;
   --sans:'Jost','Rajdhani',system-ui,sans-serif;
-  --rail:72px;--rail-open:240px;
+  --rail:236px;
   --corner:linear-gradient(var(--acc),var(--acc));
 }
 html body,html body *{font-family:var(--sans)!important}
@@ -74,24 +74,15 @@ body::before,#luxDust{display:none!important}   /* zrnění a prach pryč */
   .sidebar,#adminScreen .sidebar{
     position:fixed!important;left:0;top:0;bottom:0;height:100vh!important;z-index:300;
     width:var(--rail)!important;min-width:var(--rail)!important;overflow-x:hidden;overflow-y:auto;
-    background:linear-gradient(180deg,#0b0b0a,#050505)!important;border-right:1px solid var(--border)!important;border-image:none!important;
-    transition:width .28s cubic-bezier(.3,.9,.3,1),box-shadow .28s;padding:1rem 0}
-  .sidebar:hover,.sidebar:focus-within{width:var(--rail-open)!important;box-shadow:24px 0 60px rgba(0,0,0,.65)}
+    background:linear-gradient(180deg,#0b0b0a,#050505)!important;border-right:1px solid var(--border)!important;border-image:none!important;padding:1.1rem 0;
+    scrollbar-width:thin}
   .sidebar::after{content:'';position:absolute;right:0;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--acc-dim) 25%,var(--acc-dim) 75%,transparent);pointer-events:none}
-  .sb-logo{justify-content:flex-start!important;padding:0 0 1rem 1.05rem;margin:0 0 .8rem;border-bottom:1px solid var(--border);white-space:nowrap;font-size:1.3rem;letter-spacing:.06em}
-  .sb-logo .sb-tools{display:none}
-  .sidebar:hover .sb-logo .sb-tools,.sidebar:focus-within .sb-logo .sb-tools{display:inline-flex;margin-left:auto;padding-right:1rem}
-  .sb-nav{padding:0 .6rem;gap:3px}
-  .nb{position:relative;padding:.7rem 1.1rem;font-size:.92rem;white-space:nowrap;border-radius:0}
-  .nb .ni{font-size:1.05rem;width:22px;flex-shrink:0}
-  .nb .nl{opacity:0;transition:opacity .2s;letter-spacing:.14em}
-  .sidebar:hover .nb .nl,.sidebar:focus-within .nb .nl{opacity:1}
-  .nbadge{position:absolute;top:4px;left:34px;margin:0}
-  .sidebar:hover .nbadge,.sidebar:focus-within .nbadge{left:auto;right:10px;top:50%;transform:translateY(-50%)}
-  .sb-foot{opacity:0;pointer-events:none;transition:opacity .2s;padding:.8rem 1rem;white-space:nowrap}
-  .sidebar:hover .sb-foot,.sidebar:focus-within .sb-foot{opacity:1;pointer-events:auto}
-  #adminScreen .admin-badge{opacity:0;transition:opacity .2s}
-  #adminScreen .sidebar:hover .admin-badge{opacity:1}
+  .sb-logo{justify-content:flex-start!important;padding:0 1.2rem 1.1rem;margin:0 0 .8rem;border-bottom:1px solid var(--border);white-space:nowrap;font-size:1.5rem;letter-spacing:.14em}
+  .sb-nav{padding:0 .7rem;gap:2px}
+  .nb{position:relative;padding:.62rem .9rem;font-size:.9rem;white-space:nowrap;border-radius:0}
+  .nb .ni{font-size:1rem;width:22px;flex-shrink:0}
+  .nb .nl{letter-spacing:.13em}
+  .sb-foot{padding:.9rem 1.1rem}
   .lux-ind{left:0!important;width:2px!important}
 }
 .sb-logo{color:var(--acc);text-shadow:none!important;font-weight:700}
