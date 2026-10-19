@@ -1634,8 +1634,14 @@ async function radioTick(){
     // jinak se dva klienty s různými časy donekonečna přebíjejí a spamují Discord
     slot=radioSlot(null,fresh);
     if(fresh.lastSlot===slot){DB.cache.radioauto=fresh;}
+    else if(fresh.lastAt&&Date.now()-fresh.lastAt<600000){
+      // pojistka proti přebíjení: změna slotu se právě oznámila (< 10 min) a někdo jiný (např. stará verze webu)
+      // ji přepsal — nepřepisujeme zpět a neposíláme nic, aby se nespamoval Discord
+      DB.cache.radioauto=fresh;
+      console.warn('radioTick: přebíjení slotu potlačeno',fresh.lastSlot,'vs',slot);
+    }
     else{
-      fresh.lastSlot=slot;DB.set('radioauto',fresh);
+      fresh.lastSlot=slot;fresh.lastAt=Date.now();DB.set('radioauto',fresh);
       var f=autoRadios(fresh,slot);
       var hh=radioSlotLabel(slot);
       var start=radioSlotStart(slot);
