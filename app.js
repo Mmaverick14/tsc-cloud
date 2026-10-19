@@ -944,7 +944,7 @@ function renderMemberMessages(){
   var el=document.getElementById('mMsgList');
   if(!myMsgs.length){el.innerHTML='<div class="empty-s">// Žádné zprávy</div>';return;}
   el.innerHTML=myMsgs.slice().reverse().map(function(msg){
-    return '<div class="msg-card"><div class="msg-subject">'+esc(msg.subject)+'</div><div class="msg-body">'+esc(msg.body)+'</div><div class="msg-from">// OD: VEDENÍ — '+msg.date+'</div></div>';
+    return '<div class="msg-card"><div class="msg-subject">'+esc(msg.subject)+'</div><div class="msg-body">'+esc(msg.body)+'</div><div class="msg-from">// OD: VEDENÍ'+(msg.from?' — '+esc(msg.from):'')+' — '+msg.date+'</div></div>';
   }).join('');
 }
 
@@ -2076,7 +2076,8 @@ function sendMsg(){
   var msgs=DB.get('messages')||{};
   var members=DB.get('members')||[];
   var mid=uid();var targets=target==='all'?members.filter(function(m){return !m.hidden;}).map(function(m){return m.id;}):[target];
-  targets.forEach(function(tid){if(!msgs[tid])msgs[tid]=[];msgs[tid].push({id:mid,subject:subject,body:body,date:nowStr()});});
+  var fromName=getMember()?getMember().displayName:'';
+  targets.forEach(function(tid){if(!msgs[tid])msgs[tid]=[];msgs[tid].push({id:mid,subject:subject,body:body,date:nowStr(),from:fromName});});
   DB.set('messages',msgs);
   addLog('msg','Admin odeslal zprávu "'+subject+'" — '+(target==='all'?'všem':'jednomu členovi')+'.'+(target==='all'?'\n'+body:''),{noPing:target!=='all',extraPing:joinPings(pingBox('ping-msg'),pickPing('pick-msg')),embed:rich(C_TEAL,'💬 NOVÁ ZPRÁVA','**'+subject+'**'+(target==='all'?'\n'+body:''),[['Komu',target==='all'?'Všichni členové':'Jeden člen']],{by:(getMember()?getMember().displayName:'Admin')})});
   document.getElementById('msgSubject').value='';document.getElementById('msgBody').value='';
@@ -2882,7 +2883,7 @@ function renderAdminMessages(){
     var to=g.to.length>3?'VŠICHNI ('+g.to.length+')':g.to.join(', ');
     return '<div class="msg-card"><div style="display:flex;justify-content:space-between;gap:.5rem;"><div class="msg-subject">'+esc(m.subject)+'</div>'+
       '<button class="btn-micro del" onclick="delMsgAdmin(\''+id+'\')">✕</button></div>'+
-      '<div class="msg-body">'+esc(m.body)+'</div><div class="msg-from">// KOMU: '+esc(to)+' — '+m.date+'</div></div>';
+      '<div class="msg-body">'+esc(m.body)+'</div><div class="msg-from">// OD: '+esc(m.from||'VEDENÍ')+' · KOMU: '+esc(to)+' — '+m.date+'</div></div>';
   }).join('');
 }
 function delMsgAdmin(id){
