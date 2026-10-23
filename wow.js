@@ -1,8 +1,5 @@
-// ── WOW: holografický průkaz · zlatý déšť · puls frakce (nic nepřepisuje, jen obaluje) ──
 (function(){
   var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ═══ 1) HOLOGRAFICKÝ PRŮKAZ ČLENA ═══ */
   function holo(box){
     if(box.dataset.holo)return;box.dataset.holo='1';
     box.addEventListener('pointermove',function(e){
@@ -22,7 +19,6 @@
     });});
   }).observe(document.body,{childList:true});
 
-  /* ═══ 2) ZLATÝ DÉŠŤ ═══ */
   var cv=null,cx=null,parts=[],run=false,W=0,H=0,D=1;
   function rgb(){
     var h=(getComputedStyle(document.documentElement).getPropertyValue('--acc')||'#c49a14').trim().replace('#','');
@@ -78,7 +74,6 @@
     };
   }
 
-  /* ═══ 3) PULS FRAKCE (kruhové ukazatele ve Statistikách) ═══ */
   var prev={},C=251.33;
   function pct(a,b){return b?Math.round(a/b*100):null;}
   function data(){
@@ -118,7 +113,7 @@
         '<div class="pr-in"><div class="pr-l">'+x.ic+' '+x.l+'</div><b class="pr-v">'+(x.p==null?'—':from+'%')+'</b><div class="pr-s">'+x.s+'</div></div></div>';
     }).join('');
     host.insertBefore(box,host.firstChild);
-    void box.offsetWidth; // vynutí přepočet, aby se spustila animace
+    void box.offsetWidth;
     d.forEach(function(x){
       var p=x.p==null?0:x.p,from=prev[x.k]==null?0:prev[x.k];
       var card=box.querySelector('[data-k="'+x.k+'"]');if(!card)return;
@@ -128,7 +123,6 @@
     });
   }
 
-  /* ═══ 4) FILMOVÝ UVÍTACÍ VSTUP ═══ */
   function intro(){
     if(reduce||document.getElementById('wowIntro'))return;
     var m=getMember();if(!m)return;
@@ -153,8 +147,7 @@
     };
   }
 
-  /* ═══ 5) MAPA AKTIVITY + PÓDIUM (Statistiky) ═══ */
-  var WEEKS=16;
+var WEEKS=16;
   function heatmap(){
     var cnt={},tot=0;
     (DB.get('heists')||[]).forEach(function(h){var d=parseCz(h.date);if(d){var k=ymd(d);cnt[k]=(cnt[k]||0)+1;}});

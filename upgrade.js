@@ -1,7 +1,5 @@
-// ── UPGRADE: doplňky nad app.js ──
 (function(){
-  // 1) Oprava plateb (jména s apostrofem rozbíjela onclick)
-  window.recordPayment=function(id){
+window.recordPayment=function(id){
     var m=(DB.get('members')||[]).find(function(x){return x.id===id;});
     var fs=DB.get('finsettings')||{weeklyFee:5000},fin=DB.get('finance')||{payments:[],expenses:[]},wk=getWeekKey();
     if(!m)return;
@@ -16,7 +14,6 @@
     if(m&&e)recordOptionalPayment(mid,m.displayName,eid,e.name,e.amount);
   };
 
-  // 2) Počítání čísel v přehledech (+ karta ČLENOVÉ s limitem)
   var MAX_MEMBERS=16;
   function memCount(){return (DB.get('members')||[]).filter(function(m){return !m.hidden;}).length;}
   var _rd=window.renderDash;
@@ -39,7 +36,6 @@
     });
   };
 
-  // 3) Hledání v logu
   var _rl=window.renderLog;
   window.renderLog=function(){
     _rl();
@@ -55,7 +51,6 @@
     document.querySelectorAll('#aLog .log-entry').forEach(function(e){e.style.display=!q||normS(e.textContent).indexOf(q)!==-1?'':'none';});
   }
 
-  // 4) Záloha dat (jen Mastermind) v Nastavení
   var _rs=window.renderSettings;
   window.renderSettings=function(){
     _rs();
@@ -72,7 +67,6 @@
     };
   };
 
-  // 5) Barevné motivy (pamatuje si prohlížeč)
   var TH=[['Indigo','#5b7cfa','#4a62c8'],['Tyrkys','#14a38b','#0f7d6b'],['Zelená','#2f9e63','#237a4c'],['Růžová','#e2557f','#b53f64'],['Jantar','#d98a1f','#a96a12'],['Grafit','#7d8594','#5d6471']];
   function applyTheme(i){
     var t=TH[i]||TH[0],r=document.documentElement.style;
@@ -99,14 +93,12 @@
     });
   },1000);
 
-  // 6) Indikátor ztráty připojení
   var pill=document.createElement('div');pill.className='net-pill';pill.textContent='⚠ OFFLINE — změny se uloží po připojení';
   document.body.appendChild(pill);
   addEventListener('offline',function(){pill.classList.add('on');});
   addEventListener('online',function(){pill.classList.remove('on');toast('Připojeno ✓','success');if(window.DB)DB.flush();});
   if(!navigator.onLine)pill.classList.add('on');
 
-  // 7) Vlastní okna ve stylu webu (nahrazují confirm / prompt / alert prohlížeče)
   function tscDialog(o,onOk){
     var old=document.querySelector('.tsc-confirm');if(old)old.remove();
     var ov=document.createElement('div');ov.className='modal-ov tsc-confirm';
@@ -130,7 +122,6 @@
     if(nob)nob.onclick=close;
     ov.addEventListener('mousedown',function(e){if(e.target===ov&&!o.single)close();});
     document.addEventListener('keydown',key,true);
-    // nebezpečné akce mají výchozí focus na Zrušit, aby se nespustily omylem
     (inp||(o.danger&&nob)||okb).focus();
     if(inp)inp.select();
   }
@@ -146,8 +137,6 @@
     return {title:'// POTVRZENÍ',text:esc(m),ok:'POTVRDIT'};
   }
 
-  // Funkce z app.js volají confirm() synchronně. Zavoláme je nanečisto (confirm vrátí false a zachytí text),
-  // ukážeme vlastní okno a po potvrzení je zavoláme znovu, tentokrát s confirm = true.
   function wrapConfirm(name){
     var orig=window[name];if(typeof orig!=='function')return;
     window[name]=function(){
@@ -165,7 +154,6 @@
   ['triggerPanic','delCloth','delExpense','delPayment','delPost','deleteItem','delBoost','delHeistTarget','delHeist','clearLog',
    'delTaskAdmin','delMsgAdmin','delExcuse','delReport','delIncome','deleteMember','regenRadios','approvePromo','delEvent','delWhCat'].forEach(wrapConfirm);
 
-  // totéž pro prompt()
   function wrapPrompt(name,title){
     var orig=window[name];if(typeof orig!=='function')return;
     window[name]=function(){
@@ -186,7 +174,6 @@
 
   window.alert=function(m){tscDialog({title:'// UPOZORNĚNÍ',text:esc(m),ok:'OK',single:true});};
 
-  // 8) Limit členů frakce (server dovoluje max 16 lidí)
   function fullDialog(){
     tscDialog({title:'⚠ FRAKCE JE PLNÁ',
       text:'Máme maximální počet lidí ve frakci — <b>'+memCount()+'/'+MAX_MEMBERS+'</b>.<br>Server dovoluje maximálně '+MAX_MEMBERS+' členů. Nového člena jde přidat, až někoho odebereš.',

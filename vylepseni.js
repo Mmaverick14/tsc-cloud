@@ -1,6 +1,4 @@
-// ── VYLEPŠENÍ: přehled neplatičů + připomínka, docházka na akcích, kalkulačka lootu, profil člena ──
 (function(){
-  // ───────── společné pomůcky ─────────
   function wkKey(d){var yr=d.getFullYear(),st=new Date(yr,0,1);return yr+'-W'+Math.ceil(((d-st)/86400000+st.getDay()+1)/7);}
   function weeksList(n){var out=[],seen={};for(var i=0;out.length<n&&i<n*2;i++){var d=new Date();d.setDate(d.getDate()-7*i);var k=wkKey(d);if(!seen[k]){seen[k]=1;out.push({key:k,date:d});}}return out;}
   function fin(){var f=DB.get('finance')||{payments:[],expenses:[]};f.payments=f.payments||[];return f;}
@@ -10,7 +8,6 @@
   function players(){return members().filter(function(m){return !m.hidden;});}
   function memById(id){return members().filter(function(m){return m.id===id;})[0]||null;}
   function joinIdx(m,ws){if(!m.joined)return -1;var d=new Date(m.joined+'T12:00:00');if(isNaN(d))return -1;var k=wkKey(d);for(var i=0;i<ws.length;i++)if(ws[i].key===k)return i;return -1;}
-  // člen platí za týden, jen pokud už byl ve frakci (podle data vstupu, je-li známé)
   function liable(m,idx,ws){
     if(window.onVacation&&ws[idx]&&window.onVacation(m.id,ws[idx].key))return false; // dovolená
     var j=joinIdx(m,ws);return j===-1||idx<=j;
@@ -18,7 +15,6 @@
   function mention(m){var id=String(m.discordId||'').replace(/\D/g,'');return id?'<@'+id+'>':'';}
   var DAYS=['neděli','pondělí','úterý','středu','čtvrtek','pátek','sobotu'];
 
-  // ═════════ 1) PŘEHLED NEPLATIČŮ + PŘIPOMÍNKA ═════════
   var upSel=0;
   function recordPaymentWeek(mid,wk){
     var m=memById(mid);if(!m)return;
@@ -111,8 +107,7 @@
   }
   setInterval(remindTick,60000);setTimeout(remindTick,8000);
 
-  // ═════════ 2) DOCHÁZKA NA AKCÍCH ═════════
-  var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={};
+var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={};
   function started(e){var d=evStart(e);return !!d&&d.getTime()<=Date.now();}
   window.setAtt=function(evId,mid,val){
     if(!isAdmin())return;
@@ -177,7 +172,6 @@
   var _rc=window.renderCalendar;
   window.renderCalendar=function(scope){_rc.apply(this,arguments);if(scope==='a')renderAttOverview();};
 
-  // ═════════ 3) KALKULAČKA LOOTU ═════════
   function calcLoot(amount,facPct,bonusPct,names,leaderIdx){
     amount=Math.max(0,Math.floor(amount)||0);facPct=Math.min(100,Math.max(0,+facPct||0));bonusPct=Math.min(100,Math.max(0,+bonusPct||0));
     var n=Math.max(1,names.length);
@@ -195,7 +189,6 @@
     else s=s.replace(',','.');
     return Math.floor(parseFloat(s))||0;
   }
-  // ── pravidla lootu: podíl frakce mění jen Mastermind, report jde odeslat až po vyplnění lootu ──
   function lootFac(){var c=DB.get('lootcfg')||{};var v=parseFloat(c.fac);return isNaN(v)?10:Math.min(100,Math.max(0,v));}
   function isBoss(){var m=getMember();return !!m&&m.position==='Mastermind';}
   window.__lootCalc=null;
@@ -218,7 +211,7 @@
     var lc=window.__lootCalc,me=getMember(),n0=(DB.get('heists')||[]).length;
     var r=_sh.apply(this,arguments);
     var arr=DB.get('heists')||[];
-    if(lc&&me&&arr.length>n0){ // k novému reportu přidá přesnou částku a podíl frakce (pro statistiky a týdenní souhrn)
+    if(lc&&me&&arr.length>n0){ 
       var h=arr[arr.length-1];
       if(h&&h.memberId===me.id){h.lootTotal=lc.amount;h.lootFac=lc.fac;h.lootFacPct=lc.facPct;DB.set('heists',arr);}
     }
@@ -371,7 +364,6 @@
     if(t){e.preventDefault();openProfile(t.getAttribute('data-prof'));}
   });
 
-  // vstupní body: karty členů (admin), Crew List, vlastní profil v panelu
   var _rmg=window.renderMemberGrid;
   window.renderMemberGrid=function(){
     _rmg.apply(this,arguments);
@@ -409,7 +401,6 @@
     f.insertBefore(b,f.querySelector('.btn-back'));
   },1000);
 
-  // ═════════ 5) POCHVALY ═════════
   if(typeof SECTIONS!=='undefined'){
     if(!SECTIONS.some(function(x){return x.key==='praise';}))SECTIONS.push({key:'praise',label:'Pochvaly'});
     if(!SECTIONS.some(function(x){return x.key==='weekly';}))SECTIONS.push({key:'weekly',label:'Týdenní souhrn'});
@@ -457,7 +448,6 @@
     T.focus();
   }
 
-  // ═════════ 6) TÝDENNÍ SOUHRN NA DISCORD ═════════
   function wcfg(){var c=DB.get('weeklycfg')||{};return {on:c.on!==false,day:c.day==null?0:c.day,hour:c.hour==null?20:c.hour,last:c.last||''};}
   function lootSum(txt){
     var s=String(txt||''),tot=0,re=/\$\s*(\d[\d\s.,\u00a0]*)/g,m,found=false;
@@ -516,7 +506,6 @@
   }
   setInterval(weeklyTick,60000);setTimeout(weeklyTick,10000);
 
-  // nastavení (Admin → Nastavení)
   var _rset=window.renderSettings;
   window.renderSettings=function(){
     _rset.apply(this,arguments);
@@ -542,7 +531,6 @@
     p.querySelector('#wkOn').checked=cfg.on;p.querySelector('#wkDay').value=String(cfg.day);p.querySelector('#wkHour').value=String(cfg.hour);
   };
 
-  // ═════════ 7) ZÁLOŽKA POCHVALY (menu) ═════════
   if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.pochvaly='D';
   function renderPraiseTab(){
     var el=document.getElementById('praiseRoot');if(!el)return;
@@ -587,9 +575,6 @@
   window.mTab=function(tab){var r=_mtab.apply(this,arguments);if(tab==='pochvaly')renderPraiseTab();return r;};
   if(typeof M_RENDER!=='undefined')M_RENDER.pochvaly=renderPraiseTab;
 
-  // ═════════ 8) KOŠ (smazané položky jdou 30 dní vrátit) ═════════
-  // Zachytává mazání z polí s položkami (heisty, sklad, boosting, omluvenky, hlášení, oznámení, oblečení, akce, příjmy, pochvaly).
-  // Nic v app.js se nemění: sleduje se, které položky po uložení z pole zmizely.
   var TRASH_KEYS={
     heists:['💎 Heist',function(x){return x.target+' — '+(x.memberName||'');}],
     warehouse:['📦 Sklad',function(x){return x.name+' ('+x.qty+' ks)';}],

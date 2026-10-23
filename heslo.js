@@ -1,7 +1,3 @@
-// ── ZMĚNA VLASTNÍHO HESLA ČLENEM ──
-// - tlačítko 🔑 v postranním panelu (kdykoli)
-// - po přihlášení se členovi, který si heslo ještě nezměnil, ukáže okno s výzvou (jde odložit, příště se ukáže znovu)
-// Heslo se mění přímo přes Supabase (sb.auth.updateUser) pro přihlášený účet; nikam se neloguje ani neukládá.
 (function(){
   var MIN=6;
 
@@ -60,7 +56,6 @@
   }
   window.openPwSelf=openPw;
 
-  // tlačítko v postranním panelu
   setInterval(function(){
     var f=document.querySelector('#memberScreen .sb-foot');
     if(!f||f.querySelector('.pw-self-btn'))return;
@@ -69,7 +64,6 @@
     f.insertBefore(bt,f.querySelector('.btn-back'));
   },1000);
 
-  // výzva po přihlášení
   var _ep=window.enterPortal;
   if(typeof _ep==='function'){
     window.enterPortal=async function(){

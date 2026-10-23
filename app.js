@@ -1,6 +1,3 @@
-// ════════════════════════════════
-//  SUPABASE CONFIG
-// ════════════════════════════════
 var SUPABASE_URL='https://cufbeahjechwpyvldztr.supabase.co';
 var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmJlYWhqZWNod3B5dmxkenRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NjYwNjAsImV4cCI6MjEwNzI0MjA2MH0.CdFElIVzjhz6SRF__vypI8v9m3jghjtciWx62YkYCn4';
 var TABLE='frakce_kv';
@@ -8,8 +5,6 @@ var sb=null;
 var rtChannel=null;
 var refreshTimer=null;
 
-// DB má stejné API jako dřív (get/set), ale data žijí v Supabase.
-// get() čte z paměti (rychlé, synchronní), set() ukládá do paměti a dávkově do databáze.
 var DB={
   cache:{},pending:{},defaults:{},lastWrite:{},timer:null,
   get:function(k){var v=this.cache[k];return v===undefined?null:JSON.parse(JSON.stringify(v));},
@@ -73,7 +68,6 @@ function syncAdminForPos(m,oldPos){
 }
 var VEDENI_POS=['Mastermind','Overseer','Counselor',"Devil's Advocate",'Advisor'];
 var CAT={weapons:'ZBRANĚ',ammo:'MUNICE',drugs:'DROGY',equipment:'VYBAVENÍ',vehicles:'VOZIDLA',other:'OSTATNÍ'};
-// ── vlastní kategorie skladu (ukládají se v DB 'whcats' jako [{key,name}]) ──
 var BASE_CAT_KEYS=Object.keys(CAT);
 function customCats(){return DB.get('whcats')||[];}
 function syncCats(){
@@ -106,7 +100,7 @@ function syncCats(){
       add.onclick=addWhCat;host.appendChild(add);
     }
   });
-  // výběr kategorie při přidávání položky
+
   var sel=document.getElementById('wi-cat');
   if(sel){
     var cur=sel.value;
@@ -208,20 +202,19 @@ var CAT_PINGS=[
   {key:'equipment',label:'Sklad — Vybavení'},{key:'vehicles',label:'Sklad — Vozidla'},{key:'other',label:'Sklad — Ostatní'}
 ];
 function absImg(v){var s=imgSrc(v);if(!s)return '';try{return new URL(s,location.href).href;}catch(e){return '';}}
-// Ping: ID role (nebo <@&ID>), případně "everyone" / "here"
+
 function pingTag(v){
   v=String(v||'').trim();if(!v)return '';
   if(/^@?(everyone|here)$/i.test(v))return '@'+v.replace('@','').toLowerCase();
   var m=v.match(/\d{5,}/);return m?'<@&'+m[0]+'>':'';
 }
-// opts: {img:'url/soubor', pingCat:'weapons', noPing:true}
-// jméno zadané ve formuláři; pokud se liší od přihlášeného člena, přidá se v závorce
+
 function whoName(jmeno,m){return String(jmeno).toLowerCase()===String(m.displayName).toLowerCase()?jmeno:jmeno+' ('+m.displayName+')';}
 var LOG_ICONS={sys:'🔑',board:'📌',task:'✅',msg:'💬',wh:'📦',ev:'📤',boost:'🚗',heist:'💎',cloth:'👕',fin:'💰',excuse:'📝',excuse_dec:'📝',report:'📄',radio:'📻',member:'👤',roster:'🪪',panic:'🚨'};
 // ── GRAFICKÉ ZÁPISY (embed) ──
 function money(n){return '$'+Number(n||0).toLocaleString('cs-CZ');}
 function clip(s,n){s=String(s==null?'':s);return s.length>n?s.slice(0,n-1)+'…':s;}
-// rich(barva, nadpis, popis, [[název,hodnota,inline?],...], {img, big, by})
+
 function rich(color,title,desc,fields,o){
   o=o||{};
   var e={title:title,color:color,footer:{text:(o.by?o.by+' • ':'')+nowStr()}};
@@ -243,7 +236,7 @@ function addLog(type,text,opts){
   DB.set('syslog',log);
   if(opts&&opts.noDiscord)return;
   if(opts&&(opts.embedTitle||opts.embed)){sendToDiscord(type,opts.discordText||text,opts);return;}
-  // Lehký zápis pro všechno ostatní: ikona + věta (bez [SEKCE] [jméno] prefixu a bez uvozovek kolem jmen)
+
   var o=opts||{};
   var ic=o.icon||LOG_ICONS[type]||'';
   var clean=String(text).replace(/Člen "([^"]+)"/g,'$1');
@@ -314,15 +307,14 @@ function initData(){
   DB.setDefault('radios',{primary:'',secondary:'',action:'',vedeni:''});
   DB.setDefault('contacts',{});
   DB.setDefault('incomes',[]);
-  // Nastavení automatické změny vysílaček je od teď v klíči 'radioauto2'. Starší verze webu (zapomenuté záložky,
-  // jiná zařízení) čtou jen starý klíč 'radioauto', takže se s novými klienty už nemají o co přebíjet.
+
   (function(){
     var oldCfg=DB.get('radioauto'),nw=DB.get('radioauto2');
     if(nw===null){
       if(oldCfg){nw=JSON.parse(JSON.stringify(oldCfg));delete nw.hold;nw.lastSlot=radioSlot(null,nw);nw.lastAt=Date.now();DB.set('radioauto2',nw);}
       else DB.setDefault('radioauto2',{on:true,salt:uid()+uid(),lastSlot:''});
     }
-    if(oldCfg&&oldCfg.on!==false){oldCfg.on=false;DB.set('radioauto',oldCfg);} // starým klientům se automatika vypne
+    if(oldCfg&&oldCfg.on!==false){oldCfg.on=false;DB.set('radioauto',oldCfg);} 
   })();
 }
 
@@ -380,7 +372,7 @@ async function goBack(){
 }
 
 function goBackToMember(){
-  // From admin back to member screen (if logged in as member with admin access)
+
   var m=getMember();
   if(m){
     showScreen('memberScreen');
@@ -420,9 +412,6 @@ function triggerPanic(){
   DB.flush().then(function(){return sb.auth.signOut();}).then(function(){DB.cache={};});
 }
 
-// ════════════════════════════════
-//  PŘIHLÁŠENÍ (Supabase Auth)
-// ════════════════════════════════
 function showLoginBox(){
   var b=document.getElementById('loginBox');if(b)b.style.visibility='visible';
   var btn=document.getElementById('loginBtn');if(btn)btn.disabled=false;
@@ -451,7 +440,6 @@ async function doLogin(){
   }
 }
 
-// Načte data, najde člena podle přihlášeného účtu a otevře portál. Vrací true při úspěchu.
 async function enterPortal(session,isFreshLogin){
   var user=session.user;
   async function reject(msg){
@@ -465,12 +453,12 @@ async function enterPortal(session,isFreshLogin){
   var members=DB.get('members')||[];
   var m=members.find(function(x){return x.authId===user.id;});
   if(!m){
-    // propojení podle e-mailu (člen vytvořený dřív než účet)
+
     m=members.find(function(x){return x.email&&x.email.toLowerCase()===(user.email||'').toLowerCase();});
     if(m){m.authId=user.id;DB.set('members',members);}
   }
   if(!m&&members.length===0){
-    // úplně první přihlášení — první účet se stává Bossem s admin přístupem
+
     m={id:uid(),authId:user.id,email:user.email,displayName:(user.email||'Mastermind').split('@')[0],position:'Mastermind',adminAccess:true,note:'',panic:false};
     members.push(m);DB.set('members',members);
   }
@@ -492,7 +480,7 @@ async function enterPortal(session,isFreshLogin){
   return true;
 }
 
-// ── REALTIME (změny od ostatních členů se propíšou hned) ──
+// ── REALTIME (změny od ostatních členů se propíšou hned)
 function startRealtime(){
   startPresence();
   setTimeout(function(){injectUX();notifSync();},700);
@@ -547,7 +535,7 @@ function refreshView(){
   applyMenuCfg();
   notifSync();
   var ae=document.activeElement;
-  if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))return; // nepřepisovat, když uživatel píše
+  if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))return;
   var adminOpen=document.getElementById('adminScreen').classList.contains('active');
   if(adminOpen){
     if(!m.adminAccess){goBackToMember();return;}
@@ -560,7 +548,7 @@ function refreshView(){
   }
 }
 
-// ── Volání serverless funkce pro správu účtů (/api/admin-users) ──
+
 async function adminApi(body){
   var s=(await sb.auth.getSession()).data.session;
   if(!s)throw new Error('Nejsi přihlášen');
@@ -578,11 +566,6 @@ function goToAdmin(){
   aTab('board',document.querySelector('#adminScreen .nb'));
 }
 
-
-
-// ════════════════════════════════
-//  ÚVODNÍ PŘEHLEDY (dashboard) + ONLINE STAV
-// ════════════════════════════════
 var PRESENCE_MS=5*60*1000,presenceTimer=null;
 function scrollNavTo(btn){
   try{if(window.matchMedia('(max-width:700px)').matches){var sb=btn.closest('.sidebar');
@@ -644,7 +627,7 @@ function renderDash(){
 // ════════════════════════════════
 //  ÚPRAVA MENU (pořadí + názvy) — edituje jen Mastermind
 // ════════════════════════════════
-// DB klíč 'menu_cfg' = {admin:{order:[klíče],names:{klíč:'Nový název'}}, member:{...}}
+
 var MENU_GROUPS={calendar:'A',stats:'E',board:'A',tasks:'A',messages:'A',warehouse:'B',boosting:'B',heist:'B',heists:'B',clothing:'B',finance:'C',excuse:'D',excuses:'D',report:'D',reports:'D',radio:'D',settings:'E',incomes:'E',log:'E',members:'E',roster:'E',contacts:'E',admin:'E'};
 var MENU_NAVS={admin:'#adminScreen .sb-nav',member:'#memberScreen .sb-nav'};
 function menuKey(btn){
@@ -675,7 +658,6 @@ function applyMenuCfg(){
       var nl=it.btn.querySelector('.nl');
       if(nl)nl.textContent=(names[it.key]||'').trim()||it.def;
     });
-    // oddělovače skupin (podle klíče záložky; funguje i po přeskládání)
     var prev=null;
     Array.prototype.forEach.call(nv.querySelectorAll(':scope > .nb'),function(b){
       var g=MENU_GROUPS[menuKey(b)]||'Z';
@@ -806,8 +788,6 @@ function mTab(tab,btn){
   updateBadges();
 }
 
-// ── NOVÉ POLOŽKY (červená tečka u záložky) ──
-// Pamatuje se v tomto prohlížeči, co člen už viděl (nástěnka, úkoly, zprávy).
 function seenKey(m){return 'seen_'+m.id;}
 function loadSeen(m){try{return JSON.parse(localStorage.getItem(seenKey(m))||'null');}catch(e){return null;}}
 function saveSeen(m,s){try{localStorage.setItem(seenKey(m),JSON.stringify(s));}catch(e){}}
@@ -860,7 +840,6 @@ function updateBadges(){
   }
 }
 
-// ── BOARD ────────────────────────────────────
 function renderBoard(){
   renderDash();
   var posts=DB.get('board')||[];
@@ -897,7 +876,6 @@ function confirmPost(postId){
   }
 }
 
-// ── TASKS ────────────────────────────────────
 function switchTaskTab(which,btn){
   document.querySelectorAll('.ttab').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');
   document.getElementById('mTaskActive').classList.toggle('hidden',which!=='active');
@@ -938,7 +916,6 @@ function completeTask(idx){
   toast('Úkol archivován','success');renderMemberTasks();updateBadges();
 }
 
-// ── MESSAGES ─────────────────────────────────
 function renderMemberMessages(){
   var m=getMember();var msgs=DB.get('messages')||{};var myMsgs=msgs[m.id]||[];
   var el=document.getElementById('mMsgList');
@@ -948,7 +925,6 @@ function renderMemberMessages(){
   }).join('');
 }
 
-// ── WAREHOUSE ────────────────────────────────
 var mWhCat='all';
 function mWhFilter(cat,btn){
   mWhCat=cat;document.querySelectorAll('#mt-warehouse .wf').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderMemberWarehouse();
@@ -1021,7 +997,6 @@ function pickupItem(itemId){
   nameEl.value='';amtEl.value='1';toast(amt+'x '+item.name+' vydáno ✓','success');renderMemberWarehouse();
 }
 
-// ── WAREHOUSE DEPOSIT (member) ───────────────
 function populateDepositSelect(){
   var items=DB.get('warehouse')||[];
   var sel=document.getElementById('depItem');
@@ -1054,7 +1029,6 @@ function depositItem(){
   renderMemberWarehouse();
 }
 
-// ── CLOTHING ─────────────────────────────────
 var CLOTH_CATS=[
   {key:'masks',  label:'Masky & Vousy'},
   {key:'chains', label:'Šály & Řetízky'},
@@ -1104,7 +1078,6 @@ function filterCloth(cat,btn){
   renderClothing();
 }
 
-// ── CLOTHING ADMIN ───────────────────────────
 function previewClothImg(){
   var el=document.getElementById('cl-img-preview');if(!el)return;
   var url=document.getElementById('cl-img-url'),file=document.getElementById('cl-img');
@@ -1199,7 +1172,6 @@ function delCloth(id){
   toast('Set smazán','info');
 }
 
-// ── FINANCE ADMIN ────────────────────────────
 function toggleAddExpense(){document.getElementById('addExpensePanel').classList.toggle('hidden');}
 function addExpense(){
   var name=document.getElementById('exp-name').value.trim();
@@ -1247,7 +1219,6 @@ function renderAdminFinance(){
         '<button class="btn-micro del" onclick="delExpense(\''+e.id+'\')">✕</button></div></div>';
     }).join(''):'<div class="empty-s">// Žádné položky</div>')+
   '</div>';
-  // Weekly mandatory payments
   var payments='<div class="fa-member-payments"><div class="fa-exp-title">// TÝDENNÍ PŘÍSPĚVEK — '+wk+'</div>'+
     members.map(function(m){
       var paid=fin.payments.some(function(p){return p.memberId===m.id&&p.weekKey===wk&&(p.expenseId==='weekly'||!p.expenseId);});
@@ -1259,7 +1230,6 @@ function renderAdminFinance(){
         '</div></div>';
     }).join('')+
   '</div>';
-  // Optional expense payments per item
   var optionals=fin.expenses.filter(function(e){return e.optional;});
   var optSections=optionals.map(function(e){
     return '<div class="fa-member-payments" style="margin-top:1rem;"><div class="fa-exp-title">// NEPOVINNÁ: '+esc(e.name)+' — $'+e.amount+'</div>'+
@@ -1316,7 +1286,6 @@ function recordOptionalPayment(memberId,memberName,expenseId,expenseName,amount)
   toast('Platba evidována','success');renderAdminFinance();
 }
 
-// ── MEMBER FINANCE ───────────────────────────
 function renderMyFinance(){
   var m=getMember();if(!m)return;
   var fin=DB.get('finance')||{payments:[],expenses:[]};
@@ -1387,7 +1356,6 @@ function memberPayOptional(expenseId){
   toast('Platba evidována ✓','success');renderMyFinance();
 }
 
-// ── EXCUSES ADMIN ────────────────────────────
 function renderAdminExcuses(){
   var excuses=DB.get('excuses')||[];
   var el=document.getElementById('allExcuses');
@@ -1425,7 +1393,6 @@ function resolveExcuse(id,decision){
   toast('Omluvenka '+(decision==='accepted'?'vzata na vědomí':'zamítnuta'),'success');renderAdminExcuses();
 }
 
-// ── REPORTS ADMIN ────────────────────────────
 function renderAdminReports(){
   var reports=DB.get('reports')||[];
   var el=document.getElementById('aReports');
@@ -1435,7 +1402,6 @@ function renderAdminReports(){
   }).join('');
 }
 
-// ── RADIO ADMIN ──────────────────────────────
 function radioCardsHtml(f,withVedeni){
   var rows=[
     {label:'PRIMÁRNÍ',val:f.primary,color:'var(--acc)'},
@@ -1462,7 +1428,7 @@ function renderAdminRadio(){
   if(rc)rc.innerHTML='<div class="fa-exp-title">// AKTUÁLNĚ PLATÍ '+(cfg.on?'(AUTOMATICKY — slot '+radioSlotLabel(radioSlot())+')':'(RUČNĚ NASTAVENO)')+'</div>'+radioCardsHtml(cur,true);
   renderRadioTimes();
   var info=document.getElementById('rAutoInfo');
-  if(info)info.textContent=cfg.on?'// AUTO je zapnuté — pole níže se nepoužívají, platí frekvence z přehledu nahoře.':'';
+  if(info)info.textContent=cfg.on?'// AUTO je zapnuté pole níže se nepoužívají, platí frekvence z přehledu nahoře.':'';
 }
 function saveRadios(){
   var radios={
@@ -1488,7 +1454,6 @@ function saveRadios(){
   if(cfg.on)radioTick();
 }
 
-// Discord embed pro změnu frekvencí (frekvence Vedení se do kanálu záměrně neposílají)
 function radioEmbed(title,desc,f){
   return {
     title:title,description:desc,color:0xc49a14,
@@ -1501,12 +1466,10 @@ function radioEmbed(title,desc,f){
   };
 }
 
-// Vygeneruje a uloží nové frekvence (vrací objekt s frekvencemi)
 function genNewRadios(){
   var cfg=DB.get('radioauto2')||{};
   var f;
   if(cfg.on){
-    // nová sůl = okamžitě nové frekvence; automatická změna v nastavených časech běží dál
     cfg.salt=uid()+uid();cfg.lastSlot=radioSlot();
     DB.set('radioauto2',cfg);
     f=autoRadios(cfg,cfg.lastSlot);
@@ -1531,13 +1494,10 @@ function regenRadios(){
   if(act&&act.id==='mt-radio')renderMyRadio();
 }
 
-// ── AUTOMATICKÁ ZMĚNA FREKVENCÍ (časy nastavuje admin, výchozí 15:00 a 17:00, kanály 100–999) ──
-// Frekvence se počítají z časového slotu + tajné soli v DB, takže je všichni vidí stejně.
-// Do Discordu je oznámí první přihlášený klient, který nový slot zaznamená.
 var RADIO_DEF_TIMES=['15:00','17:00'];
 function rtFmt(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 function rtParse(s){var p=/^(\d{1,2}):(\d{2})$/.exec(String(s||'').trim());if(!p)return null;var h=+p[1],m=+p[2];return(h>23||m>59)?null:h*60+m;}
-// časy změny v minutách od půlnoci (seřazené, bez duplicit); výchozí 15:00 a 17:00
+
 function radioTimes(cfg){
   cfg=cfg||DB.get('radioauto2')||{};
   var src=(cfg.times&&cfg.times.length)?cfg.times:RADIO_DEF_TIMES,seen={},out=[];
@@ -1549,7 +1509,7 @@ function radioTimesText(cfg){
   var t=radioTimes(cfg).map(rtFmt);
   return t.length>1?t.slice(0,-1).join(', ')+' a '+t[t.length-1]:t[0];
 }
-// tag slotu: celé hodiny zůstávají jako dřív ("15"), ostatní časy jako "15:30"
+
 function radioTag(m){return m%60===0?String(m/60):rtFmt(m);}
 function radioTagMin(tag){tag=String(tag);return tag.indexOf(':')>-1?rtParse(tag):(+tag)*60;}
 function radioSlotLabel(slot){return rtFmt(radioTagMin(String(slot).split('-')[3]));}
@@ -1561,7 +1521,7 @@ function radioSlot(d,cfg){
   ts.forEach(function(t){if(t<=nowM)pick=t;});
   if(pick<0){base.setDate(base.getDate()-1);pick=ts[ts.length-1];}
   var s=base.getFullYear()+'-'+(base.getMonth()+1)+'-'+base.getDate()+'-'+radioTag(pick);
-  // po úpravě časů se už platné frekvence zpětně nemění (viz changeRadioTimes)
+
   if(cfg.hold&&cfg.hold.bad===s)s=cfg.hold.keep;
   return s;
 }
@@ -1585,7 +1545,7 @@ function currentRadios(){
   return DB.get('radios')||{primary:'',secondary:'',action:'',vedeni:''};
 }
 
-// ── ČASY AUTOMATICKÉ ZMĚNY (správa) ──
+
 var RADIO_MAX_TIMES=12;
 function renderRadioTimes(){
   var host=document.getElementById('rTimes');if(!host)return;
@@ -1593,7 +1553,7 @@ function renderRadioTimes(){
   host.innerHTML='<div class="rt-lbl">ČASY ZMĚNY (každý den)</div><div class="rt-list">'+
     ts.map(function(t){return '<span class="rt-chip">'+rtFmt(t)+(ts.length>1?'<button type="button" title="Odebrat čas" onclick="delRadioTime('+t+')">✕</button>':'')+'</span>';}).join('')+
     '</div><div class="rt-add"><input type="time" id="rtNew" class="rt-in" step="60"/><button type="button" class="btn-acc small" onclick="addRadioTime()">+ PŘIDAT ČAS</button></div>'+
-    '<div class="rt-hint">Čas se ukládá hned. Přidáš-li čas, který dnes už uběhl, začne platit až od zítřka — aktuální frekvence se nezmění.</div>';
+    '<div class="rt-hint">Čas se ukládá hned. Přidáš-li čas, který dnes už uběhl, začne platit až od zítřka aktuální frekvence se nezmění.</div>';
 }
 function changeRadioTimes(arr,msg){
   var cfg=DB.get('radioauto2')||{};
@@ -1639,13 +1599,9 @@ async function radioTick(){
   try{
     var r=await sb.from(TABLE).select('value').eq('key','radioauto2').maybeSingle();
     var fresh=(r.data&&r.data.value)||cfg;
-    // slot přepočítáme z ČERSTVÉ konfigurace (časy + hold) z DB, ne z místní, případně zastaralé kopie —
-    // jinak se dva klienty s různými časy donekonečna přebíjejí a spamují Discord
     slot=radioSlot(null,fresh);
     if(fresh.lastSlot===slot){DB.cache.radioauto2=fresh;}
     else if(fresh.lastAt&&Date.now()-fresh.lastAt<600000){
-      // pojistka proti přebíjení: změna slotu se právě oznámila (< 10 min) a někdo jiný (např. stará verze webu)
-      // ji přepsal — nepřepisujeme zpět a neposíláme nic, aby se nespamoval Discord
       DB.cache.radioauto2=fresh;
       console.warn('radioTick: přebíjení slotu potlačeno',fresh.lastSlot,'vs',slot);
     }
@@ -1664,7 +1620,6 @@ async function radioTick(){
   radioBusy=false;
 }
 
-// ── SETTINGS ─────────────────────────────────
 function renderSettings(){
   var s=DB.get('settings')||{webhook:'',webhookName:'Frakce LOG'};
   var fs=DB.get('finsettings')||{weeklyFee:5000,feeDay:0};
@@ -1690,7 +1645,6 @@ function testWebhook(){
     .then(function(){toast('Test odeslán','success');}).catch(function(){toast('Chyba odesílání','error');});
 }
 
-// ── DISCORD PO SEKCÍCH ───────────────────────
 function renderSectionHooks(){
   var s=DB.get('settings')||{};var secs=s.sections||{};
   var el=document.getElementById('sectionHooks');if(!el)return;
@@ -1750,7 +1704,6 @@ function renderPanicList(){
   }).join('');
 }
 
-// ── MEMBERS GRID (ADMIN) ─────────────────────
 function renderMemberGrid(){
   var members=DB.get('members')||[];
   var el=document.getElementById('memberGrid');if(!el)return;
@@ -1920,7 +1873,6 @@ function liftPanic(id){
   toast(m.displayName+' odemknut','success');renderMemberGrid();renderPanicList();
 }
 
-// ── BOARD ADMIN ───────────────────────────────
 function renderAdminBoard(){
   renderDash();
   var posts=DB.get('board')||[];
@@ -1941,7 +1893,6 @@ function renderAdminBoard(){
     '</div>';
   }).join('');
 }
-// ── VÝBĚR LIDÍ K OZNAČENÍ (nástěnka, úkoly, zprávy, hlášení) ──
 var PICKERS=['pick-board','pick-task','pick-msg','pick-rep'];
 function renderPickers(){
   var ms=(DB.get('members')||[]).slice().sort(function(a,b){return String(a.displayName).localeCompare(String(b.displayName),'cs');});
@@ -1978,7 +1929,7 @@ function pickPing(id){
 function joinPings(){
   return Array.prototype.slice.call(arguments).filter(function(x){return x;}).join(' ');
 }
-// Zaškrtnutá volba „Označit Member“ -> ping role Member (ID v Nastavení). Po použití se odškrtne.
+
 function pingBox(id){
   var b=document.getElementById(id);
   if(!b||!b.checked)return '';
@@ -1987,7 +1938,7 @@ function pingBox(id){
   if(!s.memberRoleId){toast('V Nastavení chybí ID role Member','error',4000);return '';}
   return '<@&'+s.memberRoleId+'>';
 }
-// @jméno člena -> <@DiscordID> (jen členové s vyplněným Discord ID)
+
 function resolveMentions(t){
   t=String(t||'');
   var ms=(DB.get('members')||[]).filter(function(m){return m.discordId&&m.displayName;})
@@ -1998,7 +1949,7 @@ function resolveMentions(t){
   });
   return t;
 }
-// <@ID> -> @jméno (zobrazení na webu)
+
 function mentionView(t){
   var ms=DB.get('members')||[];
   return String(t||'').replace(/<@!?(\d{5,})>/g,function(x,id){
@@ -2016,7 +1967,6 @@ function postBoard(){
   posts.push({id:uid(),title:title,body:body,type:type,date:nowStr(),author:author});
   DB.set('board',posts);
   var bt={info:['ℹ️ INFO',C_BLUE],warning:['⚠️ VAROVÁNÍ',C_ORANGE],urgent:['🚨 URGENTNÍ',C_RED],confirm:['✅ POTVRĎTE PŘEČTENÍ',C_PURPLE]}[type]||['',C_BLUE];
-  // Discord: @jméno / <@ID> v textu pingne hráče, checkbox pingne roli Member (ID v Nastavení)
   var dTitle=resolveMentions(title),dBody=resolveMentions(body);
   var mentions=[];var rx=/<@!?(\d{5,})>/g,mm;
   while((mm=rx.exec(dTitle+' '+dBody))){var tag='<@'+mm[1]+'>';if(mentions.indexOf(tag)===-1)mentions.push(tag);}
@@ -2040,7 +1990,6 @@ function delPost(id){
   toast('Příspěvek smazán','info');renderAdminBoard();renderBoard();
 }
 
-// ── TASKS & MESSAGES (populate selects) ──────
 function populateTaskTarget(){
   var members=DB.get('members')||[];var sel=document.getElementById('taskTarget');if(!sel)return;
   sel.innerHTML=members.map(function(m){return '<option value="'+m.id+'">'+esc(m.displayName)+'</option>';}).join('');
@@ -2085,7 +2034,6 @@ function sendMsg(){
   toast('Zpráva odeslána','success');renderAdminMessages();
 }
 
-// ── WAREHOUSE ADMIN ───────────────────────────
 var aWhCat='all';
 function aWhFilter(cat,btn){
   aWhCat=cat;document.querySelectorAll('#at-warehouse .wf').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderAdminWarehouse();
@@ -2182,7 +2130,6 @@ function deleteItem(id){
   toast('Položka smazána','info');renderAdminWarehouse();renderMemberWarehouse();
 }
 
-// ── BOOSTING ─────────────────────────────────
 var BOOST_TIERS=['D','C','B','A','A+','S','S+'];
 var mBoostTier='all',aBoostTier='all',editBoostId=null;
 
@@ -2215,7 +2162,7 @@ function boostCard(b,admin){
       '<button class="btn-micro del" onclick="delBoost(\''+b.id+'\')">✕</button></div>':'')+
   '</div>';
 }
-// klik na miniaturu = přepne hlavní fotku; klik na hlavní fotku = zvětšení
+
 function boostSwap(t){
   var card=t.closest('.boost-item');var m=card&&card.querySelector('.boost-main');
   if(m)m.src=t.src;
@@ -2268,7 +2215,6 @@ function resetBoostForm(p){
   bEl(p,'boostFormPanel').classList.add('hidden');
 }
 var GALLERY_URL=(location.origin&&location.origin!=='null')?location.origin+'/':'https://discord.com/';
-// další fotky jako samostatné embedy se stejným url -> Discord je spojí do galerie
 function boostExtras(imgs){
   return (imgs||[]).slice(1,4).map(function(i){var u=absImg(i);return u?{url:GALLERY_URL,image:{url:u}}:null;}).filter(Boolean);
 }
@@ -2343,8 +2289,6 @@ function delBoost(id){
   renderAdminBoosting();renderMemberBoosting();
 }
 
-// ── HEISTY (reporty o provedených nelegálních pracích) ──
-// Report píše ten, kdo akci vedl. Do logu jde krátký záznam, na Discord (sekce "heist") hezký embed.
 function heistCard(h,admin){
   var ok=!!h.escaped;
   return '<div class="heist-card '+(ok?'ok':'fail')+'">'+
@@ -2356,14 +2300,14 @@ function heistCard(h,admin){
       (admin?' <button class="btn-micro del" style="float:right" onclick="delHeist(\''+h.id+'\')">✕ SMAZAT</button>':'')+'</div>'+
   '</div>';
 }
-// zkrátí text na max n znaků (nejraději na mezeře) a přidá „…“
+
 function cut(s,n){
   s=String(s);if(s.length<=n)return s;
   var c=s.slice(0,n),sp=c.lastIndexOf(' ');
   if(sp>n*0.6)c=c.slice(0,sp);
   return c.replace(/\s+$/,'')+'…';
 }
-// rozdělí text na kusy max n znaků (nejraději na novém řádku / mezeře)
+
 function splitText(s,n){
   var out=[];s=String(s);
   while(s.length>n){
@@ -2373,7 +2317,7 @@ function splitText(s,n){
   }
   out.push(s);return out;
 }
-// ── Výběr účastníků heistu (podle přezdívek) ──
+
 function memberLabel(m){var n=rosterNames(m);return n.nick||m.displayName;}
 function heistCrewIds(){
   var el=document.getElementById('hs-crew');if(!el)return [];
@@ -2402,7 +2346,7 @@ function heistCrewText(h){
   var ms=DB.get('members')||[];
   return h.crew.map(function(id){var x=ms.find(function(y){return y.id===id;});return x?memberLabel(x):'(smazaný člen)';}).join(', ');
 }
-// účast na heistu: nové reporty = podle výběru, staré (bez výběru) = jen vedoucí
+
 function heistParticipated(h,id){
   return (h.crew&&h.crew.length)?h.crew.indexOf(id)!==-1:h.memberId===id;
 }
@@ -2468,7 +2412,7 @@ function renderAdminHeists(){
   '</div>';
   el.innerHTML=stats+(list.length?list.slice().reverse().map(function(h){return heistCard(h,true);}).join(''):'<div class="empty-s">// Žádné reporty</div>');
 }
-// Kategorie „Co se vykrádalo“ — spravuje Vedení (Admin → Heisty). „Jiné“ je u členů vždy poslední volba.
+
 function getHeistTargets(){
   var l=DB.get('heistTargets');
   return Array.isArray(l)?l:['Banka','Klenotnictví','Obchod','Bobcat'];
@@ -2517,7 +2461,6 @@ function delHeist(id){
   toast('Report smazán','info');renderAdminHeists();renderMyHeists();
 }
 
-// ── LOG ──────────────────────────────────────
 var LOG_LABELS={roster:'CREW LIST',ev:'VÝDEJ',wh:'SKLAD',task:'ÚKOL',msg:'ZPRÁVA',member:'ČLEN',board:'NÁSTĚNKA',sys:'SYSTÉM',fin:'FINANCE',panic:'PANIC',boost:'BOOSTING',heist:'HEIST',cloth:'OBLEČENÍ',excuse:'OMLUVENKA',report:'HLÁŠENÍ',radio:'VYSÍLAČKA'};
 var logCat='all';
 function logFilter(cat,btn){
@@ -2542,10 +2485,8 @@ function renderLog(){
       '<span class="log-text">'+esc(e.text)+'</span><button class="btn-micro del" onclick="delLogEntry('+r.idx+')">✕</button></div>';
   }).join('');
 }
+
 function clearLog(){if(!confirm('Vymazat celý log?'))return;DB.set('syslog',[]);renderLog();toast('Log vymazán','info');}
-
-
-// ── OMLUVENKY (MEMBER) ───────────────────────
 function submitExcuse(){
   var m=getMember();if(!m)return;
   var date=document.getElementById('excDate').value;
@@ -2585,7 +2526,6 @@ function renderMyExcuses(){
   }).join('');
 }
 
-// ── HLÁŠENÍ (MEMBER) ─────────────────────────
 function submitReport(){
   var m=getMember();if(!m)return;
   var body=document.getElementById('reportText').value.trim();
@@ -2609,7 +2549,6 @@ function renderSentReports(){
   }).join('');
 }
 
-// ── RÁDIO (MEMBER) ───────────────────────────
 function radioInfoHtml(){
   var next=radioNextChange().text;
   return '<div class="radio-info"><b>⚠ ZMĚNA VYSÍLAČEK</b> Každý den v <b>'+radioTimesText()+'</b> proběhne změna vysílaček (frekvence 100,0–999,0). Nové frekvence se zobrazí tady.<div class="radio-info-next">// PŘÍŠTÍ ZMĚNA: '+next+'</div></div>';
@@ -2676,8 +2615,6 @@ function deleteContact(idx){
   toast('Kontakt smazán','info');renderContacts();
 }
 
-
-// ── PŘÍJMY DO KASY ───────────────────────────
 function populateIncSource(){
   var items=DB.get('warehouse')||[];
   var drugs=items.filter(function(i){return i.cat==='drugs';});
@@ -2752,23 +2689,18 @@ function renderMyIncomes(){
   el.innerHTML=statHtml+rows;
 }
 
-// ── PŘÍJMY ADMIN ─────────────────────────────
 function renderAdminIncomes(){
   var incomes=DB.get('incomes')||[];
   var members=DB.get('members')||[];
   var el=document.getElementById('adminIncomePanel');if(!el)return;
-
   var confirmed=incomes.filter(function(i){return i.status==='confirmed';});
   var pending=incomes.filter(function(i){return i.status==='pending';});
   var totalKasa=confirmed.reduce(function(s,i){return s+i.amount;},0);
-
-  // Souhrn kasy
   var summary='<div class="inc-summary">'+
     '<div class="inc-sum-card"><div class="inc-sum-title">CELKEM V KASE</div><div class="inc-sum-val green">$'+totalKasa.toLocaleString('cs-CZ')+'</div></div>'+
     '<div class="inc-sum-card"><div class="inc-sum-title">ČEKÁ NA SCHVÁLENÍ</div><div class="inc-sum-val acc">'+pending.length+' záznamů</div></div>'+
   '</div>';
 
-  // Žebříček členů
   var memberTotals={};
   confirmed.forEach(function(i){
     if(!memberTotals[i.memberId])memberTotals[i.memberId]={name:i.memberName,total:0};
@@ -2785,7 +2717,6 @@ function renderAdminIncomes(){
     }).join(''):'<div class="empty-s">// Žádné potvrzené příjmy</div>')+
   '</div>';
 
-// Čekající ke schválení
   var pendingHtml='<div class="inc-pending"><div class="fa-exp-title">// KE SCHVÁLENÍ</div>'+
     (pending.length?pending.slice().reverse().map(function(i){
       return '<div class="inc-card pending">'+
@@ -2809,7 +2740,6 @@ function renderAdminIncomes(){
     }).join(''):'<div class="empty-s">// Nic nečeká na schválení</div>')+
   '</div>';
 
-  // Historie potvrzených
   var historyHtml='<div class="inc-pending" style="margin-top:1rem;"><div class="fa-exp-title">// HISTORIE PŘÍJMŮ</div>'+
     (confirmed.length?confirmed.slice().reverse().map(function(i){
       return '<div class="inc-card confirmed" style="opacity:.8;">'+
@@ -2825,7 +2755,6 @@ function renderAdminIncomes(){
       '</div>';
     }).join(''):'<div class="empty-s">// Žádné potvrzené příjmy</div>')+
   '</div>';
-
   el.innerHTML=summary+leaderboard+pendingHtml+historyHtml;
 }
 
@@ -2841,7 +2770,7 @@ function resolveIncome(id,decision){
   renderAdminIncomes();
   renderAdminFinance();
 }
-// ── ADMIN: MAZÁNÍ A PŘEHLEDY ZPRÁV / ÚKOLŮ ──
+
 function renderAdminTasks(){
   var el=document.getElementById('aTaskList');if(!el)return;
   var tasks=DB.get('tasks')||{};var members=DB.get('members')||[];var rows=[];
@@ -2860,6 +2789,7 @@ function renderAdminTasks(){
       '<div class="task-meta"><span class="task-date">'+t.date+(t.done?' | '+({splneno:'✓ SPLNĚNO',casti:'~ ČÁSTEČNĚ',nesplneno:'✗ NESPLNĚNO'}[t.resolution]||'ARCHIVOVÁNO'):' | AKTIVNÍ')+'</span></div></div>';
   }).join('');
 }
+
 function delTaskAdmin(mid,tid){
   if(!confirm('Smazat úkol?'))return;
   var tasks=DB.get('tasks')||{};
@@ -2867,6 +2797,7 @@ function delTaskAdmin(mid,tid){
   DB.set('tasks',tasks);
   toast('Úkol smazán','info');renderAdminTasks();
 }
+
 function renderAdminMessages(){
   var el=document.getElementById('aMsgList');if(!el)return;
   var msgs=DB.get('messages')||{};var members=DB.get('members')||[];var map={},order=[];
@@ -2914,14 +2845,11 @@ function delLogEntry(idx){
   log.splice(idx,1);DB.set('syslog',log);renderLog();
 }
 
-// ── CREW LIST (přehled: jméno, příjmení, přezdívka, hodnost, strike, návrh na povýšení) ──
-// Jméno/příjmení/přezdívku nastavuje Vedení v Admin → Členové. Když chybí, jméno se odvodí z IC jména.
 function rosterNames(m){
   var f=(m.firstName||'').trim(),l=(m.lastName||'').trim();
   if(!f&&!l){var p=String(m.displayName||'').trim().split(/\s+/);f=p[0]||'';l=p.slice(1).join(' ');}
   return {first:f,last:l,nick:(m.nick||'').trim()};
 }
-// Strike a návrhy povýšení smí spravovat jen první tři nejvyšší role
 var ROSTER_POS=['Mastermind','Overseer','Advisor'];
 function canRoster(){var m=getMember();return !!m&&ROSTER_POS.indexOf(m.position)!==-1;}
 function renderRoster(admin){
@@ -2970,7 +2898,7 @@ function rosterTarget(id,namesOnly){
   if(!canManage(m)){toast('Mastermind může spravovat jen Mastermind','error');return null;}
   return {members:members,m:m};
 }
-// Pošle aktuální seznam členů (hodnost, jméno, přezdívka, strike, návrh povýšení) na Discord do sekce „Seznam Členů“
+
 function sendRosterToDiscord(){
   if(!canRoster()){toast('Odeslat Crew List smí jen Mastermind, Overseer a Advisor','error');return;}
   var members=(DB.get('members')||[]).filter(function(x){return !x.hidden;}).sort(function(a,b){
@@ -3048,15 +2976,9 @@ function approvePromo(id){
   toast('Povýšeno na '+to,'success');renderRoster(true);
 }
 
-
-// ════════════════════════════════════════════════════════════
-//  VELKÝ UPGRADE: Ctrl+K hledání · Centrum upozornění ·
-//  Statistiky (admin) · Kalendář akcí
-// ════════════════════════════════════════════════════════════
 SECTIONS.push({key:'cal',label:'Kalendář akcí'});
 LOG_ICONS.cal='📅';LOG_LABELS.cal='KALENDÁŘ';
 
-// ── pomocné ──────────────────────────────────
 function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 function parseCz(s){
@@ -3081,7 +3003,6 @@ function goTo(scope,key){
   goNav(scope,key);
 }
 
-// ── vložení tlačítek a overlayů (jednou) ─────
 function injectUX(){
   if(document.getElementById('palette'))return;
   var tools='<span class="sb-tools"><button class="tb" title="Hledat (Ctrl+K)" onclick="openPalette()">🔍</button>'+
@@ -3114,7 +3035,6 @@ document.addEventListener('keydown',function(e){
   }
 });
 
-// ════════════ RYCHLÉ HLEDÁNÍ (Ctrl+K) ════════════
 var palSel=0,palRes=[];
 function palIndex(){
   var adm=adminActive(),scope=adm?'a':'m',out=[];
@@ -3304,7 +3224,6 @@ function notifGo(i){
   if(n.go)goTo(n.go[0],n.go[1]);
 }
 
-// ════════════ KALENDÁŘ AKCÍ ════════════
 var calMonth=null,calSel=null;
 var EV_TYPES={heist:['HEIST','#c0392b'],meeting:['SCHŮZKA','#4a90d9'],training:['TRÉNINK','#27ae60'],other:['JINÉ','#c49a14']};
 var DAYS_CZ=['Ne','Po','Út','St','Čt','Pá','So'];
@@ -3416,7 +3335,6 @@ function delEvent(id){
   toast('Akce smazána','info');renderCalendar('a');renderCalendar('m');
 }
 
-// ════════════ STATISTIKY (admin) ════════════
 var statsRange='all';
 function inRange(d){
   if(statsRange==='all')return true;
@@ -3474,8 +3392,8 @@ function renderStats(){
     dashCard('🎯','ÚSPĚŠNOST',(tot?Math.round(ok/tot*100):0)+'%',tot?'ujeli vs. neujeli':'zatím žádná data',tot&&ok/tot<.5?'warn':'ok')+
     dashCard('💰','PŘÍJMY',stUsd(money),'příspěvky + schválené příjmy','')+
     dashCard('🧾','VÝDAJOVÉ POLOŽKY',stUsd(expenses),'součet všech položek','')+'</div>';
-  // týdenní grafy (vždy posledních 8 týdnů, bez ohledu na období)
-  var wks=lastWeeks(8),hw={},iw={};
+
+    var wks=lastWeeks(8),hw={},iw={};
   allHeists.forEach(function(h){var d=parseCz(h.date);if(!d)return;var k=weekKeyOf(d);hw[k]=hw[k]||{a:0,b:0};if(h.escaped)hw[k].a++;else hw[k].b++;});
   payAll.forEach(function(p){var k=p.weekKey;if(!k)return;iw[k]=(iw[k]||0)+(+p.amount||0);});
   incAll.forEach(function(i){var d=parseCz(i.date);if(!d)return;var k=weekKeyOf(d);iw[k]=(iw[k]||0)+(+i.amount||0);});
@@ -3515,7 +3433,6 @@ function renderStats(){
     '<div class="sh">// AKTIVITA ČLENŮ</div>'+table;
 }
 
-// ── START ──────────────────────────────────────
 window.addEventListener('DOMContentLoaded',function(){
   startClock();
   if(!window.supabase||SUPABASE_ANON_KEY.indexOf('VLOŽ')===0){

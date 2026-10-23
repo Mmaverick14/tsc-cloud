@@ -1,9 +1,6 @@
-// ── LUXUS: jemné interakce nad app.js (nic nepřepisuje, jen přidává) ──
 (function(){
   var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
-
-  // 1) Světlo sledující kurzor na kartách
   var SEL='.dc,.board-post,.heist-card,.task-card,.ev-card,.member-card,.wh-item,.form-panel',raf=0,px,py,pt;
   document.addEventListener('pointermove',function(e){
     if(e.pointerType==='touch')return;
@@ -16,7 +13,6 @@
     });
   },{passive:true});
 
-  // 2) Paleta příkazů (Ctrl/Cmd + K): rychlý skok na libovolnou záložku
   var pal=null,prevFocus=null;
   function items(){
     var ms=[].slice.call(document.querySelectorAll('#memberScreen,#adminScreen')).filter(function(x){return !x.classList.contains('hidden');})[0];
@@ -69,7 +65,6 @@
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();pal?closePal():openPal();}
   },true);
 
-  // tlačítko v postranním panelu
   setInterval(function(){
     document.querySelectorAll('#memberScreen .sb-foot,#adminScreen .sb-foot').forEach(function(f){
       if(f.querySelector('.lux-k'))return;
@@ -77,7 +72,6 @@
       b.onclick=openPal;f.insertBefore(b,f.firstChild);});
   },1000);
 
-  // 3) Zlatý prach na přihlašovací obrazovce (běží jen když je vidět)
   var scr=document.getElementById('selectScreen');
   if(scr&&!reduce){
     var cv=document.createElement('canvas');cv.id='luxDust';scr.insertBefore(cv,scr.firstChild);
@@ -103,9 +97,7 @@
   }
 })();
 
-// ── LUXUS 2 ──
 (function(){
-  // plovoucí zlatý indikátor aktivní záložky
   function indicator(){document.querySelectorAll('#memberScreen .sb-nav,#adminScreen .sb-nav').forEach(indicatorFor);}
   function indicatorFor(nav){
     var ind=nav.querySelector('.lux-ind');
@@ -121,7 +113,6 @@
     }
     ind._mv();
   }
-  // uvítání podle denní doby
   function hello(){
     var ph=document.querySelector('#mt-board .ph'),nm=document.getElementById('sbName');
     if(!ph||!nm||!nm.textContent.trim())return;
@@ -144,10 +135,8 @@
   });
 })();
 
-// ── LUXUS 3: vysílačky (kopírování, odpočet, zvýraznění změny) ──
 (function(){
-  var prev=null; // poslední zobrazené frekvence, aby šlo poznat změnu
-
+  var prev=null;
   function nextChange(){
     if(typeof window.radioNextChange==='function')return window.radioNextChange();
     var n=new Date(),h=n.getHours(),t=new Date(n),day='dnes',hh=15;

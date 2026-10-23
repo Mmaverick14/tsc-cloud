@@ -1,4 +1,3 @@
-// ── VELIKOST WEBU: každý si ji nastaví sám (80–150 %), celý web se přepočítá a pamatuje se v prohlížeči ──
 (function(){
   var KEY='tsc_ui_scale',MIN=80,MAX=150,STEP=5,DEF=100;
   function get(){var v=NaN;try{v=parseInt(localStorage.getItem(KEY),10);}catch(e){}return isNaN(v)?DEF:Math.min(MAX,Math.max(MIN,v));}
@@ -24,7 +23,6 @@
     rg.oninput=function(){set(parseInt(rg.value,10));};
     p.querySelectorAll('.sp-b').forEach(function(b){b.onclick=function(){set(get()+STEP*parseInt(b.dataset.d,10));};});
     p.querySelector('.sp-r').onclick=function(){set(DEF);};
-    // umístění vedle tlačítka (po změně velikosti se přepočítá znovu)
     function place(){
       var w=p.offsetWidth,h=p.offsetHeight;
       p.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';
@@ -34,7 +32,6 @@
     p.addEventListener('click',function(ev){ev.stopPropagation();});
     setTimeout(function(){document.addEventListener('click',function f(){p.remove();document.removeEventListener('click',f);});},0);
   }
-  // tlačítko vedle 🎨 a 🔍 (lišta se vytváří až po přihlášení)
   setInterval(function(){
     document.querySelectorAll('.sb-tools').forEach(function(w){
       if(w.querySelector('.tb.size'))return;
@@ -42,7 +39,6 @@
       b.onclick=pop;w.appendChild(b);
     });
   },1000);
-  // Ctrl + Alt + plus/minus/0 jako zkratka
   document.addEventListener('keydown',function(e){
     if(!(e.ctrlKey&&e.altKey))return;
     if(e.key==='+'||e.key==='='){e.preventDefault();apply(Math.min(MAX,get()+STEP));}

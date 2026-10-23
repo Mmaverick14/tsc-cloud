@@ -1,10 +1,7 @@
-// ── DOPLNKY: odznaky novinek, export akce do kalendáře (.ics), hledání, vlastní barva ──
-// Načítat jako poslední (po luxus.js). Nic nepřepisuje, jen obaluje existující funkce.
 (function(){
   function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
   var BASE_TITLE=document.title||'THE STRIKERS CREW';
 
-  /* ═══ 1) ODZNAKY S POČTEM NOVINEK (Oznámení, Úkoly, Zprávy) ═══ */
   function unreadCounts(){
     var m=getMember();if(!m||m.hidden)return null;
     var cur=currentIds(m),s=loadSeen(m)||cur;
@@ -42,7 +39,6 @@
   }
   setInterval(function(){try{if(typeof getMember==='function'&&getMember()&&window.updateBadges)window.updateBadges();}catch(e){}},4000);
 
-  /* ═══ 2) „PŘIDAT DO KALENDÁŘE" (.ics) U KAŽDÉ AKCE ═══ */
   function p2(n){return (n<10?'0':'')+n;}
   function icsLocal(d){return d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'T'+p2(d.getHours())+p2(d.getMinutes())+'00';}
   function icsEsc(s){return String(s||'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/;/g,'\\;').replace(/,/g,'\\,');}
@@ -81,7 +77,6 @@
     };
   }
 
-  /* ═══ 3) HLEDÁNÍ: kontakty a crew list ═══ */
   function makeFilter(host,id,placeholder,itemSel){
     if(!host||document.getElementById(id))return;
     var i=document.createElement('input');
@@ -108,7 +103,6 @@
   var _rr=window.renderRoster;
   if(typeof _rr==='function')window.renderRoster=function(admin){var r=_rr.apply(this,arguments);reapply(admin?'rosterQA':'rosterQ');return r;};
 
-  /* ═══ 4) SKLAD: filtr „jen málo zásob" ═══ */
   var lowOnly={m:false,a:false},ctx=null;
   function isLow(i){return i.qty===0||(i.min>0&&i.qty<=i.min);}
   var _wv=window.whView;
@@ -142,7 +136,6 @@
     t.appendChild(b);
   });
 
-  /* ═══ 5) VLASTNÍ BARVA MOTIVU (RGB / HEX / výběr) ═══ */
   var KEY='tsc_custom_color';
   function parseHex(s){
     s=String(s||'').trim().replace(/^#/,'');
@@ -163,7 +156,6 @@
   }
   var saved=parseHex(lsGet(KEY));
   if(saved)applyCustom(saved,false);
-
   function enhancePop(pop){
     if(pop.querySelector('.theme-custom'))return;
     pop.classList.add('has-custom');
@@ -201,7 +193,6 @@
     pop.querySelectorAll('.theme-dot').forEach(function(d){
       d.addEventListener('click',function(){try{localStorage.removeItem(KEY);}catch(e){}});
     });
-    // okno je teď větší → udržet ho na obrazovce
     var rc=pop.getBoundingClientRect();
     if(rc.right>innerWidth-8)pop.style.left=Math.max(8,innerWidth-rc.width-8)+'px';
     if(rc.bottom>innerHeight-8)pop.style.top=Math.max(8,innerHeight-rc.height-8)+'px';
@@ -213,13 +204,12 @@
   }).observe(document.body,{childList:true});
 })();
 
-// ── DOPLNKY 2: generátor hesel + hotová zpráva s přihlašovacími údaji ──
 (function(){
   var g=function(id){return document.getElementById(id);};
 
   /*GEN_START*/
-  var UP='ABCDEFGHJKLMNPQRSTUVWXYZ',LO='abcdefghijkmnopqrstuvwxyz',DG='23456789'; // bez 0/O/1/l/I, ať se nespletou
-  function rnd(n){ // rovnoměrné náhodné číslo 0..n-1 (bez zkreslení)
+  var UP='ABCDEFGHJKLMNPQRSTUVWXYZ',LO='abcdefghijkmnopqrstuvwxyz',DG='23456789'; 
+  function rnd(n){ 
     var a=new Uint32Array(1),lim=Math.floor(4294967296/n)*n;
     do{crypto.getRandomValues(a);}while(a[0]>=lim);
     return a[0]%n;
@@ -230,7 +220,6 @@
     for(var i=c.length-1;i>0;i--){var j=rnd(i+1),t=c[i];c[i]=c[j];c[j]=t;}
     return c.slice(0,4).join('')+'-'+c.slice(4,8).join('')+'-'+c.slice(8).join('');
   }
-  /*GEN_END*/
 
   function copyText(txt,okMsg){
     function ok(){if(typeof toast==='function')toast(okMsg,'success');}
@@ -241,7 +230,6 @@
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
   }
 
-  // řádek tlačítek pod polem s heslem
   function addGenRow(inputIds){
     var first=g(inputIds[0]);if(!first||first.dataset.gen)return;
     first.dataset.gen='1';
@@ -281,7 +269,6 @@
     ta.focus();ta.select();
   }
 
-  // nový člen: zachytit údaje dřív, než je formulář po úspěchu vymaže
   var _cm=window.createMember;
   if(typeof _cm==='function'){
     window.createMember=async function(){
@@ -295,7 +282,7 @@
       return r;
     };
   }
-  // admin změna hesla existujícímu členovi
+
   var _cp=window.changePassword;
   if(typeof _cp==='function'){
     window.changePassword=async function(){
@@ -313,11 +300,8 @@
   }
 })();
 
-// ── DOPLNKY 3: omluvenky — od/do → délka; dovolená = týdenní příspěvek se nepočítá ──
 (function(){
-  var MIN_DAYS=4; // týden se neplatí, když dovolená pokrývá aspoň tolik jeho dní (Ne–So)
-
-  /* A) Je člen ten týden na (schválené) dovolené? */
+  var MIN_DAYS=4;
   window.onVacation=function(mid,wk){
     var days=0;
     (DB.get('excuses')||[]).forEach(function(e){
@@ -329,7 +313,6 @@
     return days>=MIN_DAYS;
   };
 
-  /* B) Formulář: pole Od/Do + automatická délka */
   var from=document.getElementById('excDate'),len=document.getElementById('excLength');
   if(from&&len&&!document.getElementById('excDateTo')){
     var fg=from.closest('.field-group');
@@ -366,7 +349,7 @@
         }
         var r=_se.apply(this,arguments);
         var arr=DB.get('excuses')||[];
-        if(arr.length>n0){ // omluvenka se opravdu odeslala → uložit i datum Do
+        if(arr.length>n0){ 
           if(toVal){arr[arr.length-1].dateTo=toVal;DB.set('excuses',arr);}
           to.value='';
         }
@@ -375,7 +358,6 @@
     }
   }
 
-  /* C) V kartách omluvenek ukázat rozsah Od–Do */
   function paintRange(hostId,list){
     var cards=document.querySelectorAll('#'+hostId+' .excuse-card');
     list.slice().reverse().forEach(function(e,i){
@@ -433,18 +415,16 @@
   };
 })();
 
-// ── DOPLNKY 4: bankovní účet frakce + předepsaný text do poznámky (mění jen Mastermind) ──
 (function(){
   var DEF_TPL='{prezdivka} - {tyden}';
   function acc(){return DB.get('bankacc')||{};}
   function boss(){var m=getMember();return !!m&&m.position==='Mastermind';}
-  function tplOf(){return DEF_TPL;} // pevný formát poznámky platby, nejde měnit
+  function tplOf(){return DEF_TPL;} 
   function feeRow(){
     var fs=DB.get('finsettings')||{},f=Number(fs.weeklyFee)||0;if(f<=0)return '';
     var D=['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'];
     return '<div class="bank-meta"><span>TÝDENNÍ PŘÍSPĚVEK</span><b>'+money(f)+' · splatnost: '+D[parseInt(fs.feeDay)||0]+'</b></div>';
   }
-  // {jmeno} = IC jméno, {prezdivka} = přezdívka (jinak IC jméno), {tyden} = číslo týdne jako W42 (stejné týdny jako v příspěvcích)
   function wk(){var w=(getWeekKey().split('W')[1]||'');return 'W'+(w.length<2?'0'+w:w);}
   function fill(tpl,m){
     var n=(typeof rosterNames==='function')?rosterNames(m):{nick:''};
