@@ -1728,3 +1728,63 @@ html body select option:hover{
   color:var(--acc)!important;
 }
 
+
+/* ===== novinky.css: Co je nového, Podnik / Dílna, Rychlé akce ===== */
+.ver-pill{display:flex;width:max-content;max-width:100%;align-items:center;gap:.5rem;margin:.9rem auto 0;padding:.4rem .9rem;background:color-mix(in srgb,var(--acc) 10%,transparent);
+  border:1px solid var(--acc-dim);color:var(--acc);font:700 .62rem 'Share Tech Mono',monospace;letter-spacing:.14em;cursor:pointer;transition:background .2s,border-color .2s}
+.ver-pill:hover{background:color-mix(in srgb,var(--acc) 20%,transparent);border-color:var(--acc)}
+.ver-pill i{width:6px;height:6px;border-radius:50%;background:var(--acc);animation:pp 2s ease-in-out infinite}
+
+.quick-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.55rem;margin:0 1.2rem .8rem}
+.quick-btn{display:flex;align-items:center;gap:.55rem;padding:.65rem .8rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--acc-dim);
+  color:var(--textb);font:700 .72rem 'Share Tech Mono',monospace;letter-spacing:.08em;cursor:pointer;text-align:left;transition:border-color .2s,background .2s,transform .15s}
+.quick-btn span{font-size:1.1rem}
+.quick-btn:hover{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,var(--card));transform:translateY(-1px)}
+.quick-btn:active{transform:scale(.97)}
+
+.biz-card{display:flex;align-items:center;gap:.9rem;margin:0 1.2rem 1rem;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--acc);cursor:pointer;transition:border-color .2s,background .2s}
+.biz-card:hover{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 7%,var(--card))}
+.biz-card.soon{border-left-style:dashed;border-left-color:var(--acc-dim)}
+.biz-card.open{border-left-color:var(--green);background:color-mix(in srgb,var(--green) 6%,var(--card))}
+.biz-ci{font-size:1.5rem}
+.biz-ct{flex:1;min-width:0}
+.biz-ct b{display:block;font:700 1.05rem 'Rajdhani',sans-serif;color:var(--textb);letter-spacing:.04em}
+.biz-ct small{display:block;font:.6rem 'Share Tech Mono',monospace;color:var(--text);letter-spacing:.06em}
+.biz-cg{font:700 .62rem 'Share Tech Mono',monospace;letter-spacing:.14em;padding:.3rem .6rem;border:1px solid var(--acc-dim);color:var(--acc);white-space:nowrap}
+.biz-card.open .biz-cg{border-color:var(--green);color:var(--green)}
+
+.biz-tag{margin-left:auto;font:700 .5rem 'Share Tech Mono',monospace;letter-spacing:.1em;padding:.1rem .35rem;border:1px solid var(--acc-dim);color:var(--acc-dim)}
+.biz-tag.open{border-color:var(--green);color:var(--green)}
+
+.biz-hero{margin:1.4rem 1.2rem;padding:2rem 1.5rem;text-align:center;background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 7%,var(--card)),var(--card));border:1px solid var(--acc-dim);border-top:2px solid var(--acc)}
+.biz-hero.soon{border-style:dashed}
+.biz-hero.open{border-top-color:var(--green)}
+.biz-ic{font-size:3rem;line-height:1}
+.biz-t{margin:.6rem 0 .4rem;font:700 1.9rem var(--lux-serif,'Cormorant Garamond',serif);color:var(--textb);letter-spacing:.04em}
+.biz-badge{display:inline-block;padding:.25rem .8rem;font:700 .65rem 'Share Tech Mono',monospace;letter-spacing:.2em;border:1px solid var(--acc-dim);color:var(--acc)}
+.biz-badge.open{border-color:var(--green);color:var(--green)}
+.biz-d{max-width:520px;margin:1rem auto;font-size:1rem;line-height:1.6;color:var(--textb)}
+.biz-eta,.biz-url{font:.65rem 'Share Tech Mono',monospace;color:var(--text);letter-spacing:.08em;margin-top:.6rem;word-break:break-all}
+.biz-go-btn{display:inline-block;margin-top:.4rem;text-decoration:none;padding:.7rem 1.6rem}
+.biz-adm{margin:0 1.2rem 1rem;font:.62rem 'Share Tech Mono',monospace;color:var(--muted);letter-spacing:.06em}
+
+.news-btn{margin-bottom:.4rem;position:relative}
+.news-btn.unseen{border-color:var(--acc);color:var(--acc)}
+.news-btn.unseen::after{content:'';position:absolute;right:.5rem;top:50%;width:7px;height:7px;margin-top:-3px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}
+.news-box{max-width:520px;width:94vw;max-height:88vh;overflow-y:auto}
+.news-head{display:flex;align-items:center;gap:.9rem;margin-bottom:1rem}
+.news-ver{font:900 1.5rem 'Orbitron',sans-serif;color:var(--acc);padding:.3rem .7rem;border:1px solid var(--acc-dim);background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.news-date{font:.6rem 'Share Tech Mono',monospace;color:var(--text);letter-spacing:.14em;margin-top:.2rem}
+.news-list{display:flex;flex-direction:column;gap:.35rem}
+.news-it{display:flex;gap:.8rem;padding:.6rem .7rem;background:var(--surf);border:1px solid var(--border);border-left:3px solid var(--acc-dim)}
+.news-ic{font-size:1.3rem;flex:none;width:1.8rem;text-align:center}
+.news-tx b{display:block;font:700 1rem 'Rajdhani',sans-serif;color:var(--textb);letter-spacing:.04em}
+.news-tx span{display:block;font-size:.88rem;line-height:1.45;color:var(--text)}
+.news-new{font:700 .5rem 'Share Tech Mono',monospace;font-style:normal;letter-spacing:.12em;padding:.1rem .35rem;margin-left:.3rem;background:var(--acc);color:#080808;vertical-align:middle}
+
+@media(max-width:700px){
+  .quick-bar,.biz-card,.biz-hero,.biz-adm{margin-left:.7rem;margin-right:.7rem}
+  .quick-bar{grid-template-columns:1fr 1fr}
+  .biz-tag{display:none}
+  .biz-t{font-size:1.5rem}
+}

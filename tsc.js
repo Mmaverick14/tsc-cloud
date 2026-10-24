@@ -5392,3 +5392,171 @@ var WEEKS=16;
 })();
 
 ;
+
+/* ===== novinky.js: Co je nového, Podnik / Dílna, Rychlé akce ===== */
+(function(){
+  var VER='2.0',DATE='24. 10. 2026',KEY='tsc_whatsnew';
+  var NEWS=[
+    ['🔧','Podnik / Dílna','Nová záložka a karta na Oznámeních. Jakmile podnik získáme, vedení přepne stav a objeví se tu odkaz na jeho portál.','NOVÉ'],
+    ['⚡','Rychlé akce','Lišta na Oznámeních: heist, příjem do kasy, omluvenka, hlášení a kalendář na jedno kliknutí.','NOVÉ'],
+    ['🚀','Rychlejší načítání','Web běží z jednoho skriptu a jednoho stylu, fotky a ikony jsou ve složce images.','NOVÉ'],
+    ['⭐','Pochvaly a profil člena','Vedení může chválit členy. V profilu najdeš heisty, docházku, strike i příspěvky.'],
+    ['🧮','Rozdělení lootu','Heist report se vyplňuje přes kalkulačku podílů pro členy, vedoucího i frakci.'],
+    ['📊','Týdenní souhrn','Každý týden automaticky na Discord: heisty, loot, docházka a neplatiči.'],
+    ['🗑','Koš','Smazané položky jde 30 dní vrátit (Administrace → Nastavení).'],
+    ['🎨','Vzhled na míru','Barevné motivy, vlastní barva, velikost webu (tlačítko Aa) a hledání přes Ctrl + K.']
+  ];
+  function $(id){return document.getElementById(id);}
+  function safeUrl(u){u=String(u||'').trim();return /^https?:\/\/[^\s"'<>]+$/i.test(u)?u:'';}
+  function biz(){
+    var b=DB.get('business')||{};
+    return {state:b.state==='open'?'open':'soon',name:String(b.name||'Podnik / Dílna'),url:safeUrl(b.url),desc:String(b.desc||''),eta:String(b.eta||'')};
+  }
+  function canBiz(){var m=getMember();return !!m&&ADMIN_POS.indexOf(m.position)!==-1;}
+
+  /* ── záložka PODNIK (vložení do menu a obsahu) ── */
+  (function inject(){
+    var nav=document.querySelector('#memberScreen .sb-nav');
+    var main=document.querySelector('#memberScreen .main');
+    if(!nav||!main||$('mt-business'))return;
+    var btn=document.createElement('button');
+    btn.className='nb';btn.setAttribute('onclick',"mTab('business',this)");
+    btn.innerHTML='<span class="ni">🔧</span><span class="nl">PODNIK</span><span class="biz-tag soon" id="bizTag">BRZY</span>';
+    var after=nav.querySelector('.nb[onclick*="\'clothing\'"]');
+    if(after)after.insertAdjacentElement('afterend',btn);else nav.appendChild(btn);
+    main.insertAdjacentHTML('beforeend','<div id="mt-business" class="mt"><div class="ph"><div class="pt">🔧 // PODNIK / DÍLNA</div></div><div id="bizRoot"></div></div>');
+    if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.business='B';
+    if(typeof M_RENDER!=='undefined')M_RENDER.business=renderBiz;
+    var gk=document.querySelector('#mt-board .gk-card');
+    if(gk)gk.insertAdjacentHTML('afterend',
+      '<div class="quick-bar" id="quickBar">'+
+        [['💎','NAHLÁSIT HEIST','heist'],['💵','PŘÍJEM DO KASY','finance'],['📝','OMLUVENKA','excuse'],['📢','HLÁŠENÍ','report'],['📅','KALENDÁŘ','calendar']].map(function(q){
+          return '<button type="button" class="quick-btn" onclick="goNav(\'m\',\''+q[2]+'\')"><span>'+q[0]+'</span>'+q[1]+'</button>';
+        }).join('')+
+      '</div><div id="bizCard" class="biz-card soon" onclick="goNav(\'m\',\'business\')"></div>');
+  })();
+
+  function renderBiz(){
+    var el=$('bizRoot');if(!el)return;
+    var b=biz(),open=b.state==='open',pt=document.querySelector('#mt-business .pt');
+    if(pt)pt.textContent='🔧 // '+b.name.toUpperCase();
+    var h;
+    if(open){
+      h='<div class="biz-hero open"><div class="biz-ic">🔧</div><div class="biz-t">'+esc(b.name)+'</div><div class="biz-badge open">● OTEVŘENO</div>'+
+        '<div class="biz-d">'+esc(b.desc||'Podnik frakce je v provozu.')+'</div>'+
+        (b.url?'<a class="btn-acc biz-go-btn" href="'+esc(b.url)+'" target="_blank" rel="noopener noreferrer">OTEVŘÍT PORTÁL ↗</a><div class="biz-url">'+esc(b.url)+'</div>'
+              :'<div class="biz-eta">// Odkaz na portál zatím není nastaven — doplní ho vedení.</div>')+'</div>';
+    }else{
+      h='<div class="biz-hero soon"><div class="biz-ic">🔒</div><div class="biz-t">'+esc(b.name)+'</div><div class="biz-badge soon">PŘIPRAVUJEME</div>'+
+        '<div class="biz-d">'+esc(b.desc||'Vlastní podnik frakce. Jakmile ho získáme, objeví se tady odkaz na jeho portál.')+'</div>'+
+        (b.eta?'<div class="biz-eta">// '+esc(b.eta)+'</div>':'')+'</div>';
+    }
+    if(canBiz())h+='<div class="biz-adm">// Stav, název a odkaz se nastavují v Administraci → Nastavení → Podnik / Dílna.</div>';
+    el.innerHTML=h;
+  }
+  var _mt=window.mTab;
+  if(typeof _mt==='function')window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='business')renderBiz();return r;};
+
+  function paintBiz(){
+    if(!getMember())return;
+    var b=biz(),open=b.state==='open',t=$('bizTag'),c=$('bizCard');
+    if(t){t.textContent=open?'OPEN':'BRZY';t.className='biz-tag '+(open?'open':'soon');}
+    if(c){
+      var key=b.state+'|'+b.name;
+      if(c.dataset.k!==key){
+        c.dataset.k=key;c.className='biz-card '+(open?'open':'soon');
+        c.innerHTML='<span class="biz-ci">'+(open?'🔧':'🔒')+'</span><div class="biz-ct"><b>'+esc(b.name)+'</b><small>'+
+          (open?'Podnik je otevřený — klikni pro odkaz na portál':'Připravujeme — odkaz se zpřístupní, jakmile podnik získáme')+'</small></div><span class="biz-cg">'+(open?'OTEVŘÍT ↗':'BRZY')+'</span>';
+      }
+    }
+  }
+  var _rb=window.renderBoard;
+  if(typeof _rb==='function')window.renderBoard=function(){var r=_rb.apply(this,arguments);paintBiz();return r;};
+
+  /* ── nastavení podniku v Administraci ── */
+  function renderBizPanel(){
+    var host=$('at-settings');if(!host||!canBiz())return;
+    var p=$('bizPanel'),b=biz();
+    if(!p){
+      p=document.createElement('div');p.id='bizPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+      p.innerHTML='<div class="fp-title">// PODNIK / DÍLNA</div><div class="form-grid">'+
+        '<div class="field-group"><label class="fl">STAV</label><div class="iw"><span class="ip">&gt;_</span><select id="biz-state"><option value="soon">Připravujeme (zamčeno)</option><option value="open">Otevřeno (máme podnik)</option></select></div></div>'+
+        '<div class="field-group"><label class="fl">NÁZEV</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="biz-name" maxlength="40" placeholder="Podnik / Dílna"/></div></div>'+
+        '<div class="field-group fg-full"><label class="fl">ODKAZ NA PORTÁL PODNIKU (https://…)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="biz-url" placeholder="https://…"/></div></div>'+
+        '<div class="field-group fg-full"><label class="fl">POPIS PRO ČLENY</label><textarea id="biz-desc" class="adm-ta" maxlength="300" style="min-height:70px"></textarea></div>'+
+        '<div class="field-group fg-full"><label class="fl">POZNÁMKA „KDY“ (jen když je zamčeno, např. „po zakoupení licence“)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="biz-eta" maxlength="60"/></div></div>'+
+        '</div><div class="fp-ftr"><button class="btn-acc small" id="bizSave">ULOŽIT</button><span id="bizStatus" class="smsg"></span></div>';
+      host.appendChild(p);
+      p.querySelector('#bizSave').onclick=saveBiz;
+    }
+    if(p.contains(document.activeElement))return;
+    p.querySelector('#biz-state').value=b.state;p.querySelector('#biz-name').value=b.name;
+    p.querySelector('#biz-url').value=b.url;p.querySelector('#biz-desc').value=b.desc;p.querySelector('#biz-eta').value=b.eta;
+  }
+  function saveBiz(){
+    if(!canBiz()){toast('Podnik smí nastavit jen Mastermind, Overseer a Counselor','error');return;}
+    var st=$('bizStatus'),raw=$('biz-url').value.trim(),url=safeUrl(raw);
+    if(raw&&!url){st.style.color='var(--red)';st.textContent='// ODKAZ MUSÍ ZAČÍNAT https://';return;}
+    var prev=biz(),me=getMember();
+    var nb={state:$('biz-state').value==='open'?'open':'soon',name:($('biz-name').value.trim()||'Podnik / Dílna').slice(0,40),url:url,desc:$('biz-desc').value.trim().slice(0,300),eta:$('biz-eta').value.trim().slice(0,60)};
+    DB.set('business',nb);
+    var opened=nb.state==='open'&&prev.state!=='open';
+    addLog('sys',me.displayName+' upravil nastavení podniku „'+nb.name+'“ ('+(nb.state==='open'?'otevřeno':'zamčeno')+').',
+      opened?{embed:rich(C_GREEN,'🔧 '+nb.name.toUpperCase()+' — OTEVŘENO',nb.desc||'Podnik frakce je v provozu.',[['🔗 Portál',nb.url||'odkaz zatím nenastaven',false]],{by:me.displayName})}:{noDiscord:true});
+    st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);
+    toast('Podnik uložen','success');paintBiz();renderBiz();
+  }
+  var _rs=window.renderSettings;
+  if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderBizPanel();}catch(e){console.error(e);}return r;};
+
+  /* ── CO JE NOVÉHO ── */
+  function openNews(){
+    var old=document.querySelector('.news-ov');if(old)old.remove();
+    var ov=document.createElement('div');ov.className='modal-ov news-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="modal-box news-box"><div class="news-head"><span class="news-ver">v'+VER+'</span><div><div class="modal-title" style="margin:0">CO JE NOVÉHO</div><div class="news-date">UPDATE · '+DATE+'</div></div></div>'+
+      '<div class="news-list">'+NEWS.map(function(n){
+        return '<div class="news-it"><span class="news-ic">'+n[0]+'</span><div class="news-tx"><b>'+esc(n[1])+(n[3]?' <i class="news-new">'+n[3]+'</i>':'')+'</b><span>'+esc(n[2])+'</span></div></div>';
+      }).join('')+'</div><div class="modal-ftr"><button class="btn-acc small" id="newsOk">ROZUMÍM</button></div></div>';
+    document.body.appendChild(ov);
+    function close(){document.removeEventListener('keydown',key,true);ov.remove();lsSet(KEY,VER);}
+    function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
+    document.addEventListener('keydown',key,true);
+    ov.querySelector('#newsOk').onclick=close;
+    ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
+    ov.querySelector('#newsOk').focus();
+    if(lsGet(KEY)!==VER&&typeof window.tscBurst==='function'&&getMember())window.tscBurst();
+  }
+  window.openNews=openNews;
+
+  var _ep=window.enterPortal;
+  if(typeof _ep==='function')window.enterPortal=async function(){
+    var r=await _ep.apply(this,arguments);
+    if(r&&lsGet(KEY)!==VER){
+      var tries=0;
+      (function wait(){
+        if(lsGet(KEY)===VER||document.querySelector('.news-ov'))return;
+        if(document.querySelector('#wowIntro,.pw-self-ov')&&tries++<12){setTimeout(wait,1500);return;}
+        openNews();
+      })();
+    }
+    return r;
+  };
+
+  /* ── tlačítko v menu + štítek verze na přihlášení ── */
+  setInterval(function(){
+    document.querySelectorAll('#memberScreen .sb-foot,#adminScreen .sb-foot').forEach(function(f){
+      var b=f.querySelector('.news-btn');
+      if(!b){b=document.createElement('button');b.className='btn-back news-btn';b.textContent='🆕 CO JE NOVÉHO';b.onclick=openNews;f.insertBefore(b,f.querySelector('.btn-back'));}
+      b.classList.toggle('unseen',lsGet(KEY)!==VER);
+    });
+    paintBiz();
+    if($('bizPanel')&&canBiz())renderBizPanel();
+  },1500);
+  var sub=document.querySelector('#selectScreen .sel-sub');
+  if(sub&&!document.querySelector('.ver-pill')){
+    sub.insertAdjacentHTML('afterend','<button type="button" class="ver-pill"><i></i>v'+VER+' · NOVÁ VERZE — CO JE NOVÉHO</button>');
+    document.querySelector('.ver-pill').onclick=openNews;
+  }
+})();
+
+;
