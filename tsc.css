@@ -1801,16 +1801,14 @@ html body select option:hover{
 .goal-now{margin-bottom:.7rem;font-size:.72rem;color:var(--muted);letter-spacing:.06em}
 @media(max-width:700px){.board-extra{margin:0 .7rem .8rem}.goal-row{flex-wrap:wrap;gap:.2rem .6rem}.goal-tx{white-space:normal;flex-basis:100%;order:3}}
 
-/* ===== Karta serveru: dlaždice v přehledu ===== */
-#mt-board .gk-card{display:none!important}
-.gk-tile{display:block;text-decoration:none;color:inherit;cursor:pointer}
-.gk-tile .dc-top{align-items:center;gap:.5rem}
-.gk-tile .gk-logo{width:30px;height:30px;border-radius:6px;box-shadow:none}
-.gk-tile .dc-lb{line-height:1.3}
-#dashM .gk-tile.dc:not(.warn):not(.ok) .dc-val{font-size:1.8rem!important;letter-spacing:.06em;-webkit-text-fill-color:var(--textb)!important;color:var(--textb)!important}
-.gk-tile:hover{border-color:var(--acc-dim)!important;background:var(--surf)!important}
-.gk-tile:hover .dc-sub{color:var(--acc)!important}
+/* ===== Karta serveru: úzký pruh nad Cílem kasy ===== */
+#mt-board .gk-card{display:flex!important;width:fit-content;max-width:calc(100% - 2.4rem);margin:.2rem 1.2rem .8rem;padding:.5rem .9rem;gap:.9rem}
+#mt-board .gk-card .gk-logo{width:38px;height:38px;border-radius:8px;box-shadow:none}
+#mt-board .gk-card .gk-name{font-size:1rem}
+#mt-board .gk-card .gk-sub{font-size:.5rem}
+#mt-board .gk-card .gk-btn{padding:.35rem .8rem;font-size:.62rem}
 .board-extra{margin-top:.2rem}
+@media(max-width:700px){#mt-board .gk-card{width:auto;margin:.2rem .7rem .8rem}}
 
 /* ===== Kompaktní boční panel ===== */
 

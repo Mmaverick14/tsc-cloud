@@ -5503,54 +5503,10 @@ var WEEKS=16;
   var _rs=window.renderSettings;
   if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderBizPanel();}catch(e){console.error(e);}return r;};
 
-  /* ── CO JE NOVÉHO ── */
-  function openNews(){
-    var old=document.querySelector('.news-ov');if(old)old.remove();
-    var ov=document.createElement('div');ov.className='modal-ov news-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
-    ov.innerHTML='<div class="modal-box news-box"><div class="news-head"><span class="news-ver">v'+VER+'</span><div><div class="modal-title" style="margin:0">CO JE NOVÉHO</div><div class="news-date">UPDATE · '+DATE+'</div></div></div>'+
-      '<div class="news-list">'+NEWS.map(function(n){
-        return '<div class="news-it"><span class="news-ic">'+n[0]+'</span><div class="news-tx"><b>'+esc(n[1])+(n[3]?' <i class="news-new">'+n[3]+'</i>':'')+'</b><span>'+esc(n[2])+'</span></div></div>';
-      }).join('')+'</div><div class="modal-ftr"><button class="btn-acc small" id="newsOk">ROZUMÍM</button></div></div>';
-    document.body.appendChild(ov);
-    function close(){document.removeEventListener('keydown',key,true);ov.remove();lsSet(KEY,VER);}
-    function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
-    document.addEventListener('keydown',key,true);
-    ov.querySelector('#newsOk').onclick=close;
-    ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
-    ov.querySelector('#newsOk').focus();
-    if(lsGet(KEY)!==VER&&typeof window.tscBurst==='function'&&getMember())window.tscBurst();
-  }
-  window.openNews=openNews;
-
-  var _ep=window.enterPortal;
-  if(typeof _ep==='function')window.enterPortal=async function(){
-    var r=await _ep.apply(this,arguments);
-    if(r&&lsGet(KEY)!==VER){
-      var tries=0;
-      (function wait(){
-        if(lsGet(KEY)===VER||document.querySelector('.news-ov'))return;
-        if(document.querySelector('#wowIntro,.pw-self-ov')&&tries++<12){setTimeout(wait,1500);return;}
-        openNews();
-      })();
-    }
-    return r;
-  };
-
-  /* ── tlačítko v menu + štítek verze na přihlášení ── */
   setInterval(function(){
-    document.querySelectorAll('#memberScreen .sb-foot,#adminScreen .sb-foot').forEach(function(f){
-      var b=f.querySelector('.news-btn');
-      if(!b){b=document.createElement('button');b.className='btn-back news-btn';b.textContent='🆕 CO JE NOVÉHO';b.onclick=openNews;f.insertBefore(b,f.querySelector('.btn-back'));}
-      b.classList.toggle('unseen',lsGet(KEY)!==VER);
-    });
     paintBiz();
     if($('bizPanel')&&canBiz())renderBizPanel();
   },1500);
-  var sub=document.querySelector('#selectScreen .sel-sub');
-  if(sub&&!document.querySelector('.ver-pill')){
-    sub.insertAdjacentHTML('afterend','<button type="button" class="ver-pill"><i></i>v'+VER+' · NOVÁ VERZE — CO JE NOVÉHO</button>');
-    document.querySelector('.ver-pill').onclick=openNews;
-  }
 })();
 
 ;
@@ -5635,14 +5591,6 @@ var WEEKS=16;
       var out=goalHtml(s);
       if(h.dataset.h!==out){h.dataset.h=out;h.innerHTML=out;}
     });
-    var d=$('dashM');
-    if(d&&!d.querySelector('.gk-tile')){
-      var tile='<a class="dc gk-tile" href="https://discord.gg/genk" target="_blank" rel="noopener noreferrer">'+
-        '<div class="dc-top"><span class="gk-logo" role="img" aria-label="GenK RP"></span><span class="dc-lb">HRAJEME NA SERVERU</span></div>'+
-        '<div class="dc-val">GENK RP</div><div class="dc-sub">💬 discord.gg/genk ↗</div></a>';
-      var on=d.querySelector('.dash-online');
-      if(on)on.insertAdjacentHTML('beforebegin',tile);else d.insertAdjacentHTML('beforeend',tile);
-    }
     goalCelebrate();goalCheck();
   }
   var _rd=window.renderDash;
