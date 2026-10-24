@@ -5429,11 +5429,7 @@ var WEEKS=16;
     if(typeof M_RENDER!=='undefined')M_RENDER.business=renderBiz;
     var gk=document.querySelector('#mt-board .gk-card');
     if(gk)gk.insertAdjacentHTML('afterend',
-      '<div class="quick-bar" id="quickBar">'+
-        [['💎','NAHLÁSIT HEIST','heist'],['💵','PŘÍJEM DO KASY','finance'],['📝','OMLUVENKA','excuse'],['📢','HLÁŠENÍ','report'],['📅','KALENDÁŘ','calendar']].map(function(q){
-          return '<button type="button" class="quick-btn" onclick="goNav(\'m\',\''+q[2]+'\')"><span>'+q[0]+'</span>'+q[1]+'</button>';
-        }).join('')+
-      '</div><div id="bizCard" class="biz-card soon" onclick="goNav(\'m\',\'business\')"></div>');
+      '<div id="bizCard" class="biz-card soon" onclick="goNav(\'m\',\'business\')"></div>');
   })();
 
   function renderBiz(){
@@ -5590,11 +5586,12 @@ var WEEKS=16;
     if(b.state==='open'&&!g.reached)return '';
     var saved=goalSaved(g),pct=Math.min(100,Math.floor(saved/g.target*100)),done=g.reached||saved>=g.target;
     var go=scope==='m'?' onclick="goNav(\'m\',\''+(done?'business':'finance')+'\')" style="cursor:pointer"':'';
-    return '<div class="goal'+(done?' done':'')+'"'+go+'>'+
-      '<div class="goal-top"><span class="goal-t">'+(done?'🎉':'🎯')+' CÍL KASY</span><span class="goal-p">'+pct+' %</span></div>'+
-      '<div class="goal-tx">'+(done?'Cíl splněn — <b>'+usd(g.target)+'</b> na <b>'+esc(g.label)+'</b> máme. Podnik je odemčen!':'Našetřeno <b>'+usd(saved)+'</b> z <b>'+usd(g.target)+'</b> na <b>'+esc(g.label)+'</b>')+'</div>'+
-      '<div class="goal-bar"><i style="width:'+pct+'%"></i></div>'+
-      '<div class="goal-sub">'+(done?'Klikni a podívej se na Podnik / Dílnu.':'Zbývá '+usd(Math.max(0,g.target-saved))+' — nos peníze do kasy (Finance → Vložit do kasy).')+'</div></div>';
+    var tip=done?'Klikni a podívej se na Podnik / Dílnu.':'Zbývá '+usd(Math.max(0,g.target-saved))+' — nos peníze do kasy (Finance → Vložit do kasy).';
+    return '<div class="goal'+(done?' done':'')+'"'+go+' title="'+esc(tip)+'">'+
+      '<div class="goal-row"><span class="goal-t">'+(done?'🎉':'🎯')+' CÍL KASY</span>'+
+      '<span class="goal-tx">'+(done?'Splněno — <b>'+usd(g.target)+'</b> na <b>'+esc(g.label)+'</b>, Podnik je odemčen!':'Našetřeno <b>'+usd(saved)+'</b> z <b>'+usd(g.target)+'</b> na <b>'+esc(g.label)+'</b>')+'</span>'+
+      '<span class="goal-p">'+pct+' %</span></div>'+
+      '<div class="goal-bar"><i style="width:'+pct+'%"></i></div></div>';
   }
 
   var goalBusy=false;

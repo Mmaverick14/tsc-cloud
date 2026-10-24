@@ -1735,12 +1735,6 @@ html body select option:hover{
 .ver-pill:hover{background:color-mix(in srgb,var(--acc) 20%,transparent);border-color:var(--acc)}
 .ver-pill i{width:6px;height:6px;border-radius:50%;background:var(--acc);animation:pp 2s ease-in-out infinite}
 
-.quick-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.55rem;margin:0 1.2rem .8rem}
-.quick-btn{display:flex;align-items:center;gap:.55rem;padding:.65rem .8rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--acc-dim);
-  color:var(--textb);font:700 .72rem 'Share Tech Mono',monospace;letter-spacing:.08em;cursor:pointer;text-align:left;transition:border-color .2s,background .2s,transform .15s}
-.quick-btn span{font-size:1.1rem}
-.quick-btn:hover{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,var(--card));transform:translateY(-1px)}
-.quick-btn:active{transform:scale(.97)}
 
 .biz-card{display:flex;align-items:center;gap:.9rem;margin:0 1.2rem 1rem;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--acc);cursor:pointer;transition:border-color .2s,background .2s}
 .biz-card:hover{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 7%,var(--card))}
@@ -1783,32 +1777,46 @@ html body select option:hover{
 .news-new{font:700 .5rem 'Share Tech Mono',monospace;font-style:normal;letter-spacing:.12em;padding:.1rem .35rem;margin-left:.3rem;background:var(--acc);color:#080808;vertical-align:middle}
 
 @media(max-width:700px){
-  .quick-bar,.biz-card,.biz-hero,.biz-adm{margin-left:.7rem;margin-right:.7rem}
-  .quick-bar{grid-template-columns:1fr 1fr}
+      .biz-card,.biz-hero,.biz-adm{margin-left:.7rem;margin-right:.7rem}
   .biz-tag{display:none}
   .biz-t{font-size:1.5rem}
 }
 
 
-/* ===== Cíl kasy na podnik ===== */
-.board-extra{display:flex;flex-direction:column;gap:.7rem;margin:0 1.2rem 1rem}
+/* ===== Cíl kasy na podnik (kompaktní) ===== */
+.board-extra{display:flex;flex-direction:column;gap:.5rem;margin:0 1.2rem .8rem}
 .board-extra:empty{display:none}
-.goal{padding:.9rem 1.2rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--acc);transition:background .2s}
+.goal{padding:.5rem .9rem .6rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--acc);transition:background .2s}
 .goal[onclick]:hover{background:var(--surf)}
-.goal-top{display:flex;justify-content:space-between;align-items:baseline}
-.goal-t{font-size:.7rem;font-weight:600;letter-spacing:.2em;color:var(--acc)}
-.goal-p{font-family:'Orbitron',sans-serif!important;font-size:1.1rem;font-weight:700;color:var(--textb)}
-.goal-tx{margin:.35rem 0 .6rem;font-size:1.05rem;color:var(--textb)}
+.goal-row{display:flex;align-items:baseline;gap:.9rem;margin-bottom:.4rem}
+.goal-t{font-size:.66rem;font-weight:600;letter-spacing:.2em;color:var(--acc);white-space:nowrap}
+.goal-tx{flex:1;min-width:0;font-size:.92rem;color:var(--textb);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .goal-tx b{color:var(--acc);font-weight:700}
-.goal-bar{height:12px;background:var(--surf);border:1px solid var(--border);overflow:hidden}
-.goal-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc-dim),var(--acc));box-shadow:0 0 12px -2px var(--acc);transition:width 1s cubic-bezier(.2,.8,.2,1)}
-.goal-sub{margin-top:.5rem;font-size:.76rem;color:var(--muted);letter-spacing:.05em}
+.goal-p{font-family:var(--sans,'Jost',sans-serif)!important;font-size:.95rem;font-weight:700;color:var(--textb);white-space:nowrap}
+.goal-bar{height:6px;background:var(--surf);border:1px solid var(--border);overflow:hidden}
+.goal-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc-dim),var(--acc));box-shadow:0 0 10px -2px var(--acc);transition:width 1s cubic-bezier(.2,.8,.2,1)}
 .goal.done{border-left-color:var(--green);background:color-mix(in srgb,var(--green) 6%,var(--card))}
 .goal.done .goal-t,.goal.done .goal-tx b{color:var(--green)}
-.goal.done .goal-bar i{background:linear-gradient(90deg,var(--gdim),var(--green));box-shadow:0 0 12px -2px var(--green)}
+.goal.done .goal-bar i{background:linear-gradient(90deg,var(--gdim),var(--green));box-shadow:0 0 10px -2px var(--green)}
 .goal-now{margin-bottom:.7rem;font-size:.72rem;color:var(--muted);letter-spacing:.06em}
-@media(max-width:700px){.board-extra{margin:0 .7rem 1rem}}
+@media(max-width:700px){.board-extra{margin:0 .7rem .8rem}.goal-row{flex-wrap:wrap;gap:.2rem .6rem}.goal-tx{white-space:normal;flex-basis:100%;order:3}}
 
+/* ===== Karta serveru: malý odznak v rohu Oznámení ===== */
+#mt-board{position:relative}
+@media(min-width:1101px){
+  #mt-board .gk-card{position:absolute;top:.9rem;left:1.2rem;z-index:11;margin:0;padding:.35rem .6rem;gap:.55rem;background:transparent;border:1px solid var(--border);border-left:2px solid var(--acc)}
+  #mt-board .gk-card .gk-logo{width:30px;height:30px;border-radius:6px;box-shadow:none}
+  #mt-board .gk-card .gk-sub{display:none}
+  #mt-board .gk-card .gk-name{font-size:.78rem}
+  #mt-board .gk-card .gk-btn{padding:.25rem .5rem;font-size:.6rem}
+}
+@media(max-width:1100px){
+  #mt-board .gk-card{padding:.4rem .7rem;gap:.6rem}
+  #mt-board .gk-card .gk-logo{width:32px;height:32px}
+  #mt-board .gk-card .gk-sub{display:none}
+  #mt-board .gk-card .gk-name{font-size:.85rem}
+  #mt-board .gk-card .gk-btn{width:auto;padding:.3rem .6rem;font-size:.62rem}
+}
 
 /* ===== Kompaktní boční panel ===== */
 
