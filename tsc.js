@@ -5560,3 +5560,594 @@ var WEEKS=16;
 })();
 
 ;
+
+
+
+;
+
+/* ===== rozsireni: kompaktní menu, Nábor, Člen týdne, Cíl kasy ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function pl(n,a,b,c){return n===1?a:(n>=2&&n<=4?b:c);}
+  function usd(n){return '$'+Number(n||0).toLocaleString('cs-CZ');}
+
+  if(typeof SECTIONS!=='undefined'&&!SECTIONS.some(function(x){return x.key==='recruit';}))
+    SECTIONS.push({key:'recruit',label:'Nábor (nový uchazeč, schválení, zamítnutí)'});
+  if(typeof LOG_ICONS!=='undefined')LOG_ICONS.recruit='📝';
+  if(typeof LOG_LABELS!=='undefined')LOG_LABELS.recruit='NÁBOR';
+  if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.recruit='E';
+
+  /* ══════════════════════════════════════════════
+     1) NÁBOR — záložka v Administraci + veřejný formulář
+     ══════════════════════════════════════════════ */
+  var T_APPS='frakce_nabor',T_CFG='frakce_nabor_cfg';
+  var rec={apps:null,err:'',cfg:null,filter:'pending',busy:false};
+
+  (function injectRecruit(){
+    var nav=document.querySelector('#adminScreen .sb-nav'),main=document.querySelector('#adminScreen .main');
+    if(!nav||!main||$('at-recruit'))return;
+    var btn=document.createElement('button');btn.className='nb';btn.setAttribute('onclick',"aTab('recruit',this)");
+    btn.innerHTML='<span class="ni">📝</span><span class="nl">NÁBOR</span><span class="nbadge" id="recruitBadge"></span>';
+    nav.appendChild(btn);
+    main.insertAdjacentHTML('beforeend','<div id="at-recruit" class="at"><div class="ph"><div class="pt">📝 // NÁBOR UCHAZEČŮ</div></div><div id="recruitRoot"></div></div>');
+    var wrap=document.querySelector('#selectScreen .sel-wrap');
+    if(wrap&&!$('recruitOpen')){
+      wrap.insertAdjacentHTML('beforeend','<button type="button" class="rc-open" id="recruitOpen">📝 CHCEŠ SE PŘIDAT? — NÁBOR</button>');
+      $('recruitOpen').onclick=recOpenForm;
+    }
+  })();
+
+  function pendingList(){return (rec.apps||[]).filter(function(a){return a.status==='pending';});}
+  function findApp(id){return (rec.apps||[]).filter(function(a){return a.id===id;})[0]||null;}
+  function appName(a){var d=a.data||{};return ((d.first||'')+' '+(d.last||'')).trim()||'(bez jména)';}
+  function recBadge(){
+    var n=pendingList().length,b=$('recruitBadge');
+    if(b){b.textContent=n>99?'99+':String(n);b.classList.toggle('visible',n>0);b.classList.add('unread');}
+  }
+
+  /* ── veřejný formulář (přihlašovací obrazovka) ── */
+  function closeRecForm(){var o=document.querySelector('.rc-ov');if(o)o.remove();}
+  function recOpenForm(){
+    if(!sb){toast('Nábor teď není dostupný','error');return;}
+    closeRecForm();
+    var ov=document.createElement('div');ov.className='modal-ov rc-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="modal-box rc-box"><div class="modal-title">📝 NÁBOR — PŘIHLÁŠKA</div><div id="rcBody"><div class="empty-s">// Načítám…</div></div></div>';
+    document.body.appendChild(ov);
+    function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
+    function close(){document.removeEventListener('keydown',key,true);ov.remove();}
+    document.addEventListener('keydown',key,true);
+    ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
+    var body=ov.querySelector('#rcBody');
+    function msg(t,sub){body.innerHTML='<div class="rc-note"><b>'+esc(t)+'</b>'+(sub?'<div>'+esc(sub)+'</div>':'')+'</div><div class="modal-ftr"><button class="btn-ghost small" id="rcX">ZAVŘÍT</button></div>';body.querySelector('#rcX').onclick=close;}
+    sb.from(T_CFG).select('open,info').eq('id',1).maybeSingle().then(function(r){
+      if(r.error||!r.data){msg('Nábor teď není zprovozněn.','Zkus to později nebo se ozvi vedení na Discordu.');return;}
+      if(r.data.open===false){msg('Nábor je momentálně zavřený.',r.data.info||'Zkus to později.');return;}
+      rcForm(body,r.data.info,close);
+    },function(){msg('Nábor teď není dostupný.','Zkontroluj připojení a zkus to znovu.');});
+  }
+  function rcForm(body,info,close){
+    body.innerHTML=(info?'<div class="rc-note">'+esc(info)+'</div>':'')+
+      '<div class="form-grid">'+
+      '<div class="field-group"><label class="fl">JMÉNO (IC) *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rc-first" maxlength="40" autocomplete="off"/></div></div>'+
+      '<div class="field-group"><label class="fl">PŘÍJMENÍ (IC) *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rc-last" maxlength="40" autocomplete="off"/></div></div>'+
+      '<div class="field-group"><label class="fl">PŘEZDÍVKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rc-nick" maxlength="40" autocomplete="off"/></div></div>'+
+      '<div class="field-group"><label class="fl">OOC VĚK *</label><div class="iw"><span class="ip">#</span><input type="number" id="rc-age" min="10" max="99"/></div></div>'+
+      '<div class="field-group fg-full"><label class="fl">DISCORD (jméno nebo ID) *</label><div class="iw"><span class="ip">@</span><input type="text" id="rc-dc" maxlength="60" autocomplete="off"/></div></div>'+
+      '<div class="field-group fg-full"><label class="fl">PROČ SE CHCEŠ PŘIDAT? *</label><textarea id="rc-why" class="adm-ta" maxlength="800" style="min-height:90px"></textarea></div>'+
+      '<div class="field-group fg-full"><label class="fl">ZKUŠENOSTI (jiné frakce, role-play…)</label><textarea id="rc-exp" class="adm-ta" maxlength="600" style="min-height:70px"></textarea></div>'+
+      '<div class="field-group fg-full"><label class="fl">KDY MÁŠ ČAS HRÁT?</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rc-av" maxlength="200" placeholder="např. po–pá od 18:00, víkendy celý den"/></div></div>'+
+      '</div><input type="text" id="rc-web" class="rc-hp" tabindex="-1" autocomplete="off" aria-hidden="true"/>'+
+      '<div id="rcMsg" class="smsg" style="min-height:1em;color:#e05555"></div>'+
+      '<div class="modal-ftr"><button class="btn-acc small" id="rcSend">ODESLAT PŘIHLÁŠKU</button><button class="btn-ghost small" id="rcNo">ZRUŠIT</button></div>';
+    body.querySelector('#rcNo').onclick=close;
+    var send=body.querySelector('#rcSend'),m=body.querySelector('#rcMsg');
+    function v(id){return (body.querySelector('#'+id).value||'').trim();}
+    function err(t){m.style.color='#e05555';m.textContent=t;}
+    send.onclick=async function(){
+      if(v('rc-web')){body.innerHTML='<div class="rc-note"><b>Přihláška odeslána ✓</b></div>';return;} // past na boty
+      var d={first:v('rc-first').slice(0,40),last:v('rc-last').slice(0,40),nick:v('rc-nick').slice(0,40),age:parseInt(v('rc-age'),10)||0,
+        discord:v('rc-dc').slice(0,60),why:v('rc-why').slice(0,800),exp:v('rc-exp').slice(0,600),avail:v('rc-av').slice(0,200)};
+      if(!d.first||!d.last)return err('// VYPLŇ JMÉNO A PŘÍJMENÍ');
+      if(d.age<10||d.age>99)return err('// ZADEJ SVŮJ OOC VĚK');
+      if(!d.discord)return err('// ZADEJ SVŮJ DISCORD');
+      if(d.why.length<15)return err('// NAPIŠ ALESPOŇ PÁR VĚT, PROČ SE CHCEŠ PŘIDAT');
+      var last=parseInt(lsGet('tsc_recruit_ts'),10);
+      if(last&&Date.now()-last<600000)return err('// PŘIHLÁŠKU JSI NEDÁVNO ODESLAL — ZKUS TO ZA PÁR MINUT');
+      send.disabled=true;m.style.color='var(--acc)';m.textContent='// ODESÍLÁM…';
+      var r;
+      try{r=await sb.from(T_APPS).insert({data:d});}catch(e){r={error:e};}
+      if(r.error){send.disabled=false;err('// ODESLÁNÍ SE NEPODAŘILO (nábor může být zavřený)');return;}
+      lsSet('tsc_recruit_ts',String(Date.now()));
+      body.innerHTML='<div class="rc-note"><b>Přihláška odeslána ✓</b><div>Vedení se ti ozve na Discordu. Díky za zájem!</div></div><div class="modal-ftr"><button class="btn-acc small" id="rcX">ZAVŘÍT</button></div>';
+      body.querySelector('#rcX').onclick=close;
+    };
+    body.querySelector('#rc-first').focus();
+  }
+
+  /* ── načítání přihlášek (jen vedení) ── */
+  function recFetch(){
+    if(rec.busy||!sb||!currentMemberId||!isAdmin())return Promise.resolve();
+    rec.busy=true;
+    return Promise.all([
+      sb.from(T_APPS).select('*').order('created_at',{ascending:false}).limit(300),
+      sb.from(T_CFG).select('open,info').eq('id',1).maybeSingle()
+    ]).then(function(res){
+      var a=res[0],c=res[1];
+      if(a.error){rec.err=String(a.error.message||a.error);rec.apps=[];}
+      else{rec.err='';rec.apps=a.data||[];}
+      rec.cfg=(c&&c.data)||null;rec.busy=false;
+      recBadge();recClaim();
+      var act=$('at-recruit'),ae=document.activeElement;
+      if(act&&act.classList.contains('active')&&!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)))renderRecruit();
+    }).catch(function(e){rec.busy=false;rec.err=String((e&&e.message)||e);});
+  }
+  // upozornění na Discord pošle jen první admin, který přihlášku uvidí (atomický zápis)
+  function recClaim(){
+    var todo=pendingList().filter(function(a){return !a.notified;}).slice(0,5);
+    todo.forEach(function(a){
+      a.notified=true;
+      sb.from(T_APPS).update({notified:true}).eq('id',a.id).eq('notified',false).select('id').then(function(r){
+        if(r.error||!r.data||!r.data.length)return;
+        var d=a.data||{};
+        addLog('recruit','Nový uchazeč o členství: '+appName(a)+'.',{embed:rich(C_PURPLE,'📝 NOVÝ UCHAZEČ O ČLENSTVÍ','**'+appName(a)+'**'+(d.nick?' „'+d.nick+'“':''),[
+          ['💬 Discord',d.discord||'—'],['🎂 OOC věk',String(d.age||'—')],['🕒 Čas na hraní',d.avail||'—'],['❓ Proč se chce přidat',d.why||'—',false]],
+          {by:'Nábor'})});
+      });
+    });
+  }
+  setInterval(function(){recFetch();},60000);
+  setTimeout(function(){recFetch();},7000);
+
+  var _ns=window.notifSources;
+  if(typeof _ns==='function')window.notifSources=function(m){
+    var out=_ns.apply(this,arguments);
+    if(m&&m.adminAccess)pendingList().forEach(function(a){
+      out.push({id:'n_'+a.id,icon:'📝',title:'Nový uchazeč',text:appName(a),go:['a','recruit'],ts:Date.parse(a.created_at)||Date.now()});
+    });
+    return out;
+  };
+
+  /* ── záložka NÁBOR ── */
+  function secTxt(t,v){return v?'<div class="rc-sec">'+t+'</div><div class="rc-tx">'+esc(v)+'</div>':'';}
+  function recCard(a){
+    var d=a.data||{},st=a.status||'pending',nm=appName(a);
+    var when=a.created_at?new Date(a.created_at).toLocaleString('cs-CZ',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    var chip={pending:['ČEKÁ','pending'],approved:['SCHVÁLENO','ok'],rejected:['ZAMÍTNUTO','no']}[st]||['?','pending'];
+    var decided=a.decided_by?'<div class="rc-by">// '+(st==='approved'?'Schválil ':'Zamítl ')+esc(a.decided_by)+(a.decided_at?' — '+esc(new Date(a.decided_at).toLocaleString('cs-CZ',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})):'')+'</div>':'';
+    var act='<div class="rc-act">'+
+      (st==='pending'?'<button class="btn-acc small" data-act="ok" data-id="'+esc(a.id)+'">✓ SCHVÁLIT A VYTVOŘIT ÚČET</button><button class="btn-danger" data-act="no" data-id="'+esc(a.id)+'">✕ ZAMÍTNOUT</button>':'')+
+      '<button class="btn-micro del" data-act="del" data-id="'+esc(a.id)+'" style="margin-left:auto">🗑 SMAZAT</button></div>';
+    return '<div class="rc-card '+chip[1]+'">'+
+      '<div class="rc-top"><span class="rc-name">'+esc(nm)+(d.nick?' <em>„'+esc(d.nick)+'“</em>':'')+'</span><span class="rc-chip '+chip[1]+'">'+chip[0]+'</span></div>'+
+      '<div class="rc-meta"><span>💬 '+esc(d.discord||'—')+'</span><span>🎂 OOC věk: '+esc(d.age||'—')+'</span><span>🕒 '+esc(d.avail||'—')+'</span><span class="rc-when">'+esc(when)+'</span></div>'+
+      secTxt('PROČ SE CHCE PŘIDAT',d.why)+secTxt('ZKUŠENOSTI',d.exp)+
+      (st==='rejected'&&a.reason?secTxt('DŮVOD ZAMÍTNUTÍ',a.reason):'')+decided+act+'</div>';
+  }
+  function renderRecruit(){
+    var root=$('recruitRoot');if(!root)return;
+    if(rec.apps===null){root.innerHTML='<div class="empty-s">// Načítám přihlášky…</div>';return;}
+    if(rec.err){
+      root.innerHTML='<div class="form-panel" style="margin:1.2rem"><div class="fp-title">// NÁBOR ZATÍM NENÍ ZAPOJEN</div>'+
+        '<div class="rc-tx">V databázi chybí tabulky pro nábor. V Supabase otevři <b>SQL Editor</b>, vlož obsah souboru <b>nabor.sql</b> a spusť ho. Potom tuhle záložku obnov.</div>'+
+        '<div class="rc-by" style="margin-top:.6rem">// chyba: '+esc(rec.err)+'</div></div>';
+      return;
+    }
+    var list=rec.apps,c={pending:0,approved:0,rejected:0};list.forEach(function(a){if(c[a.status]!==undefined)c[a.status]++;});
+    var cfg=rec.cfg||{open:true,info:''};
+    var tabs=[['pending','ČEKAJÍ'],['approved','SCHVÁLENÍ'],['rejected','ZAMÍTNUTÍ'],['all','VŠE']].map(function(t){
+      var n=t[0]==='all'?list.length:c[t[0]];
+      return '<button class="wf'+(rec.filter===t[0]?' active':'')+'" data-flt="'+t[0]+'">'+t[1]+' ('+n+')</button>';
+    }).join('');
+    var shown=list.filter(function(a){return rec.filter==='all'||a.status===rec.filter;});
+    root.innerHTML=
+      '<div class="form-panel" style="margin:1.2rem"><div class="fp-title">// STAV NÁBORU</div>'+
+        '<div class="form-grid"><div class="field-group"><label class="fl">NÁBOR</label><div class="iw" style="padding:.4rem .8rem"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer"><input type="checkbox" id="rcOpen"'+(cfg.open!==false?' checked':'')+' style="accent-color:var(--acc)"/><span style="font-size:.9rem;color:var(--textb)">Otevřený — uchazeči mohou posílat přihlášky</span></label></div></div>'+
+        '<div class="field-group"><label class="fl">ZPRÁVA PRO UCHAZEČE (zobrazí se ve formuláři / při zavřeném náboru)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rcInfo" maxlength="200" value="'+esc(cfg.info||'').replace(/<br>/g,' ')+'"/></div></div></div>'+
+        '<div class="fp-ftr"><button class="btn-acc small" data-act="cfg">ULOŽIT</button><span id="rcCfgSt" class="smsg"></span></div></div>'+
+      '<div class="wh-filters" style="padding-top:0">'+tabs+'</div>'+
+      '<div class="rc-list">'+(shown.length?shown.map(recCard).join(''):'<div class="empty-s">// Žádné přihlášky v této skupině</div>')+'</div>';
+  }
+  var _aTab=window.aTab;
+  if(typeof _aTab==='function')window.aTab=function(tab){
+    var r=_aTab.apply(this,arguments);
+    if(tab==='recruit'){renderRecruit();recFetch();}
+    return r;
+  };
+  if(typeof A_RENDER!=='undefined')A_RENDER.recruit=renderRecruit;
+
+  var rcRoot=$('recruitRoot');
+  if(rcRoot)rcRoot.addEventListener('click',function(e){
+    var f=e.target.closest('[data-flt]');if(f){rec.filter=f.getAttribute('data-flt');renderRecruit();return;}
+    var b=e.target.closest('[data-act]');if(!b)return;
+    var act=b.getAttribute('data-act'),id=b.getAttribute('data-id');
+    if(act==='ok')recApprove(id);else if(act==='no')recReject(id);else if(act==='del')recDelete(id);else if(act==='cfg')recSaveCfg();
+  });
+
+  async function recSaveCfg(){
+    var st=$('rcCfgSt'),open=$('rcOpen').checked,info=$('rcInfo').value.trim().slice(0,200);
+    var r=await sb.from(T_CFG).update({open:open,info:info}).eq('id',1);
+    if(r.error){st.style.color='var(--red)';st.textContent='// CHYBA: '+r.error.message;return;}
+    rec.cfg={open:open,info:info};
+    addLog('recruit',getMember().displayName+(open?' otevřel':' zavřel')+' nábor.',{embed:rich(open?C_GREEN:C_ORANGE,open?'🟢 NÁBOR OTEVŘEN':'🔒 NÁBOR ZAVŘEN',info||null,[],{by:getMember().displayName})});
+    st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);
+    toast('Nastavení náboru uloženo','success');
+  }
+
+  var GEN_CHARS='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  function genPass(){
+    var a=new Uint32Array(12);crypto.getRandomValues(a);
+    var c=[];for(var i=0;i<12;i++)c.push(GEN_CHARS[a[i]%GEN_CHARS.length]);
+    return c.slice(0,4).join('')+'-'+c.slice(4,8).join('')+'-'+c.slice(8).join('');
+  }
+
+  function recApprove(id){
+    var a=findApp(id),me=getMember();
+    if(!a||a.status!=='pending'||!me||!me.adminAccess)return;
+    var d=a.data||{},did=(String(d.discord||'').match(/\d{17,20}/)||[''])[0];
+    var old=document.querySelector('.rc-appr');if(old)old.remove();
+    var opts=POSITIONS.filter(function(p){return p!=='Mastermind'||me.position==='Mastermind';}).map(function(p){return '<option'+(p==='Associate'?' selected':'')+'>'+esc(p)+'</option>';}).join('');
+    var ov=document.createElement('div');ov.className='modal-ov rc-appr';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="modal-box rc-box"><div class="modal-title">✓ SCHVÁLIT — '+esc(appName(a))+'</div>'+
+      '<div class="rc-tx" style="margin-bottom:.8rem">Vytvoří se přihlašovací účet a člen se přidá do crew listu. Po vytvoření se zobrazí zpráva s údaji, kterou pošleš uchazeči.</div>'+
+      '<div class="form-grid">'+
+      '<div class="field-group fg-full"><label class="fl">E-MAIL PRO PŘIHLÁŠENÍ *</label><div class="iw"><span class="ip">@</span><input type="email" id="ra-mail" autocomplete="off"/></div></div>'+
+      '<div class="field-group"><label class="fl">POZICE</label><div class="iw"><span class="ip">&gt;_</span><select id="ra-pos">'+opts+'</select></div></div>'+
+      '<div class="field-group"><label class="fl">DOČASNÉ HESLO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="ra-pass"/></div></div>'+
+      '<div class="field-group fg-full"><label class="fl">DISCORD ID (pro označování)</label><div class="iw"><span class="ip">@</span><input type="text" id="ra-did" value="'+esc(did)+'" placeholder="nepovinné"/></div></div></div>'+
+      '<div id="raMsg" class="smsg" style="min-height:1em;color:#e05555"></div>'+
+      '<div class="modal-ftr"><button class="btn-acc small" id="raOk">VYTVOŘIT ÚČET</button><button class="btn-ghost small" id="raNo">ZRUŠIT</button></div></div>';
+    document.body.appendChild(ov);
+    var mail=ov.querySelector('#ra-mail'),pass=ov.querySelector('#ra-pass'),msg=ov.querySelector('#raMsg'),ok=ov.querySelector('#raOk');
+    pass.value=genPass();
+    function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
+    function close(){document.removeEventListener('keydown',key,true);ov.remove();}
+    document.addEventListener('keydown',key,true);
+    ov.querySelector('#raNo').onclick=close;
+    ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
+    ok.onclick=async function(){
+      var email=mail.value.trim().toLowerCase(),pw=pass.value,pos=ov.querySelector('#ra-pos').value,dcid=ov.querySelector('#ra-did').value.replace(/\D/g,'');
+      msg.style.color='#e05555';
+      if(email.indexOf('@')<1){msg.textContent='// ZADEJ PLATNÝ E-MAIL';return;}
+      if(pw.length<6){msg.textContent='// HESLO MIN. 6 ZNAKŮ';return;}
+      ok.disabled=true;msg.style.color='var(--acc)';msg.textContent='// VYTVÁŘÍM ÚČET…';
+      var before=(DB.get('members')||[]).map(function(x){return x.id;});
+      var set=function(i,v){$(i).value=v;};
+      set('nm-email',email);set('nm-name',appName(a));set('nm-first',d.first||'');set('nm-last',d.last||'');set('nm-nick',d.nick||'');
+      set('nm-pass',pw);set('nm-pos',pos);set('nm-discord',dcid);
+      set('nm-note','Nábor: Discord '+(d.discord||'—')+', OOC věk '+(d.age||'—'));
+      $('nm-admin').checked=false;$('nm-hidden').checked=false;
+      var cs=$('createStatus');if(cs)cs.textContent='';
+      try{await window.createMember();}catch(e){console.error(e);}
+      var mem=(DB.get('members')||[]).filter(function(x){return (x.email||'').toLowerCase()===email&&before.indexOf(x.id)===-1;})[0];
+      if(!mem){
+        ok.disabled=false;msg.style.color='#e05555';
+        msg.textContent=(cs&&cs.textContent)||'// ÚČET SE NEPODAŘILO VYTVOŘIT';
+        return;
+      }
+      var upd={status:'approved',decided_by:me.displayName,decided_at:new Date().toISOString(),member_id:mem.id,notified:true};
+      var r=await sb.from(T_APPS).update(upd).eq('id',a.id);
+      if(r.error)toast('Účet vytvořen, ale přihlášku se nepodařilo označit: '+r.error.message,'error',6000);
+      else Object.keys(upd).forEach(function(k){a[k]=upd[k];});
+      addLog('recruit',me.displayName+' schválil uchazeče '+appName(a)+' ('+pos+').',{embed:rich(C_GREEN,'✅ UCHAZEČ SCHVÁLEN','**'+appName(a)+'**'+(dcid?' (<@'+dcid+'>)':''),[['🎖️ Pozice',pos],['🧑 Schválil',me.displayName]],{by:me.displayName})});
+      recBadge();close();renderRecruit();
+    };
+    mail.focus();
+  }
+  function recReject(id){
+    var a=findApp(id),me=getMember();if(!a||a.status!=='pending'||!me)return;
+    window.tscDialog({title:'✕ ZAMÍTNOUT UCHAZEČE',text:'Zamítnout přihlášku: <b>'+esc(appName(a))+'</b>?<div class="tsc-sub">Můžeš připsat důvod (nepovinné, vidí ho jen vedení).</div>',input:true,ok:'ZAMÍTNOUT',cancel:'ZRUŠIT',danger:true},async function(reason){
+      reason=String(reason||'').trim().slice(0,300);
+      var upd={status:'rejected',decided_by:me.displayName,decided_at:new Date().toISOString(),reason:reason||null,notified:true};
+      var r=await sb.from(T_APPS).update(upd).eq('id',a.id);
+      if(r.error){toast('Chyba: '+r.error.message,'error');return;}
+      Object.keys(upd).forEach(function(k){a[k]=upd[k];});
+      addLog('recruit',me.displayName+' zamítl uchazeče '+appName(a)+'.',{embed:rich(C_RED,'❌ UCHAZEČ ZAMÍTNUT','**'+appName(a)+'**',[['🧑 Zamítl',me.displayName],['📝 Důvod',reason||'neuveden',false]],{by:me.displayName})});
+      toast('Přihláška zamítnuta','info');recBadge();renderRecruit();
+    });
+  }
+  function recDelete(id){
+    var a=findApp(id);if(!a)return;
+    window.tscDialog({title:'⚠ SMAZAT PŘIHLÁŠKU?',text:'Smazat přihlášku: <b>'+esc(appName(a))+'</b>?<div class="tsc-sub">Tuto akci nelze vrátit.</div>',ok:'SMAZAT',cancel:'ZRUŠIT',danger:true},async function(){
+      var r=await sb.from(T_APPS).delete().eq('id',a.id);
+      if(r.error){toast('Chyba: '+r.error.message,'error');return;}
+      rec.apps=rec.apps.filter(function(x){return x.id!==a.id;});
+      toast('Přihláška smazána','info');recBadge();renderRecruit();
+    });
+  }
+
+  /* ══════════════════════════════════════════════
+     2) ČLEN TÝDNE
+     ══════════════════════════════════════════════ */
+  var PT={heist:10,esc:5,came:8,absent:-4,praise:12,perK:2,capMoney:30};
+  function potwCompute(){
+    var from=Date.now()-7*864e5,now=Date.now(),rows={};
+    (DB.get('members')||[]).forEach(function(m){
+      if(m.hidden)return;
+      var n=rosterNames(m);
+      rows[m.id]={id:m.id,name:m.displayName,nick:n.nick,pos:m.position,heists:0,esc:0,came:0,absent:0,praises:0,money:0,score:0};
+    });
+    (DB.get('heists')||[]).forEach(function(h){
+      var d=parseCz(h.date);if(!d||d.getTime()<from)return;
+      var ids=(h.crew&&h.crew.length)?h.crew:[h.memberId];
+      ids.forEach(function(id){var r=rows[id];if(!r)return;r.heists++;if(h.escaped)r.esc++;});
+    });
+    (DB.get('events')||[]).forEach(function(e){
+      var d=evStart(e);if(!d||d.getTime()<from||d.getTime()>now||!e.att)return;
+      Object.keys(e.att).forEach(function(id){var r=rows[id];if(!r)return;if(e.att[id]==='came')r.came++;else if(e.att[id]==='absent')r.absent++;});
+    });
+    (DB.get('praises')||[]).forEach(function(p){if(p.ts>=from&&rows[p.memberId])rows[p.memberId].praises++;});
+    (DB.get('incomes')||[]).forEach(function(i){
+      if(i.status!=='confirmed')return;
+      var d=parseCz(i.date);if(!d||d.getTime()<from||!rows[i.memberId])return;
+      rows[i.memberId].money+=Number(i.amount)||0;
+    });
+    var list=Object.keys(rows).map(function(k){
+      var r=rows[k];
+      r.score=Math.max(0,r.heists*PT.heist+r.esc*PT.esc+r.came*PT.came+r.absent*PT.absent+r.praises*PT.praise+Math.min(PT.capMoney,Math.round(r.money/1000*PT.perK)));
+      return r;
+    }).filter(function(r){return r.score>0;});
+    list.sort(function(a,b){return b.score-a.score||b.heists-a.heists||b.came-a.came||String(a.name).localeCompare(String(b.name),'cs');});
+    return list;
+  }
+  function potwChips(r){
+    var c=[];
+    if(r.heists)c.push('💎 '+r.heists+' '+pl(r.heists,'heist','heisty','heistů'));
+    if(r.came)c.push('📋 '+r.came+' '+pl(r.came,'akce','akce','akcí'));
+    if(r.praises)c.push('⭐ '+r.praises+' '+pl(r.praises,'pochvala','pochvaly','pochval'));
+    if(r.money>0)c.push('💰 přispěl do kasy');
+    return c;
+  }
+  function potwHtml(rows){
+    var how='<details class="potw-how"><summary>Jak se počítají body?</summary><div>Heist: '+PT.heist+' b. (+'+PT.esc+' b., když ujeli) · Docházka na akci: '+PT.came+' b. (neomluvená absence '+PT.absent+' b.) · Pochvala: '+PT.praise+' b. · Příjem do kasy: '+PT.perK+' b. za každých $1 000 (max. '+PT.capMoney+' b.). Počítá se posledních 7 dní.</div></details>';
+    if(!rows.length)return '<div class="potw empty"><div class="potw-crown">🏆</div><div class="potw-main"><div class="potw-lb">// ČLEN TÝDNE · POSLEDNÍCH 7 DNÍ</div><div class="potw-sub">Zatím nikdo nemá body. Odehraj heist, přijď na akci, získej pochvalu nebo přines peníze do kasy.</div>'+how+'</div></div>';
+    var w=rows[0],ru=rows.slice(1,4).map(function(r,i){return '<span><b>'+(i+2)+'.</b> <span class="prof-link" data-prof="'+esc(r.id)+'">'+esc(r.name)+'</span> · '+r.score+' b.</span>';}).join('');
+    return '<div class="potw"><div class="potw-crown">🏆</div><div class="potw-main">'+
+      '<div class="potw-lb">// ČLEN TÝDNE · POSLEDNÍCH 7 DNÍ</div>'+
+      '<div class="potw-name prof-link" data-prof="'+esc(w.id)+'">'+esc(w.name)+'</div>'+
+      '<div class="potw-sub">'+esc(w.pos)+(w.nick?' · „'+esc(w.nick)+'“':'')+'</div>'+
+      '<div class="potw-chips">'+potwChips(w).map(function(c){return '<span>'+esc(c)+'</span>';}).join('')+'</div>'+
+      (ru?'<div class="potw-top">'+ru+'</div>':'')+how+'</div>'+
+      '<div class="potw-score"><b>'+w.score+'</b><small>BODŮ</small></div></div>';
+  }
+  var _al=window.addLog;
+  if(typeof _al==='function')window.addLog=function(type,text,opts){
+    try{
+      if(type==='weekly'&&opts&&opts.embed&&Array.isArray(opts.embed.fields)&&!opts.embed.fields.some(function(f){return /^🏅 Člen týdne/.test(f.name||'');})){
+        var rows=potwCompute();
+        if(rows.length){
+          var w=rows[0],extra=rows.slice(1,3).map(function(r,i){return (i+2)+'. '+r.name+' ('+r.score+' b.)';}).join(' · ');
+          var f={name:'🏅 Člen týdne',value:'**'+w.name+'** — '+w.score+' b. ('+potwChips(w).join(', ')+')'+(extra?'\n'+extra:''),inline:false};
+          var fl=opts.embed.fields,idx=-1;
+          fl.forEach(function(x,i){if(/^🏆 Nejaktivnější/.test(x.name||''))idx=i;});
+          if(idx>=0)fl.splice(idx+1,0,f);else fl.splice(Math.max(0,fl.length-1),0,f);
+        }
+      }
+    }catch(e){console.error('potw',e);}
+    return _al.apply(this,arguments);
+  };
+
+  /* ══════════════════════════════════════════════
+     3) CÍL KASY NA PODNIK
+     ══════════════════════════════════════════════ */
+  function goalCfg(){
+    var g=DB.get('savegoal');
+    if(!g)return {on:false};
+    var t=Math.max(0,Math.floor(Number(g.target)||0));
+    return {on:g.on!==false&&t>0,target:t,label:String(g.label||'dílnu'),since:g.since||'',auto:g.auto!==false,reached:!!g.reached,reachedAt:g.reachedAt||0};
+  }
+  function goalSaved(g){
+    var since=g.since?new Date(g.since+'T00:00:00').getTime():0,sum=0;
+    (DB.get('incomes')||[]).forEach(function(i){
+      if(i.status!=='confirmed')return;
+      if(since){var d=parseCz(i.date);if(!d||d.getTime()<since)return;}
+      sum+=Number(i.amount)||0;
+    });
+    return sum;
+  }
+  function goalHtml(scope){
+    var g=goalCfg();if(!g.on)return '';
+    var b=DB.get('business')||{};
+    if(b.state==='open'&&!g.reached)return '';
+    var saved=goalSaved(g),pct=Math.min(100,Math.floor(saved/g.target*100)),done=g.reached||saved>=g.target;
+    var go=scope==='m'?' onclick="goNav(\'m\',\''+(done?'business':'finance')+'\')" style="cursor:pointer"':'';
+    return '<div class="goal'+(done?' done':'')+'"'+go+'>'+
+      '<div class="goal-top"><span class="goal-t">'+(done?'🎉':'🎯')+' CÍL KASY</span><span class="goal-p">'+pct+' %</span></div>'+
+      '<div class="goal-tx">'+(done?'Cíl splněn — <b>'+usd(g.target)+'</b> na <b>'+esc(g.label)+'</b> máme. Podnik je odemčen!':'Našetřeno <b>'+usd(saved)+'</b> z <b>'+usd(g.target)+'</b> na <b>'+esc(g.label)+'</b>')+'</div>'+
+      '<div class="goal-bar"><i style="width:'+pct+'%"></i></div>'+
+      '<div class="goal-sub">'+(done?'Klikni a podívej se na Podnik / Dílnu.':'Zbývá '+usd(Math.max(0,g.target-saved))+' — nos peníze do kasy (Finance → Vložit do kasy).')+'</div></div>';
+  }
+  var goalBusy=false;
+  async function goalCheck(){
+    if(goalBusy||!currentMemberId||!sb||!DB.cache||DB.cache.members===undefined)return;
+    var g=goalCfg();if(!g.on||g.reached||!g.auto||goalSaved(g)<g.target)return;
+    goalBusy=true;
+    try{
+      var r=await sb.from(TABLE).select('value').eq('key','savegoal').maybeSingle();
+      var fresh=(r.data&&r.data.value)||DB.get('savegoal');
+      if(!fresh||fresh.reached){if(fresh)DB.cache.savegoal=fresh;}
+      else{
+        fresh.reached=true;fresh.reachedAt=Date.now();
+        DB.set('savegoal',fresh);await DB.flush();
+        var b=DB.get('business')||{},was=b.state==='open';
+        if(!was){b.state='open';DB.set('business',b);}
+        if(!was)addLog('fin','Cíl kasy splněn ('+usd(g.target)+') — Podnik byl automaticky odemčen.',{embed:rich(C_GREEN,'🎉 CÍL KASY SPLNĚN','Našetřili jsme **'+usd(g.target)+'** na **'+g.label+'**. Podnik / Dílna je odemčen!',[['💰 Cíl',usd(g.target)]],{by:'Automaticky'})});
+        try{renderDash();}catch(e){}
+      }
+    }catch(e){console.error('goal',e);}
+    goalBusy=false;
+  }
+  function goalCelebrate(){
+    var g=goalCfg();if(!g.on||!g.reached||!g.reachedAt)return;
+    if(lsGet('tsc_goal_seen')===String(g.reachedAt))return;
+    lsSet('tsc_goal_seen',String(g.reachedAt));
+    if(Date.now()-g.reachedAt<3*864e5){toast('🎉 Cíl kasy splněn — Podnik je odemčen!','success',6000);if(typeof window.tscBurst==='function')window.tscBurst();}
+  }
+
+  /* ── vykreslení na Oznámeních ── */
+  function extraHost(scope){
+    var id=scope==='a'?'extraA':'extraM',el=$(id);
+    if(!el){
+      var anchor=$(scope==='a'?'dashA':'dashM');if(!anchor)return null;
+      el=document.createElement('div');el.id=id;el.className='board-extra';anchor.after(el);
+    }
+    return el;
+  }
+  function paintExtras(){
+    if(!getMember())return;
+    var html=null;
+    ['m','a'].forEach(function(s){
+      var h=extraHost(s);if(!h)return;
+      if(html===null)html={g:null,p:potwHtml(potwCompute())};
+      var out=goalHtml(s)+html.p;
+      if(h.dataset.h!==out){h.dataset.h=out;h.innerHTML=out;}
+    });
+    goalCelebrate();goalCheck();
+  }
+  var _rd=window.renderDash;
+  if(typeof _rd==='function')window.renderDash=function(){var r=_rd.apply(this,arguments);try{paintExtras();}catch(e){console.error(e);}return r;};
+  setInterval(function(){try{goalCheck();}catch(e){}},60000);
+
+  /* ── nastavení cíle (Administrace → Nastavení) ── */
+  function canGoal(){var m=getMember();return !!m&&ADMIN_POS.indexOf(m.position)!==-1;}
+  function renderGoalPanel(){
+    var host=$('at-settings');if(!host||!canGoal())return;
+    var p=$('goalPanel');
+    if(!p){
+      p=document.createElement('div');p.id='goalPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+      p.innerHTML='<div class="fp-title">// CÍL KASY NA PODNIK</div><div class="form-grid">'+
+        '<div class="field-group"><label class="fl">CÍLOVÁ ČÁSTKA ($)</label><div class="iw"><span class="ip">$</span><input type="number" id="gl-target" min="0" step="1000"/></div></div>'+
+        '<div class="field-group"><label class="fl">NA CO ŠETŘÍME (4. pád, např. „dílnu“)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="gl-label" maxlength="30" placeholder="dílnu"/></div></div>'+
+        '<div class="field-group"><label class="fl">POČÍTAT PŘÍJMY OD (prázdné = všechny)</label><div class="iw"><span class="ip">&gt;_</span><input type="date" id="gl-since"/></div></div>'+
+        '<div class="field-group"><label class="fl">PRUH NA OZNÁMENÍCH</label><div class="iw" style="padding:.4rem .8rem"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer"><input type="checkbox" id="gl-on" style="accent-color:var(--acc)"/><span style="font-size:.9rem;color:var(--textb)">Zobrazovat</span></label></div></div>'+
+        '<div class="field-group fg-full"><label class="fl">PO SPLNĚNÍ</label><div class="iw" style="padding:.4rem .8rem"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer"><input type="checkbox" id="gl-auto" style="accent-color:var(--acc)"/><span style="font-size:.9rem;color:var(--textb)">Automaticky odemknout Podnik / Dílnu</span></label></div></div>'+
+        '</div><div id="glNow" class="rc-by"></div><div class="fp-ftr"><button class="btn-acc small" id="glSave">ULOŽIT</button><span id="glSt" class="smsg"></span></div>';
+      host.appendChild(p);
+      p.querySelector('#glSave').onclick=saveGoal;
+    }
+    var g=DB.get('savegoal')||{},cur=goalCfg();
+    var saved=goalSaved(cur.target!==undefined?cur:{since:''});
+    var now=p.querySelector('#glNow');
+    if(now)now.textContent='// Teď v kase (potvrzené příjmy'+(cur.since?' od '+cur.since:'')+'): '+usd(saved)+(cur.target?' z '+usd(cur.target):'')+(cur.reached?' · cíl už byl splněn':'');
+    if(p.contains(document.activeElement))return;
+    p.querySelector('#gl-target').value=g.target||'';p.querySelector('#gl-label').value=g.label||'';
+    p.querySelector('#gl-since').value=g.since||'';p.querySelector('#gl-on').checked=g.on!==false&&!!g.target;
+    p.querySelector('#gl-auto').checked=g.auto!==false;
+  }
+  function saveGoal(){
+    var me=getMember(),st=$('glSt');
+    if(!canGoal()){toast('Cíl smí nastavit jen Mastermind, Overseer a Counselor','error');return;}
+    var target=Math.max(0,Math.floor(Number($('gl-target').value)||0));
+    if(!target){st.style.color='var(--red)';st.textContent='// ZADEJ CÍLOVOU ČÁSTKU';return;}
+    var prev=DB.get('savegoal')||{};
+    var next={on:$('gl-on').checked,target:target,label:($('gl-label').value.trim()||'dílnu').slice(0,30),since:$('gl-since').value||'',auto:$('gl-auto').checked,
+      reached:!!prev.reached&&prev.target===target&&prev.on!==false,reachedAt:prev.reachedAt||0};
+    if(!next.reached)next.reachedAt=0;
+    DB.set('savegoal',next);
+    addLog('sys',me.displayName+' nastavil cíl kasy na '+usd(target)+' ('+next.label+').',{noDiscord:true});
+    st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);
+    toast('Cíl kasy uložen','success');
+    renderGoalPanel();try{renderDash();}catch(e){}
+    goalCheck();
+  }
+  var _rs=window.renderSettings;
+  if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderGoalPanel();}catch(e){console.error(e);}return r;};
+
+  /* ══════════════════════════════════════════════
+     4) KOMPAKTNÍ BOČNÍ PANEL (skupiny, které jdou sbalit)
+     ══════════════════════════════════════════════ */
+  var NG={
+    member:{sel:'#memberScreen .sb-nav',g:[
+      ['PŘEHLED',['board','tasks','messages','calendar']],
+      ['OPERACE',['warehouse','boosting','heist','clothing','business']],
+      ['FINANCE & PAPÍRY',['finance','excuse','report']],
+      ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
+    admin:{sel:'#adminScreen .sb-nav',g:[
+      ['PŘEHLED',['board','tasks','messages','calendar']],
+      ['OPERACE',['warehouse','boosting','heists','clothing']],
+      ['FINANCE',['finance','incomes','excuses','reports']],
+      ['LIDÉ',['members','roster','recruit','radio']],
+      ['SYSTÉM',['stats','log','settings']]]}
+  };
+  var NG_KEY='tsc_nav_grp',hdrs={},lastActive={};
+  function ngState(){try{return JSON.parse(lsGet(NG_KEY)||'{}')||{};}catch(e){return {};}}
+  function ngSave(s){lsSet(NG_KEY,JSON.stringify(s));}
+  function ngClosed(scope,i){
+    var s=ngState(),k=scope+'|'+NG[scope].g[i][0];
+    return k in s?!!s[k]:i!==0;
+  }
+  function ngHeader(scope,i){
+    var k=scope+'|'+i;
+    if(hdrs[k])return hdrs[k];
+    var h=document.createElement('div');h.className='nav-grp';h.setAttribute('role','button');h.tabIndex=0;
+    h.innerHTML='<span class="ng-t">'+esc(NG[scope].g[i][0])+'</span><i class="ng-c">▾</i>';
+    function toggle(){
+      var s=ngState();s[scope+'|'+NG[scope].g[i][0]]=!ngClosed(scope,i);ngSave(s);ngPaint(scope);
+    }
+    h.onclick=toggle;
+    h.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}};
+    hdrs[k]=h;return h;
+  }
+  function ngButtons(scope){
+    var nav=document.querySelector(NG[scope].sel),by={};
+    if(!nav)return {nav:null,by:by};
+    [].slice.call(nav.querySelectorAll(':scope > .nb')).forEach(function(b){var k=menuKey(b);if(k)by[k]=b;});
+    return {nav:nav,by:by};
+  }
+  function ngLayout(scope){
+    var o=ngButtons(scope),nav=o.nav;if(!nav)return;
+    var want=[],used=[];
+    NG[scope].g.forEach(function(g,i){
+      var items=g[1].map(function(k){return o.by[k];}).filter(Boolean);
+      if(!items.length)return;
+      want.push(ngHeader(scope,i));
+      items.forEach(function(b){want.push(b);used.push(b);});
+    });
+    [].slice.call(nav.querySelectorAll(':scope > .nb')).forEach(function(b){if(used.indexOf(b)===-1)want.push(b);});
+    var cur=[].slice.call(nav.children).filter(function(x){return x.classList.contains('nb')||x.classList.contains('nav-grp');});
+    var same=cur.length===want.length&&cur.every(function(x,i){return x===want[i];});
+    if(!same){
+      var ind=nav.querySelector('.lux-ind');
+      want.forEach(function(x){nav.insertBefore(x,ind||null);});
+      if(ind&&ind._mv)ind._mv();
+    }
+    ngPaint(scope);
+  }
+  function ngPaint(scope){
+    var o=ngButtons(scope);if(!o.nav)return;
+    NG[scope].g.forEach(function(g,i){
+      var closed=ngClosed(scope,i),alert=false,h=ngHeader(scope,i);
+      g[1].forEach(function(k){
+        var b=o.by[k];if(!b)return;
+        b.classList.toggle('grp-hide',closed);
+        if(closed&&(b.querySelector('.nbadge.visible')||b.classList.contains('has-new')))alert=true;
+      });
+      h.classList.toggle('closed',closed);h.classList.toggle('has-alert',alert);
+      h.setAttribute('aria-expanded',closed?'false':'true');
+    });
+    var ind=o.nav.querySelector('.lux-ind');if(ind&&ind._mv)ind._mv();
+  }
+  function ngTick(){
+    Object.keys(NG).forEach(function(scope){
+      ngLayout(scope);
+      var o=ngButtons(scope);if(!o.nav)return;
+      var a=o.nav.querySelector(':scope > .nb.active'),k=a?menuKey(a):null;
+      if(k&&k!==lastActive[scope]){
+        lastActive[scope]=k;
+        NG[scope].g.forEach(function(g,i){
+          if(g[1].indexOf(k)!==-1&&ngClosed(scope,i)){var s=ngState();s[scope+'|'+g[0]]=false;ngSave(s);ngPaint(scope);}
+        });
+      }
+    });
+    var SHORT={'news-btn':'🆕 NOVINKY','pw-self-btn':'🔑 HESLO','prof-self-btn':'👤 PROFIL'};
+    document.querySelectorAll('.sb-foot .news-btn,.sb-foot .pw-self-btn,.sb-foot .prof-self-btn').forEach(function(b){
+      var key=Object.keys(SHORT).filter(function(c){return b.classList.contains(c);})[0];
+      b.classList.add('foot-mini');
+      if(key&&b.textContent!==SHORT[key]){if(!b.title)b.title=b.textContent;b.textContent=SHORT[key];}
+    });
+  }
+  var _amc=window.applyMenuCfg;
+  if(typeof _amc==='function')window.applyMenuCfg=function(){var r=_amc.apply(this,arguments);try{ngLayout('member');ngLayout('admin');}catch(e){console.error(e);}return r;};
+  ngTick();setInterval(ngTick,500);
+})();
+
+;
