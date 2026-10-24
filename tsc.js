@@ -5428,8 +5428,6 @@ var WEEKS=16;
     if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.business='B';
     if(typeof M_RENDER!=='undefined')M_RENDER.business=renderBiz;
     var gk=document.querySelector('#mt-board .gk-card');
-    if(gk)gk.insertAdjacentHTML('afterend',
-      '<div id="bizCard" class="biz-card soon" onclick="goNav(\'m\',\'business\')"></div>');
   })();
 
   function renderBiz(){
@@ -5626,7 +5624,7 @@ var WEEKS=16;
     var id=scope==='a'?'extraA':'extraM',el=$(id);
     if(!el){
       var anchor=$(scope==='a'?'dashA':'dashM');if(!anchor)return null;
-      el=document.createElement('div');el.id=id;el.className='board-extra';anchor.after(el);
+      el=document.createElement('div');el.id=id;el.className='board-extra';anchor.before(el);
     }
     return el;
   }
@@ -5637,6 +5635,14 @@ var WEEKS=16;
       var out=goalHtml(s);
       if(h.dataset.h!==out){h.dataset.h=out;h.innerHTML=out;}
     });
+    var d=$('dashM');
+    if(d&&!d.querySelector('.gk-tile')){
+      var tile='<a class="dc gk-tile" href="https://discord.gg/genk" target="_blank" rel="noopener noreferrer">'+
+        '<div class="dc-top"><span class="gk-logo" role="img" aria-label="GenK RP"></span><span class="dc-lb">HRAJEME NA SERVERU</span></div>'+
+        '<div class="dc-val">GENK RP</div><div class="dc-sub">💬 discord.gg/genk ↗</div></a>';
+      var on=d.querySelector('.dash-online');
+      if(on)on.insertAdjacentHTML('beforebegin',tile);else d.insertAdjacentHTML('beforeend',tile);
+    }
     goalCelebrate();goalCheck();
   }
   var _rd=window.renderDash;
