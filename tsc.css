@@ -1802,7 +1802,7 @@ html body select option:hover{
 @media(max-width:700px){.board-extra{margin:0 .7rem .8rem}.goal-row{flex-wrap:wrap;gap:.2rem .6rem}.goal-tx{white-space:normal;flex-basis:100%;order:3}}
 
 /* ===== Karta serveru: úzký pruh nad Cílem kasy ===== */
-#mt-board .gk-card{display:flex!important;width:fit-content;max-width:calc(100% - 2.4rem);margin:.2rem 1.2rem .8rem;padding:.5rem .9rem;gap:.9rem}
+#mt-board .gk-card{display:flex!important;width:auto;max-width:none;margin:.2rem 1.2rem .5rem;padding:.5rem .9rem;gap:.9rem}
 #mt-board .gk-card .gk-logo{width:38px;height:38px;border-radius:8px;box-shadow:none}
 #mt-board .gk-card .gk-name{font-size:1rem}
 #mt-board .gk-card .gk-sub{font-size:.5rem}
