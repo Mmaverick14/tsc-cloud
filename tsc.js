@@ -5660,7 +5660,7 @@ var WEEKS=16;
       ['FINANCE & PAPÍRY',['finance','excuse','report']],
       ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
     admin:{sel:'#adminScreen .sb-nav',g:[
-      ['PŘEHLED',['board','tasks','messages','calendar']],
+      ['PŘEHLED',['board','tasks','templates','messages','calendar']],
       ['OPERACE',['warehouse','boosting','heists','clothing']],
       ['FINANCE',['finance','incomes','excuses','reports']],
       ['LIDÉ',['members','roster','radio']],
@@ -5748,4 +5748,186 @@ var WEEKS=16;
   ngTick();setInterval(ngTick,500);
 })();
 
-;
+/* ===== Šablony úkolů a hlášení ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function me(){return getMember();}
+function members(){return DB.get('members')||[];}
+function players(){return members().filter(function(m){return !m.hidden;});}
+function memById(id){return members().filter(function(m){return m.id===id;})[0]||null;}
+function fmtD(s){if(!s)return '—';var p=String(s).split('-');return p.length===3?(+p[2])+'. '+(+p[1])+'. '+p[0]:s;}
+function memberPing(){var s=DB.get('settings')||{};return s.memberRoleId?'<@&'+s.memberRoleId+'>':'';}
+function confirmDanger(title,text,ok,fn){
+  if(typeof window.tscDialog==='function')window.tscDialog({title:title,text:text,ok:ok,danger:true,cancel:'ZRUŠIT'},fn);
+  else if(window.confirm(title))fn();
+}
+var busy={};
+function ready(){return !!currentMemberId&&!!sb&&!!DB.cache&&DB.cache.members!==undefined;}
+
+if(!SECTIONS.some(function(x){return x.key==='tpl';}))SECTIONS.push({key:'tpl',label:'Šablony úkolů'});
+LOG_ICONS.tpl='📋';LOG_LABELS.tpl='ŠABLONY';
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.templates='A';
+
+var TDAYS=['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'];
+var tplEdit=null,rpEdit=null;
+function tpls(){var a=DB.get('tasktpl');return Array.isArray(a)?a:[];}
+function rtpls(){var a=DB.get('reptpl');return Array.isArray(a)?a:[];}
+function canTpl(){return !!isAdmin();}
+function assignFromTpl(t,auto){
+  var targets=(!t.target||t.target==='all')?players():[memById(t.target)].filter(Boolean);
+  var tasks=DB.get('tasks')||{},n=0,names=[];
+  targets.forEach(function(x){
+    var arr=tasks[x.id]=tasks[x.id]||[];
+    if(arr.some(function(k){return !k.done&&k.title===t.title;}))return;
+    arr.push({id:uid(),title:t.title,desc:t.desc||'',priority:t.priority||'normal',date:nowStr(),done:false});n++;names.push(x.displayName);
+  });
+  if(!n)return 0;
+  DB.set('tasks',tasks);
+  var pr={low:['LOW',C_GREY],normal:['NORMAL',C_GREEN],high:['HIGH',C_ORANGE],urgent:['URGENT',C_RED]}[t.priority]||['NORMAL',C_GREEN];
+  var who=(!t.target||t.target==='all')?'Všichni členové ('+n+')':names.join(', ');
+  var m=me();
+  addLog('task',(auto?'Automaticky':(m?m.displayName:'Admin'))+' zadal úkol ze šablony "'+t.name+'": "'+t.title+'" ('+n+' členů).',{
+    extraPing:t.ping?memberPing():'',
+    embed:rich(pr[1],'✅ NOVÝ ÚKOL'+(auto?' (opakovaný)':' (šablona)'),'**'+t.title+'**'+(t.desc?'\n'+t.desc:''),[['👥 Komu',who],['⚡ Priorita',pr[0]]],{by:auto?'Automatika':(m?m.displayName:'Admin')})});
+  return n;
+}
+function tplFormHtml(){
+  var hrs='';for(var h=0;h<24;h++)hrs+='<option value="'+h+'">'+(h<10?'0':'')+h+':00</option>';
+  return '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title" id="tpTitle">// NOVÁ ŠABLONA ÚKOLU</div><div class="form-grid">'+
+    '<div class="field-group"><label class="fl">NÁZEV ŠABLONY *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="tp-name" maxlength="40" placeholder="např. Týdenní sběr"/></div></div>'+
+    '<div class="field-group"><label class="fl">PRIORITA</label><div class="iw"><span class="ip">&gt;_</span><select id="tp-prio"><option value="low">LOW</option><option value="normal" selected>NORMAL</option><option value="high">HIGH</option><option value="urgent">URGENT</option></select></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">NÁZEV ÚKOLU *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="tp-title" maxlength="80"/></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">BRIEFING</label><textarea id="tp-desc" class="adm-ta" maxlength="600"></textarea></div>'+
+    '<div class="field-group"><label class="fl">KOMU</label><div class="iw"><span class="ip">&gt;_</span><select id="tp-target"></select></div></div>'+
+    '<div class="field-group"><label class="fl">DISCORD</label><div class="iw" style="padding:.4rem .8rem"><label class="ping-chk"><input type="checkbox" id="tp-ping"/><span>🔔 Označit Member při zadání</span></label></div></div>'+
+    '<div class="field-group"><label class="fl">OPAKOVÁNÍ</label><div class="iw" style="padding:.4rem .8rem"><label class="ping-chk"><input type="checkbox" id="tp-rep"/><span>Zadávat automaticky každý týden</span></label></div></div>'+
+    '<div class="field-group"><label class="fl">DEN A HODINA</label><div class="rx-two"><div class="iw"><select id="tp-day">'+TDAYS.map(function(d,i){return '<option value="'+i+'">'+d+'</option>';}).join('')+'</select></div><div class="iw"><select id="tp-hour">'+hrs+'</select></div></div></div></div>'+
+    '<div class="rx-hint">Úkol se nezadá členovi, který už má úkol se stejným názvem otevřený. Automatika se spustí, když je v daný čas někdo přihlášený.</div>'+
+    '<div class="fp-ftr"><button class="btn-acc small" id="tpSave" onclick="tplSave()">ULOŽIT ŠABLONU</button><button class="btn-ghost small" onclick="tplCancel()">ZRUŠIT</button><span id="tpSt" class="smsg"></span></div></div>'+
+    '<div class="sh">// ŠABLONY ÚKOLŮ</div><div id="tplList" class="stream"></div>'+
+    '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title" id="rpTitle">// ŠABLONA HLÁŠENÍ (člen ji vloží v záložce Hlášení)</div><div class="form-grid">'+
+    '<div class="field-group fg-full"><label class="fl">NÁZEV *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rp-name" maxlength="40" placeholder="např. Hlášení po akci"/></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">TEXT *</label><textarea id="rp-text" class="adm-ta" maxlength="1200" placeholder="Co se dělalo:\nCo se povedlo:\nCo se nepovedlo:"></textarea></div></div>'+
+    '<div class="fp-ftr"><button class="btn-acc small" onclick="rpSave()">ULOŽIT</button><button class="btn-ghost small" onclick="rpCancel()">ZRUŠIT</button><span id="rpSt" class="smsg"></span></div></div>'+
+    '<div class="sh">// ŠABLONY HLÁŠENÍ</div><div id="rpList" class="stream"></div>';
+}
+function renderTpl(){
+  var root=$('templatesRoot');if(!root||!me())return;
+  if(!root.dataset.built){root.dataset.built='1';root.innerHTML=tplFormHtml();}
+  var sel=$('tp-target');
+  if(sel&&document.activeElement!==sel){
+    var cur=sel.value,h='<option value="all">— všichni členové —</option>'+players().map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.displayName)+'</option>';}).join('');
+    if(sel.dataset.h!==h){sel.dataset.h=h;sel.innerHTML=h;sel.value=cur||'all';}
+  }
+  var L=tpls();
+  $('tplList').innerHTML=L.length?L.map(function(t){
+    var tg=(!t.target||t.target==='all')?'všichni':(memById(t.target)?memById(t.target).displayName:'(smazaný člen)');
+    return '<div class="task-card '+(t.priority||'normal')+'"><div class="task-top"><span class="task-name">'+esc(t.name)+'</span><span class="pchip '+(t.priority||'normal')+'">'+(PRIO[t.priority]||'NORMAL')+'</span></div>'+
+      '<div class="task-desc"><b>'+esc(t.title)+'</b>'+(t.desc?'<br>'+esc(t.desc):'')+'</div>'+
+      '<div class="task-meta"><span class="task-date">Komu: '+esc(tg)+(t.repeat&&t.repeat.on?' · 🔁 každý týden: '+TDAYS[t.repeat.day]+' v '+(t.repeat.hour<10?'0':'')+t.repeat.hour+':00'+(t.last?' (naposledy '+esc(fmtD(t.last))+')':''):' · bez opakování')+'</span>'+
+      '<div class="task-resolve"><button class="btn-acc small" onclick="tplRun(\''+t.id+'\')">▶ ZADAT TEĎ</button><button class="btn-micro" onclick="tplEditOpen(\''+t.id+'\')">✎</button><button class="btn-micro del" onclick="tplDel(\''+t.id+'\')">✕</button></div></div></div>';
+  }).join(''):'<div class="empty-s">// Zatím žádné šablony úkolů</div>';
+  var R=rtpls();
+  $('rpList').innerHTML=R.length?R.map(function(r){
+    return '<div class="rep-card"><div class="rep-from">// '+esc(r.name)+'<span style="float:right"><button class="btn-micro" onclick="rpEditOpen(\''+r.id+'\')">✎</button> <button class="btn-micro del" onclick="rpDel(\''+r.id+'\')">✕</button></span></div><div class="rep-body">'+esc(r.text)+'</div></div>';
+  }).join(''):'<div class="empty-s">// Zatím žádné šablony hlášení</div>';
+}
+window.tplCancel=function(){
+  tplEdit=null;['tp-name','tp-title','tp-desc'].forEach(function(i){$(i).value='';});
+  $('tp-prio').value='normal';$('tp-target').value='all';$('tp-ping').checked=false;$('tp-rep').checked=false;$('tp-day').value='0';$('tp-hour').value='18';
+  $('tpSave').textContent='ULOŽIT ŠABLONU';$('tpTitle').textContent='// NOVÁ ŠABLONA ÚKOLU';
+};
+window.tplEditOpen=function(id){
+  var t=tpls().filter(function(x){return x.id===id;})[0];if(!t)return;tplEdit=id;
+  $('tp-name').value=t.name;$('tp-title').value=t.title;$('tp-desc').value=t.desc||'';$('tp-prio').value=t.priority||'normal';
+  $('tp-target').value=t.target||'all';$('tp-ping').checked=!!t.ping;$('tp-rep').checked=!!(t.repeat&&t.repeat.on);
+  $('tp-day').value=String(t.repeat?t.repeat.day:0);$('tp-hour').value=String(t.repeat?t.repeat.hour:18);
+  $('tpSave').textContent='ULOŽIT ZMĚNY';$('tpTitle').textContent='// UPRAVIT ŠABLONU';$('tp-name').scrollIntoView({behavior:'smooth',block:'center'});
+};
+window.tplSave=function(){
+  if(!canTpl())return;var st=$('tpSt');
+  var name=$('tp-name').value.trim(),title=$('tp-title').value.trim();
+  if(!name||!title){st.style.color='var(--red)';st.textContent='// VYPLŇ NÁZEV ŠABLONY A ÚKOLU';return;}
+  var a=tpls(),t=tplEdit?a.filter(function(x){return x.id===tplEdit;})[0]:null;
+  if(!t){t={id:uid(),last:''};a.push(t);}
+  t.name=name;t.title=title;t.desc=$('tp-desc').value.trim();t.priority=$('tp-prio').value;t.target=$('tp-target').value;t.ping=$('tp-ping').checked;
+  t.repeat={on:$('tp-rep').checked,day:parseInt($('tp-day').value,10)||0,hour:parseInt($('tp-hour').value,10)||0};
+  DB.set('tasktpl',a);addLog('tpl',me().displayName+' uložil šablonu úkolu "'+name+'".',{noDiscord:true});
+  tplCancel();st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);toast('Šablona uložena','success');renderTpl();
+};
+window.tplRun=function(id){
+  if(!canTpl())return;var t=tpls().filter(function(x){return x.id===id;})[0];if(!t)return;
+  var n=assignFromTpl(t,false);
+  toast(n?'Úkol zadán ('+n+' členů)':'Nikomu nebyl zadán — stejný úkol už mají otevřený',n?'success':'info',3500);
+};
+window.tplDel=function(id){
+  var t=tpls().filter(function(x){return x.id===id;})[0];if(!t||!canTpl())return;
+  confirmDanger('⚠ SMAZAT ŠABLONU?',esc(t.name),'SMAZAT',function(){DB.set('tasktpl',tpls().filter(function(x){return x.id!==id;}));toast('Šablona smazána','info');renderTpl();});
+};
+window.rpCancel=function(){rpEdit=null;$('rp-name').value='';$('rp-text').value='';$('rpTitle').textContent='// ŠABLONA HLÁŠENÍ (člen ji vloží v záložce Hlášení)';};
+window.rpEditOpen=function(id){var r=rtpls().filter(function(x){return x.id===id;})[0];if(!r)return;rpEdit=id;$('rp-name').value=r.name;$('rp-text').value=r.text;$('rpTitle').textContent='// UPRAVIT ŠABLONU HLÁŠENÍ';$('rp-name').scrollIntoView({behavior:'smooth',block:'center'});};
+window.rpSave=function(){
+  if(!canTpl())return;var name=$('rp-name').value.trim(),text=$('rp-text').value.trim(),st=$('rpSt');
+  if(!name||!text){st.style.color='var(--red)';st.textContent='// VYPLŇ NÁZEV I TEXT';return;}
+  var a=rtpls(),r=rpEdit?a.filter(function(x){return x.id===rpEdit;})[0]:null;
+  if(!r){r={id:uid()};a.push(r);}r.name=name;r.text=text;DB.set('reptpl',a);
+  rpCancel();st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);toast('Šablona hlášení uložena','success');renderTpl();
+};
+window.rpDel=function(id){
+  var r=rtpls().filter(function(x){return x.id===id;})[0];if(!r||!canTpl())return;
+  confirmDanger('⚠ SMAZAT ŠABLONU?',esc(r.name),'SMAZAT',function(){DB.set('reptpl',rtpls().filter(function(x){return x.id!==id;}));toast('Šablona smazána','info');renderTpl();});
+};
+/* výběr šablony v záložce Hlášení */
+function repTplInit(){
+  var ta=$('reportText');if(!ta)return;var fg=ta.closest('.field-group');if(!fg)return;
+  var list=rtpls(),w=$('repTplWrap'),key=list.map(function(x){return x.id+x.name;}).join('|');
+  if(!w){w=document.createElement('div');w.id='repTplWrap';w.className='rx-tpl-row';fg.insertBefore(w,ta);}
+  if(w.dataset.k===key)return;w.dataset.k=key;
+  if(!list.length){w.innerHTML='';return;}
+  w.innerHTML='<select id="repTplSel" class="rx-sel"><option value="">📄 Vložit šablonu hlášení…</option>'+list.map(function(r){return '<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>';}).join('')+'</select>';
+  $('repTplSel').onchange=function(){
+    var r=rtpls().filter(function(x){return x.id===this.value;}.bind(this))[0];
+    if(r){ta.value=ta.value.trim()?ta.value.replace(/\s+$/,'')+'\n\n'+r.text:r.text;ta.focus();}
+    this.value='';
+  };
+}
+/* automatické zadávání opakovaných úkolů */
+async function tplTick(){
+  if(busy.tpl||!ready())return;
+  var now=new Date(),t0=ymd(now);
+  function due(t){return t.repeat&&t.repeat.on&&now.getDay()===t.repeat.day&&now.getHours()>=t.repeat.hour&&t.last!==t0;}
+  if(!tpls().some(due))return;
+  busy.tpl=1;
+  try{
+    var r=await sb.from(TABLE).select('value').eq('key','tasktpl').maybeSingle();
+    var fresh=(r.data&&Array.isArray(r.data.value))?r.data.value:tpls(),run=[];
+    fresh.forEach(function(t){if(due(t)){t.last=t0;run.push(t);}});
+    if(run.length){DB.set('tasktpl',fresh);await DB.flush();run.forEach(function(t){assignFromTpl(t,true);});}
+    else DB.cache.tasktpl=fresh;
+  }catch(e){console.error('tplTick',e);}
+  busy.tpl=0;
+}
+
+/* vložení záložky do administrace */
+(function inject(){
+  var an=document.querySelector('#adminScreen .sb-nav'),am=document.querySelector('#adminScreen .main');
+  if(!an||!am||$('at-templates'))return;
+  var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"aTab('templates',this)");
+  b.innerHTML='<span class="ni">📋</span><span class="nl">ŠABLONY</span>';
+  var after=an.querySelector('.nb[onclick*="\'tasks\'"]');
+  if(after)after.insertAdjacentElement('afterend',b);else an.appendChild(b);
+  am.insertAdjacentHTML('beforeend','<div id="at-templates" class="at"><div class="ph"><div class="pt">📋 // ŠABLONY ÚKOLŮ A HLÁŠENÍ</div></div><div id="templatesRoot"></div></div>');
+})();
+A_RENDER.templates=renderTpl;
+var _at=window.aTab;
+window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='templates')renderTpl();return r;};
+var _mt=window.mTab;
+window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='report')repTplInit();return r;};
+var _rsr=window.renderSentReports;
+if(typeof _rsr==='function')window.renderSentReports=function(){var r=_rsr.apply(this,arguments);try{repTplInit();}catch(e){}return r;};
+
+setInterval(function(){if(me()){try{repTplInit();}catch(e){}}},800);
+setInterval(function(){try{tplTick();}catch(e){console.error(e);}},60000);
+setTimeout(function(){try{tplTick();}catch(e){}},12000);
+})();

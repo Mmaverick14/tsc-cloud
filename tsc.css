@@ -1838,3 +1838,14 @@ html body select option:hover{
   html body .sb-nav .nb.grp-hide{display:flex!important}
 }
 
+
+
+/* ===== Šablony úkolů a hlášení ===== */
+.rx-hint{font-size:.8rem;line-height:1.5;color:var(--muted);margin:.2rem 1.2rem .8rem}
+.rx-in,.rx-sel{background:transparent;border:0;border-bottom:1px solid var(--brite);color:var(--textb);font-size:.9rem;padding:.4rem .3rem;outline:0;min-width:0;flex:1;color-scheme:dark}
+.rx-in:focus,.rx-sel:focus{border-bottom-color:var(--acc)}
+.rx-two{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.rx-tpl-row{margin:0 0 .5rem}
+.rx-tpl-row .rx-sel{width:100%}
+.log-type.tpl{background:rgba(39,174,96,.08);color:#4fd18b;border:1px solid var(--gdim)}
+@media(max-width:700px){.rx-two{grid-template-columns:1fr}}
