@@ -7,6 +7,7 @@ var sb=null;
 var rtChannel=null;
 var refreshTimer=null;
 
+var tscToken=null;
 var DB={
   cache:{},pending:{},defaults:{},lastWrite:{},timer:null,
   get:function(k){var v=this.cache[k];return v===undefined?null:JSON.parse(JSON.stringify(v));},
@@ -40,6 +41,20 @@ var DB={
       toast('Chyba ukládání do databáze — zkouším znovu','error',4000);
     }
   },
+  flushSync:function(){
+    clearTimeout(this.timer);
+    var now=new Date().toISOString(),rows=[];
+    var p=this.pending,d=this.defaults;
+    Object.keys(p).forEach(function(k){rows.push({key:k,value:p[k],updated_at:now});});
+    if(!rows.length||!tscToken)return false;
+    try{
+      fetch(SUPABASE_URL+'/rest/v1/'+TABLE+'?on_conflict=key',{method:'POST',keepalive:true,
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+tscToken,'Prefer':'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify(rows)}).catch(function(){});
+      this.pending={};return true;
+    }catch(e){return false;}
+  },
+  hasPending:function(){return Object.keys(this.pending).length>0;},
   load:async function(){
     var r=await sb.from(TABLE).select('key,value');
     if(r.error)throw r.error;
@@ -152,7 +167,7 @@ function canManage(target){
 var RADIO_GEN_POS=['Mastermind','Overseer','Counselor',"Devil's Advocate",'Advisor','Captain'];
 function canRegenRadios(){var m=getMember();return !!m&&RADIO_GEN_POS.indexOf(m.position)!==-1;}
 function isVedeni(pos){return VEDENI_POS.indexOf(pos)!==-1;}
-function getWeekKey(){var d=new Date();var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
+function getWeekKey(d){d=d||new Date();var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
 
 // ── TOAST ────────────────────────────────────
 function toast(msg,type,dur){
@@ -164,7 +179,7 @@ function toast(msg,type,dur){
 
 // ── UTILS ────────────────────────────────────
 function uid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
-function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');}
+function esc(s){if(s===null||s===undefined||s===''||s===false)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/\n/g,'<br>');}
 function nowStr(){return new Date().toLocaleString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
 function nowFull(){return new Date().toLocaleString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 function setText(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
@@ -2988,7 +3003,7 @@ function parseCz(s){
   if(!r)return null;
   return new Date(+r[3],+r[2]-1,+r[1],+(r[4]||0),+(r[5]||0));
 }
-function weekKeyOf(d){var yr=d.getFullYear();var start=new Date(yr,0,1);var wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);return yr+'-W'+wk;}
+function weekKeyOf(d){return getWeekKey(d);}
 function agoStr(ts){
   var s=Math.max(0,(Date.now()-ts)/1000);
   if(s<60)return 'teď';
@@ -3007,8 +3022,8 @@ function goTo(scope,key){
 
 function injectUX(){
   if(document.getElementById('palette'))return;
-  var tools='<span class="sb-tools"><button class="tb" title="Hledat (Ctrl+K)" onclick="openPalette()">🔍</button>'+
-    '<button class="tb bell" title="Upozornění" onclick="toggleNotif(event)">🔔<i class="bell-n"></i></button></span>';
+  var tools='<span class="sb-tools"><button class="tb" title="Hledat (Ctrl+K)" aria-label="Hledat" onclick="openPalette()">🔍</button>'+
+    '<button class="tb bell" title="Upozornění" aria-label="Upozornění" onclick="toggleNotif(event)">🔔<i class="bell-n"></i></button></span>';
   document.querySelectorAll('.sidebar .sb-logo').forEach(function(l){l.insertAdjacentHTML('beforeend',tools);});
   document.querySelectorAll('.sidebar .sb-foot').forEach(function(f){f.insertAdjacentHTML('afterbegin',tools);});
   var p=document.createElement('div');p.id='palette';p.className='pal-ov';
@@ -3443,6 +3458,14 @@ window.addEventListener('DOMContentLoaded',function(){
     return;
   }
   sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  sb.auth.onAuthStateChange(function(ev,ses){tscToken=ses?ses.access_token:null;});
+  window.addEventListener('beforeunload',function(e){
+    if(!DB.hasPending())return;
+    DB.flushSync();
+    e.preventDefault();e.returnValue='';
+  });
+  document.addEventListener('visibilitychange',function(){if(document.hidden&&DB.hasPending())DB.flushSync();});
+  window.addEventListener('pagehide',function(){if(DB.hasPending())DB.flushSync();});
   sb.auth.getSession().then(function(r){
     var s=r.data&&r.data.session;
     if(s){return enterPortal(s,false).then(function(ok){if(!ok)showLoginBox();});}
@@ -3544,7 +3567,7 @@ window.recordPayment=function(id){
   setInterval(function(){
     document.querySelectorAll('.sb-tools').forEach(function(w){
       if(w.querySelector('.theme'))return;
-      var b=document.createElement('button');b.className='tb theme';b.title='Barevný motiv';b.textContent='🎨';b.onclick=themePop;w.appendChild(b);
+      var b=document.createElement('button');b.className='tb theme';b.title='Barevný motiv';b.setAttribute('aria-label','Barevný motiv');b.textContent='🎨';b.onclick=themePop;w.appendChild(b);
     });
   },1000);
 
@@ -3748,7 +3771,7 @@ window.recordPayment=function(id){
 
 /* ===== vylepseni.js ===== */
 (function(){
-  function wkKey(d){var yr=d.getFullYear(),st=new Date(yr,0,1);return yr+'-W'+Math.ceil(((d-st)/86400000+st.getDay()+1)/7);}
+  function wkKey(d){return getWeekKey(d);}
   function weeksList(n){var out=[],seen={};for(var i=0;out.length<n&&i<n*2;i++){var d=new Date();d.setDate(d.getDate()-7*i);var k=wkKey(d);if(!seen[k]){seen[k]=1;out.push({key:k,date:d});}}return out;}
   function fin(){var f=DB.get('finance')||{payments:[],expenses:[]};f.payments=f.payments||[];return f;}
   function fee(){return Number((DB.get('finsettings')||{}).weeklyFee)||5000;}
@@ -3952,7 +3975,7 @@ var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={
     var b=document.querySelector('#mt-heist .fp-ftr button[onclick="submitHeist()"]');
     if(b){var ok=lootValid();b.disabled=!ok;b.title=ok?'':'Nejdřív vyplň loot přes „ROZDĚLIT LOOT“';}
   }
-  setInterval(syncLootBtn,400);
+  setInterval(function(){if(!document.hidden)syncLootBtn();},800);
   var _sh=window.submitHeist;
   window.submitHeist=function(){
     syncLootBtn();
@@ -4537,7 +4560,7 @@ var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={
       el.appendChild(document.createTextNode(g+', '));el.appendChild(b);
       var s=document.createElement('small');s.textContent='ALT + 1–9 PŘEPÍNÁ ZÁLOŽKY · CTRL + K HLEDÁ';el.appendChild(s);}
   }
-  setInterval(function(){indicator();hello();},800);
+  setInterval(function(){if(!document.hidden){indicator();hello();}},1500);
   // Alt + číslo = záložka podle pořadí v menu
   document.addEventListener('keydown',function(e){
     if(!e.altKey||e.ctrlKey||e.metaKey||!/^[1-9]$/.test(e.key))return;
@@ -5379,7 +5402,7 @@ var WEEKS=16;
   setInterval(function(){
     document.querySelectorAll('.sb-tools').forEach(function(w){
       if(w.querySelector('.tb.size'))return;
-      var b=document.createElement('button');b.className='tb size';b.title='Velikost webu';b.textContent='Aa';b.style.fontWeight='700';
+      var b=document.createElement('button');b.className='tb size';b.title='Velikost webu';b.setAttribute('aria-label','Velikost webu');b.textContent='Aa';b.style.fontWeight='700';
       b.onclick=pop;w.appendChild(b);
     });
   },1000);
@@ -5745,7 +5768,7 @@ var WEEKS=16;
   }
   var _amc=window.applyMenuCfg;
   if(typeof _amc==='function')window.applyMenuCfg=function(){var r=_amc.apply(this,arguments);try{ngLayout('member');ngLayout('admin');}catch(e){console.error(e);}return r;};
-  ngTick();setInterval(ngTick,500);
+  ngTick();setInterval(function(){if(!document.hidden)ngTick();},1500);
 })();
 
 /* ===== Šablony úkolů a hlášení ===== */
@@ -5927,7 +5950,7 @@ window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='report')repT
 var _rsr=window.renderSentReports;
 if(typeof _rsr==='function')window.renderSentReports=function(){var r=_rsr.apply(this,arguments);try{repTplInit();}catch(e){}return r;};
 
-setInterval(function(){if(me()){try{repTplInit();}catch(e){}}},800);
+setInterval(function(){if(!document.hidden&&me()){try{repTplInit();}catch(e){}}},2000);
 setInterval(function(){try{tplTick();}catch(e){console.error(e);}},60000);
 setTimeout(function(){try{tplTick();}catch(e){}},12000);
 })();
