@@ -403,7 +403,7 @@ function triggerPanic(){
     fields:[
       {name:'🎖️ Pozice',value:String(m.position||'—'),inline:true},
       {name:'🔒 Přístup',value:'Zablokován do odemčení Vedením',inline:true},
-      {name:'📻 Vysílačka',value:'Frekvence byly změněny nové najdeš ve Vysílačce.',inline:false}
+      {name:'📻 Vysílačka',value:'Frekvence byly změněny — nové najdeš ve Vysílačce.',inline:false}
     ],
     footer:{text:'Panic'},timestamp:new Date().toISOString()
   }});
@@ -3764,31 +3764,6 @@ window.recordPayment=function(id){
   function mention(m){var id=String(m.discordId||'').replace(/\D/g,'');return id?'<@'+id+'>':'';}
   var DAYS=['neděli','pondělí','úterý','středu','čtvrtek','pátek','sobotu'];
 
-  function dfDate(){return (DB.get('debtfrom')||{}).date||'';}
-function setDebtFrom(date,msg){
-  DB.set('debtfrom',date?{date:date,by:rosterWho(),at:nowStr()}:{});
-  addLog('fin',rosterWho()+' '+msg,{noDiscord:true});
-  toast(date?'Dluhy se nově počítají od '+date:'Limit dluhů zrušen','success');
-  renderAdminFinance();
-}
-function debtAction(a){
-  if(!isAdmin())return;
-  if(a==='save'){
-    var v=(document.getElementById('dfDate')||{}).value||'';
-    if(!v){toast('Vyber datum','error');return;}
-    setDebtFrom(v,'nastavil počítání dluhů od '+v+'.');
-  }else if(a==='clear'){
-    setDebtFrom('','zrušil limit počítání dluhů.');
-  }else if(a==='zero'){
-    var go=function(){setDebtFrom(ymd(new Date()),'smazal všechny dosavadní dluhy (počítá se od tohoto týdne).');};
-    if(typeof window.tscDialog==='function')
-      window.tscDialog({title:'⚠ SMAZAT VŠECHNY DLUHY?',text:'Všechny nezaplacené týdny před tímto týdnem se přestanou počítat u všech členů.',ok:'SMAZAT DLUHY',danger:true,cancel:'ZRUŠIT'},go);
-    else if(confirm('Smazat všechny dosavadní dluhy?'))go();
-  }
-}
-
-function remCfg(){var c=DB.get('finremind')||{};return {on:c.on!==false,hour:c.hour==null?18:c.hour,last:c.last||'',daily:!!c.daily};}
-
   var upSel=0;
   function recordPaymentWeek(mid,wk){
     var m=memById(mid);if(!m)return;
@@ -3836,25 +3811,23 @@ function remCfg(){var c=DB.get('finremind')||{};return {on:c.on!==false,hour:c.h
     var hours='';for(var h=0;h<24;h++)hours+='<option value="'+h+'"'+(cfg.hour===h?' selected':'')+'>'+(h<10?'0':'')+h+':00</option>';
     var box=document.createElement('div');box.id='unpaidBox';
     box.innerHTML='<div class="fa-exp-title">// PŘEHLED NEPLATIČŮ</div>'+
-      '<div class="up-set"><label><input type="checkbox" id="frOn"'+(cfg.on?' checked':'')+'/> AUTOMATICKÁ PŘIPOMÍNKA OD</label><select id="frHour">'+hours+'</select>'+
-        '<label><input type="checkbox" id="frDaily"'+(cfg.daily?' checked':'')+'/> KAŽDÝ DEN (ne jen v den splatnosti: '+due+')</label>'+
-        '<span>// odešle se, když je v ten čas někdo přihlášený, a jen jednou za den</span></div>'+
-      '<div class="up-set"><span>DLUHY SE POČÍTAJÍ OD</span><input type="date" id="dfDate" value="'+esc(dfDate())+'"/>'+
-        '<button class="btn-acc small" data-df="save">ULOŽIT</button>'+
-        '<button class="btn-danger" data-df="zero">🧹 SMAZAT VŠECHNY DOSAVADNÍ DLUHY</button>'+
-        (dfDate()?'<button class="btn-ghost small" data-df="clear">ZRUŠIT LIMIT</button>':'')+
-        '<span>// týdny před tímto datem nikdo nedluží</span></div>';
+      '<div class="up-bar"><select id="upWeek">'+opts+'</select>'+
+        '<span class="up-sum'+(list.length?'':' ok')+'">NEZAPLATILO <b>'+list.length+'</b> Z '+all.length+' · CHYBÍ <b>'+money(list.length*amt)+'</b></span>'+
+        (list.length?'<button class="btn-acc small" data-remind="1" style="margin-left:auto">📣 PŘIPOMENOUT NA DISCORD</button>':'')+'</div>'+
+      rows+
+      '<div class="fa-exp-title" style="margin-top:1rem">// POSLEDNÍCH 6 TÝDNŮ</div>'+mx+
+      '<div class="up-set"><label><input type="checkbox" id="frOn"'+(cfg.on?' checked':'')+'/> AUTOMATICKÁ PŘIPOMÍNKA V DEN SPLATNOSTI ('+due+') OD</label><select id="frHour">'+hours+'</select>'+
+        '<span>// odešle se, když je v ten čas někdo přihlášený, a jen jednou za den</span></div>';
     el.insertBefore(box,el.firstChild);
     box.onclick=function(e){
-      var d=e.target.closest('[data-df]');if(d){debtAction(d.getAttribute('data-df'));return;}
       var p=e.target.closest('[data-pay]');if(p){recordPaymentWeek(p.getAttribute('data-pay'),wk);return;}
       if(e.target.closest('[data-remind]'))sendReminder(wk,true);
     };
     box.onchange=function(e){
       if(e.target.id==='upWeek'){upSel=parseInt(e.target.value)||0;renderUnpaid();}
-      else if(e.target.id==='frOn'||e.target.id==='frHour'||e.target.id==='frDaily'){
-  var c=remCfg();c.on=document.getElementById('frOn').checked;c.hour=parseInt(document.getElementById('frHour').value)||0;c.daily=document.getElementById('frDaily').checked;
-  DB.set('finremind',c);toast('Nastavení připomínky uloženo','success');
+      else if(e.target.id==='frOn'||e.target.id==='frHour'){
+        var c=remCfg();c.on=document.getElementById('frOn').checked;c.hour=parseInt(document.getElementById('frHour').value)||0;
+        DB.set('finremind',c);toast('Nastavení připomínky uloženo','success');
       }
     };
   }
@@ -3864,7 +3837,7 @@ function remCfg(){var c=DB.get('finremind')||{};return {on:c.on!==false,hour:c.h
   var remBusy=false;
   async function remindTick(){
     if(remBusy||!currentMemberId||!sb||!DB.cache||DB.cache.members===undefined)return;
-    if((!cfg.daily&&now.getDay()!==(parseInt(fs.feeDay)||0))||now.getHours()<cfg.hour)return;
+    var cfg=remCfg();if(!cfg.on)return;
     var now=new Date(),fs=DB.get('finsettings')||{};
     if(now.getDay()!==(parseInt(fs.feeDay)||0)||now.getHours()<cfg.hour)return;
     var today=ymd(now);if(cfg.last===today)return;
@@ -4950,14 +4923,6 @@ var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={
 (function(){
   var MIN_DAYS=4;
   window.onVacation=function(mid,wk){
-    function wkNum(k){var p=/^(\d+)-W(\d+)$/.exec(k||'');return p?(+p[1])*100+(+p[2]):0;}
-  function beforeDebtStart(wk){
-    var s=(DB.get('debtfrom')||{}).date;if(!s)return false;
-    var d=new Date(s+'T12:00:00');if(isNaN(d))return false;
-    return wkNum(wk)<wkNum(weekKeyOf(d));
-  }
-  window.onVacation=function(mid,wk){
-    if(beforeDebtStart(wk))return true;
     var days=0;
     (DB.get('excuses')||[]).forEach(function(e){
       if(e.memberId!==mid||e.status!=='accepted'||!e.date)return;
