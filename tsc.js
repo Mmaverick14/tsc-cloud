@@ -6036,7 +6036,7 @@ function renderRulesPanel(){
   var p=$('rulesPanel');
   if(!p){
     p=document.createElement('div');p.id='rulesPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
-    p.innerHTML='<div class="fp-title">// PRAVIDLA WEBU A FRAKCE</div>'+
+    p.innerHTML='<div class="fp-title">// PRAVIDLA ULOŽIŠTĚ A SKUPINY</div>'+
       '<div class="field-group fg-full"><label class="fl">TEXT PRAVIDEL</label><textarea id="rl-text" class="adm-ta" style="min-height:220px" maxlength="8000" placeholder="Sem napiš pravidla…"></textarea></div>'+
       '<div class="fp-ftr" style="margin-top:.7rem"><label class="ping-chk"><input type="checkbox" id="rl-new" checked/><span>Vyžádat nový souhlas od všech (zvýší verzi)</span></label>'+
       '<button class="btn-acc small" id="rlSave">ULOŽIT PRAVIDLA</button><span id="rlSt" class="smsg"></span></div>'+
@@ -6176,3 +6176,4 @@ window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='rules')rende
 var _at=window.aTab;
 window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='rules')render('a');return r;};
 })();
+
