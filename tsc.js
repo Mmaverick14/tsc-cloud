@@ -5954,3 +5954,121 @@ setInterval(function(){if(!document.hidden&&me()){try{repTplInit();}catch(e){}}}
 setInterval(function(){try{tplTick();}catch(e){console.error(e);}},60000);
 setTimeout(function(){try{tplTick();}catch(e){}},12000);
 })();
+
+/* ===== Pravidla: povinný souhlas ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+if(!SECTIONS.some(function(x){return x.key==='rules';}))SECTIONS.push({key:'rules',label:'Pravidla (souhlas členů)'});
+LOG_ICONS.rules='📜';LOG_LABELS.rules='PRAVIDLA';
+
+function rules(){var r=DB.get('rules');return (r&&r.text)?r:null;}
+function ack(id){return DB.get('rack_'+id);}
+function need(m){var r=rules();if(!r||!m||m.hidden||m.panic)return false;var a=ack(m.id);return !a||a.v!==r.v;}
+function canEdit(){var m=getMember();return !!m&&ADMIN_POS.indexOf(m.position)!==-1;}
+function ready(){return !!currentMemberId&&!!sb&&!!DB.cache&&DB.cache.members!==undefined;}
+
+function show(){
+  var m=getMember(),r=rules();
+  if(!m||!r||$('rulesOv'))return;
+  var a=ack(m.id),done=!!a&&a.v===r.v;
+  var ov=document.createElement('div');
+  ov.className='modal-ov';ov.id='rulesOv';ov.style.zIndex='9850';
+  ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+  var foot=done
+    ?'<div class="smsg" style="margin-top:.8rem">✓ Souhlas udělen: '+esc(a.at||'')+'</div><div class="modal-ftr"><button class="btn-ghost small" id="rlNo">ZAVŘÍT</button></div>'
+    :'<div id="rlHint" class="smsg" style="color:var(--text);margin-top:.7rem">// Doscrolluj pravidla až dolů.</div>'+
+     '<label class="ping-chk" style="margin-top:.5rem"><input type="checkbox" id="rlChk" disabled/><span>Přečetl/a jsem pravidla a souhlasím s nimi</span></label>'+
+     '<div class="modal-ftr"><button class="btn-acc small" id="rlOk" disabled>SOUHLASÍM</button><button class="btn-ghost small" id="rlOut">ODHLÁSIT SE</button></div>';
+  ov.innerHTML='<div class="modal-box" style="max-width:640px;width:94vw;max-height:92vh;display:flex;flex-direction:column">'+
+    '<div class="modal-title">📜 PRAVIDLA WEBU A FRAKCE</div>'+
+    '<div class="prof-sub" style="margin-bottom:.6rem">VERZE '+r.v+(r.date?' · ZMĚNĚNO '+esc(r.date):'')+'</div>'+
+    '<div id="rulesTxt" style="overflow-y:auto;max-height:50vh;padding:.8rem 1rem;background:var(--surf);border:1px solid var(--border);color:var(--textb);font-size:.95rem;line-height:1.6">'+esc(r.text)+'</div>'+foot+'</div>';
+  document.body.appendChild(ov);
+
+  function close(){document.removeEventListener('keydown',key,true);ov.remove();}
+  function key(e){if(done&&e.key==='Escape'){e.stopPropagation();close();}}
+  document.addEventListener('keydown',key,true);
+
+  if(done){
+    $('rlNo').onclick=close;
+    ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
+    return;
+  }
+  var box=$('rulesTxt'),chk=$('rlChk'),ok=$('rlOk');
+  function reached(){
+    if(box.scrollTop+box.clientHeight>=box.scrollHeight-4){chk.disabled=false;$('rlHint').textContent='';}
+  }
+  box.onscroll=reached;setTimeout(reached,50);
+  chk.onchange=function(){ok.disabled=!chk.checked;};
+  ok.onclick=function(){
+    if(!chk.checked)return;
+    DB.set('rack_'+m.id,{v:r.v,at:nowStr(),ts:Date.now()});
+    addLog('rules',m.displayName+' souhlasí s pravidly (verze '+r.v+').',{
+      embed:rich(C_GREEN,'📜 SOUHLAS S PRAVIDLY',null,[['👤 Člen',m.displayName],['📅 Kdy',nowStr()],['📌 Verze','v'+r.v]],{by:m.displayName}),icon:'📜'});
+    toast('Souhlas s pravidly uložen ✓','success');
+    close();
+  };
+  $('rlOut').onclick=function(){close();goBack();};
+}
+window.showRules=show;
+
+/* hlídání: kdo nesouhlasil s aktuální verzí, dostane okno */
+setInterval(function(){
+  if(document.hidden||!ready())return;
+  var m=getMember();
+  if(need(m)&&!$('rulesOv'))show();
+},2000);
+
+/* tlačítko v menu členů */
+setInterval(function(){
+  var f=document.querySelector('#memberScreen .sb-foot');
+  if(!f||f.querySelector('.rules-self-btn')||!rules())return;
+  var b=document.createElement('button');
+  b.className='btn-back rules-self-btn foot-mini';b.textContent='📜 PRAVIDLA';b.title='Pravidla webu a frakce';
+  b.onclick=show;
+  f.insertBefore(b,f.lastElementChild);
+},1500);
+
+/* správa v Administraci → Nastavení */
+function renderRulesPanel(){
+  var host=$('at-settings');if(!host||!canEdit())return;
+  var p=$('rulesPanel');
+  if(!p){
+    p=document.createElement('div');p.id='rulesPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+    p.innerHTML='<div class="fp-title">// PRAVIDLA WEBU A FRAKCE</div>'+
+      '<div class="field-group fg-full"><label class="fl">TEXT PRAVIDEL</label><textarea id="rl-text" class="adm-ta" style="min-height:220px" maxlength="8000" placeholder="Sem napiš pravidla…"></textarea></div>'+
+      '<div class="fp-ftr" style="margin-top:.7rem"><label class="ping-chk"><input type="checkbox" id="rl-new" checked/><span>Vyžádat nový souhlas od všech (zvýší verzi)</span></label>'+
+      '<button class="btn-acc small" id="rlSave">ULOŽIT PRAVIDLA</button><span id="rlSt" class="smsg"></span></div>'+
+      '<div class="fp-title" style="margin-top:1rem">// KDO SOUHLASIL</div><div id="rlList"></div>';
+    host.appendChild(p);
+    p.querySelector('#rlSave').onclick=function(){
+      if(!canEdit())return;
+      var me=getMember(),txt=$('rl-text').value.trim(),old=DB.get('rules')||{v:0,text:''},st=$('rlSt');
+      var changed=txt!==(old.text||'');
+      var v=old.v||0;
+      if(txt&&(v===0||(changed&&$('rl-new').checked)))v=v+1;
+      DB.set('rules',{text:txt,v:v,date:nowStr(),by:me.displayName});
+      addLog('rules',me.displayName+(txt?' upravil pravidla (verze '+v+').':' smazal pravidla.'),{noDiscord:true});
+      st.textContent='// ULOŽENO'+(txt?' (verze '+v+')':'');setTimeout(function(){st.textContent='';},2500);
+      toast('Pravidla uložena','success');renderRulesPanel();
+    };
+  }
+  var r=DB.get('rules')||{};
+  var ta=$('rl-text');
+  if(document.activeElement!==ta&&ta.dataset.v!==String(r.v||0)+'|'+(r.text||'').length){
+    ta.value=r.text||'';ta.dataset.v=String(r.v||0)+'|'+(r.text||'').length;
+  }
+  var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden;});
+  var okN=0;
+  var rows=ms.map(function(x){
+    var a=ack(x.id),good=!!r.v&&!!a&&a.v===r.v;if(good)okN++;
+    return '<div class="prof-li"><span>'+esc(x.displayName)+'</span><span style="color:'+(good?'var(--green)':'var(--red)')+'">'+
+      (good?'✓ '+esc(a.at||''):(a?'✗ souhlas jen s verzí v'+a.v:'✗ zatím nesouhlasil'))+'</span></div>';
+  }).join('');
+  $('rlList').innerHTML=r.text?('<div class="att-sum" style="margin-bottom:.4rem">Souhlasilo '+okN+' z '+ms.length+' (aktuální verze v'+r.v+')</div>'+rows)
+    :'<div class="empty-s">// Pravidla zatím nejsou nastavena — nikdo nemusí nic odklikávat</div>';
+}
+var _rs=window.renderSettings;
+if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderRulesPanel();}catch(e){console.error(e);}return r;};
+})();
