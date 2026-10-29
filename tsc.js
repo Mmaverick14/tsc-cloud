@@ -5678,12 +5678,12 @@ var WEEKS=16;
      ══════════════════════════════════════════════ */
   var NG={
     member:{sel:'#memberScreen .sb-nav',g:[
-      ['PŘEHLED',['board','tasks','messages','calendar']],
+      ['PŘEHLED',['board','tasks','messages','calendar','rules']],      
       ['OPERACE',['warehouse','boosting','heist','clothing','business']],
       ['FINANCE & PAPÍRY',['finance','excuse','report']],
       ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
     admin:{sel:'#adminScreen .sb-nav',g:[
-      ['PŘEHLED',['board','tasks','templates','messages','calendar']],
+      ['PŘEHLED',['board','tasks','templates','messages','calendar','rules']],
       ['OPERACE',['warehouse','boosting','heists','clothing']],
       ['FINANCE',['finance','incomes','excuses','reports']],
       ['LIDÉ',['members','roster','radio']],
@@ -6071,4 +6071,108 @@ function renderRulesPanel(){
 }
 var _rs=window.renderSettings;
 if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderRulesPanel();}catch(e){console.error(e);}return r;};
+})();
+
+/* ===== Záložka PRAVIDLA (text + kdo souhlasil + odeslání na Discord) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.rules='A';
+
+function rules(){var r=DB.get('rules');return (r&&r.text)?r:null;}
+function ack(id){return DB.get('rack_'+id);}
+function canSend(){var m=getMember();return !!m&&ADMIN_POS.indexOf(m.position)!==-1;}
+
+function stat(r){
+  var ok=[],no=[];
+  (DB.get('members')||[]).filter(function(x){return !x.hidden;}).forEach(function(x){
+    var a=ack(x.id);
+    if(a&&a.v===r.v)ok.push({m:x,at:a.at||''});else no.push({m:x,old:a?a.v:0});
+  });
+  return {ok:ok,no:no,tot:ok.length+no.length};
+}
+
+function html(scope){
+  var r=rules();
+  if(!r)return '<div class="empty-s">// Pravidla zatím nejsou nastavena</div>';
+  var s=stat(r),me=getMember(),a=me?ack(me.id):null,need=!!me&&!me.hidden&&(!a||a.v!==r.v);
+  var h='<div class="excuse-template" style="margin:1.1rem 1.2rem">'+
+    '<div class="excuse-tmpl-title">// PRAVIDLA — VERZE v'+r.v+(r.date?' · ZMĚNĚNO '+esc(r.date):'')+'</div>'+
+    '<div style="color:var(--textb);font-size:1rem;line-height:1.65">'+esc(r.text)+'</div></div>';
+  if(need)h+='<div class="fp-ftr" style="margin:0 1.2rem 1rem"><button class="btn-acc small" onclick="showRules()">📜 SOUHLASÍM — OTEVŘÍT</button></div>';
+  h+='<div class="sh">// KDO SOUHLASIL: '+s.ok.length+' Z '+s.tot+'</div><div class="st-grid">'+
+    '<div class="st-box"><div class="st-bt-title" style="color:var(--green)">✓ SOUHLASILI ('+s.ok.length+')</div>'+
+      (s.ok.length?s.ok.map(function(x){return '<div class="prof-li"><span>'+esc(x.m.displayName)+'</span><span>'+esc(x.at)+'</span></div>';}).join(''):'<div class="empty-s">// Nikdo</div>')+'</div>'+
+    '<div class="st-box"><div class="st-bt-title" style="color:var(--red)">✗ NESOUHLASILI ('+s.no.length+')</div>'+
+      (s.no.length?s.no.map(function(x){return '<div class="prof-li"><span>'+esc(x.m.displayName)+'</span><span>'+(x.old?'jen verze v'+x.old:'zatím ne')+'</span></div>';}).join(''):'<div class="empty-s">// Všichni souhlasili ✓</div>')+'</div>'+
+    '</div>';
+  if(canSend())h+='<div class="fp-ftr" style="margin:1rem 1.2rem 2rem"><button class="btn-acc small" onclick="rulesSend(\''+scope+'\')">📤 POSLAT NA DISCORD</button>'+
+    '<label class="ping-chk"><input type="checkbox" id="rlPing'+scope+'"/><span>🔔 Označit ty, kdo nesouhlasili</span></label></div>';
+  return h;
+}
+
+function render(scope){
+  var el=$(scope==='a'?'rulesRootA':'rulesRootM');if(!el||!getMember())return;
+  var out=html(scope);
+  if(el.dataset.h!==out){el.dataset.h=out;el.innerHTML=out;}
+}
+
+window.rulesSend=function(scope){
+  if(!canSend()){toast('Odeslat smí jen vedení','error');return;}
+  var r=rules();if(!r){toast('Pravidla nejsou nastavena','error');return;}
+  var set=DB.get('settings')||{},sec=(set.sections||{}).rules||{};
+  if(sec.on===false){toast('Sekce „Pravidla“ je v Nastavení vypnutá','error',4000);return;}
+  if(!(sec.url||'').trim()&&!set.webhook){toast('Chybí webhook (Nastavení → Discord)','error',4000);return;}
+  var me=getMember(),s=stat(r),pb=$('rlPing'+scope);
+  var ping=(pb&&pb.checked)?s.no.filter(function(x){return x.m.discordId;}).map(function(x){return '<@'+x.m.discordId+'>';}).join(' '):'';
+  if(pb)pb.checked=false;
+  var chunks=splitText(r.text,3500);
+  chunks.forEach(function(c,i){
+    setTimeout(function(){
+      sendToDiscord('rules','',{noPing:true,embed:{
+        title:i===0?'📜 PRAVIDLA — verze v'+r.v:'📜 PRAVIDLA — pokračování',
+        description:c,color:0x9b59b6,footer:{text:me.displayName+' • '+nowStr()}}});
+    },i*800);
+  });
+  setTimeout(function(){
+    var okTxt=s.ok.map(function(x){return x.m.displayName;}).join(', ')||'—';
+    var noTxt=s.no.map(function(x){return x.m.displayName;}).join(', ')||'všichni souhlasili ✓';
+    sendToDiscord('rules','',{extraPing:ping,embed:{
+      title:'📜 PRAVIDLA — STAV SOUHLASŮ (v'+r.v+')',
+      description:'Souhlasilo **'+s.ok.length+'** z **'+s.tot+'** členů.',
+      color:s.no.length?0xe67e22:0x2ecc71,
+      fields:[{name:'✅ Souhlasili ('+s.ok.length+')',value:clip(okTxt,1000),inline:false},
+              {name:'❌ Nesouhlasili ('+s.no.length+')',value:clip(noTxt,1000),inline:false}],
+      footer:{text:me.displayName+' • '+nowStr()}}});
+  },chunks.length*800+400);
+  addLog('rules',me.displayName+' odeslal pravidla a stav souhlasů na Discord ('+s.ok.length+'/'+s.tot+').',{noDiscord:true});
+  toast('Pravidla odeslána na Discord ✓','success');
+};
+
+/* vložení záložky do menu a obsahu (člen i vedení) */
+(function inject(){
+  var mn=document.querySelector('#memberScreen .sb-nav'),mm=document.querySelector('#memberScreen .main');
+  if(mn&&mm&&!$('mt-rules')){
+    var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"mTab('rules',this)");
+    b.innerHTML='<span class="ni">📜</span><span class="nl">PRAVIDLA</span>';
+    var af=mn.querySelector('.nb[onclick*="\'calendar\'"]');
+    if(af)af.insertAdjacentElement('afterend',b);else mn.appendChild(b);
+    mm.insertAdjacentHTML('beforeend','<div id="mt-rules" class="mt"><div class="ph"><div class="pt">📜 // PRAVIDLA</div></div><div id="rulesRootM"></div></div>');
+  }
+  var an=document.querySelector('#adminScreen .sb-nav'),am=document.querySelector('#adminScreen .main');
+  if(an&&am&&!$('at-rules')){
+    var c=document.createElement('button');c.className='nb';c.setAttribute('onclick',"aTab('rules',this)");
+    c.innerHTML='<span class="ni">📜</span><span class="nl">PRAVIDLA</span>';
+    var ac=an.querySelector('.nb[onclick*="\'calendar\'"]');
+    if(ac)ac.insertAdjacentElement('afterend',c);else an.appendChild(c);
+    am.insertAdjacentHTML('beforeend','<div id="at-rules" class="at"><div class="ph"><div class="pt">📜 // PRAVIDLA</div></div><div id="rulesRootA"></div></div>');
+  }
+})();
+
+if(typeof M_RENDER!=='undefined')M_RENDER.rules=function(){render('m');};
+if(typeof A_RENDER!=='undefined')A_RENDER.rules=function(){render('a');};
+var _mt=window.mTab;
+window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='rules')render('m');return r;};
+var _at=window.aTab;
+window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='rules')render('a');return r;};
 })();
