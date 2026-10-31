@@ -399,8 +399,25 @@ function goBackToMember(){
   }
 }
 
+// ── PANIC: zapnutí / vypnutí ──
+function panicOn(){var c=DB.get('panicCfg');return !c||c.on!==false;}
+function applyPanicCfg(){document.body.classList.toggle('panic-off',!panicOn());}
+function setPanicEnabled(on){
+  var m=getMember();
+  if(!m||ADMIN_POS.indexOf(m.position)===-1){
+    toast('PANIC smí zapnout/vypnout jen Mastermind, Overseer a Counselor','error');
+    var cb=document.getElementById('panicEnabled');if(cb)cb.checked=panicOn();
+    return;
+  }
+  DB.set('panicCfg',{on:!!on,by:m.displayName,date:nowStr()});
+  addLog('panic',m.displayName+(on?' ZAPNUL':' VYPNUL')+' funkci PANIC.',{noDiscord:true});
+  applyPanicCfg();renderPanicList();
+  toast('PANIC '+(on?'zapnut':'vypnut'),on?'success':'info');
+}
+
 // ── PANIC ────────────────────────────────────
 function triggerPanic(){
+  if(!panicOn()){toast('PANIC je momentálně vypnutý','error');return;}
   var m=getMember();if(!m)return;
   if(!confirm('Aktivovat PANIC? Váš přístup bude zablokován.'))return;
   var members=DB.get('members')||[];
@@ -486,6 +503,7 @@ async function enterPortal(session,isFreshLogin){
     return false;
   }
   currentMemberId=m.id;
+  applyPanicCfg();
   if(isFreshLogin&&!m.hidden)addLog('sys','Člen "'+m.displayName+'" se přihlásil.');
   document.getElementById('panicBtn').classList.remove('hidden');
   var adminBtn=document.getElementById('adminNavBtn');
@@ -550,6 +568,7 @@ function refreshView(){
   var adminBtn=document.getElementById('adminNavBtn');
   if(adminBtn)adminBtn.classList.toggle('hidden',!m.adminAccess);
   applyMenuCfg();
+  applyPanicCfg();
   notifSync();
   var ae=document.activeElement;
   if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))return;
@@ -1710,6 +1729,10 @@ function saveFinanceSettings(){
   DB.set('finsettings',fs);setText('feeStatus','// ULOŽENO');setTimeout(function(){setText('feeStatus','');},2000);toast('Nastavení uloženo','success');
 }
 function renderPanicList(){
+  var cb=document.getElementById('panicEnabled');
+  if(cb){cb.checked=panicOn();
+    var t=document.getElementById('panicEnabledTxt');
+    if(t)t.textContent=panicOn()?'PANIC tlačítko zapnuto':'PANIC tlačítko VYPNUTO';}
   var pList=DB.get('panicList')||[];var members=DB.get('members')||[];
   var el=document.getElementById('panicList');if(!el)return;
   if(!pList.length){el.innerHTML='<div class="empty-s">// Žádní blokovaní členové</div>';return;}

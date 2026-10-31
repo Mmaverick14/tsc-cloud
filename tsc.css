@@ -1849,3 +1849,6 @@ html body select option:hover{
 .rx-tpl-row .rx-sel{width:100%}
 .log-type.tpl{background:rgba(39,174,96,.08);color:#4fd18b;border:1px solid var(--gdim)}
 @media(max-width:700px){.rx-two{grid-template-columns:1fr}}
+
+/* PANIC vypnut vedením */
+body.panic-off #panicBtn{display:none!important}
