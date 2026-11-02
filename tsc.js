@@ -2193,6 +2193,7 @@ function boostCard(b,admin){
     '<div class="wh-name">'+esc(b.name)+'</div>'+
     '<div class="boost-stat"><span>MAX RYCHLOST</span><b>'+(b.speed?esc(b.speed)+' MP/H':'—')+'</b></div>'+
     '<div class="boost-stat"><span>HANDLING</span><b>'+(b.handling?esc(b.handling):'—')+'</b></div>'+
+    '<div class="boost-stat"><span>CENA</span><b>'+(b.price?money(b.price):'—')+'</b></div>'+
     '<div class="boost-stat"><span>LOKACE</span><b class="boost-loc">'+(b.loc?esc(b.loc):'—')+'</b></div>'+
     '<div class="boost-stat"><span>BACKUP</span><b class="'+(b.backup?'bk-yes':'bk-no')+'">'+(b.backup?'POTŘEBA':'NE')+'</b></div>'+
     (b.note?'<div class="boost-note">'+esc(b.note)+'</div>':'')+
@@ -2246,7 +2247,7 @@ function toggleBoostForm(p){
 }
 function resetBoostForm(p){
   editBoostId=null;
-  ['bo-name','bo-speed','bo-handling','bo-loc','bo-note','bo-img','bo-img2','bo-img3'].forEach(function(i){bEl(p,i).value='';});
+  ['bo-name','bo-speed','bo-handling','bo-price','bo-loc','bo-note','bo-img','bo-img2','bo-img3'].forEach(function(i){bEl(p,i).value='';});
   bEl(p,'bo-backup').checked=false;
   bEl(p,'bo-tier').value='D';
   bEl(p,'bo-preview').innerHTML='—';
@@ -2258,10 +2259,10 @@ var GALLERY_URL=(location.origin&&location.origin!=='null')?location.origin+'/':
 function boostExtras(imgs){
   return (imgs||[]).slice(1,4).map(function(i){var u=absImg(i);return u?{url:GALLERY_URL,image:{url:u}}:null;}).filter(Boolean);
 }
-function boostEmbed(title,by,name,tier,speed,loc,backup,note,imgs){
+function boostEmbed(title,by,name,tier,speed,loc,backup,note,imgs,price){
   imgs=imgs||[];
   var e=rich(C_ORANGE,title,'**'+name+'**',[
-    ['🏁 Tier','Tier '+tier],['⚡ Rychlost',speed?speed+' MP/H':'—'],['🛡 Backup',backup?'POTŘEBA':'NE'],
+    ['🏁 Tier','Tier '+tier],['⚡ Rychlost',speed?speed+' MP/H':'—'],['💰 Cena',price?money(price):'—'],['🛡 Backup',backup?'POTŘEBA':'NE'],
     ['📍 Lokace',loc||'neuvedena'],['📝 Poznámka',note,false]
   ],{img:imgs[0],big:true,by:by});
   if(imgs.length>1)e.url=GALLERY_URL;
@@ -2273,6 +2274,7 @@ function saveBoost(p){
   var tier=bEl(p,'bo-tier').value;
   var speed=bEl(p,'bo-speed').value.trim();
   var handling=bEl(p,'bo-handling').value.trim();
+  var price=parseInt(bEl(p,'bo-price').value)||0;
   var loc=bEl(p,'bo-loc').value.trim();
   var backup=bEl(p,'bo-backup').checked;
   var note=bEl(p,'bo-note').value.trim();
@@ -2283,16 +2285,16 @@ function saveBoost(p){
   var exPing=pingBox((p||'')+'ping-boost');
   var list=DB.get('boosting')||[];
   var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena')+' — Backup: '+(backup?'POTŘEBA':'ne')+(note?' — Poznámka: '+note:'');
-  var short=name+' (Tier '+tier+(speed?', '+speed+' MP/H':'')+') · Lokace: '+(loc||'neuvedena')+'; Backup: '+(backup?'POTŘEBA':'NE')+(note?'; Poznámka: '+note:'');
+  var short=name+' (Tier '+tier+(speed?', '+speed+' MP/H':'')+') · Cena: '+(price?money(price):'neuvedena')+' · Lokace: '+(loc||'neuvedena')+'; Backup: '+(backup?'POTŘEBA':'NE')+(note?'; Poznámka: '+note:'');
   if(editBoostId){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
-    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.loc=loc;b.backup=backup;b.note=note;b.img=img;b.img2=img2;b.img3=img3;
-    addLog('boost',m.displayName+' upravil vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,imgs)});
+    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.price=price;b.loc=loc;b.backup=backup;b.note=note;b.img=img;b.img2=img2;b.img3=img3;
+    addLog('boost',m.displayName+' upravil vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,imgs,price)});
     toast('Vozidlo upraveno','success');
   }else{
-    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,loc:loc,backup:backup,note:note,img:img,img2:img2,img3:img3,ownerId:m.id,addedBy:m.displayName});
-    addLog('boost',m.displayName+' přidal vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,imgs)});
+    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,price:price,loc:loc,backup:backup,note:note,img:img,img2:img2,img3:img3,ownerId:m.id,addedBy:m.displayName});
+    addLog('boost',m.displayName+' přidal vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,imgs,price)});
     toast(name+' přidáno','success');
   }
   DB.set('boosting',list);
@@ -2308,6 +2310,7 @@ function editBoost(id,p){
   bEl(p,'bo-tier').value=b.tier||'D';
   bEl(p,'bo-speed').value=b.speed||'';
   bEl(p,'bo-handling').value=b.handling||'';
+  bEl(p,'bo-price').value=b.price||'';
   bEl(p,'bo-loc').value=b.loc||'';
   bEl(p,'bo-backup').checked=!!b.backup;
   bEl(p,'bo-note').value=b.note||'';
