@@ -1511,7 +1511,7 @@ function genNewRadios(){
     f=autoRadios(cfg,cfg.lastSlot);
   }else{
     var used={},out=[];
-    while(out.length<4){var n=((1000+Math.floor(Math.random()*8991))/10).toFixed(1).replace('.',',');if(!used[n]){used[n]=1;out.push(n);}}
+    while(out.length<4){var n=((1000+Math.floor(Math.random()*98991))/10).toFixed(1).replace('.',',');if(!used[n]){used[n]=1;out.push(n);}}
     f={primary:out[0],secondary:out[1],action:out[2],vedeni:out[3]};
     DB.set('radios',f);
   }
@@ -1572,7 +1572,7 @@ function hashStr(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){
 function rngFrom(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 function autoRadios(cfg,slot){
   var r=rngFrom(hashStr((cfg.salt||'x')+'|'+slot));var used={},out=[];
-  while(out.length<4){var n=((1000+Math.floor(r()*8991))/10).toFixed(1).replace('.',',');if(!used[n]){used[n]=1;out.push(n);}}
+  while(out.length<4){var n=((1000+Math.floor(r()*98991))/10).toFixed(1).replace('.',',');if(!used[n]){used[n]=1;out.push(n);}}
   return {primary:out[0],secondary:out[1],action:out[2],vedeni:out[3]};
 }
 function currentRadios(){
@@ -2591,7 +2591,7 @@ function renderSentReports(){
 
 function radioInfoHtml(){
   var next=radioNextChange().text;
-  return '<div class="radio-info"><b>⚠ ZMĚNA VYSÍLAČEK</b> Každý den v <b>'+radioTimesText()+'</b> proběhne změna vysílaček (frekvence 100,0–999,0). Nové frekvence se zobrazí tady.<div class="radio-info-next">// PŘÍŠTÍ ZMĚNA: '+next+'</div></div>';
+  return '<div class="radio-info"><b>⚠ ZMĚNA VYSÍLAČEK</b> Každý den v <b>'+radioTimesText()+'</b> proběhne změna vysílaček (frekvence 100,0–9999,0). Nové frekvence se zobrazí tady.<div class="radio-info-next">// PŘÍŠTÍ ZMĚNA: '+next+'</div></div>';
 }
 function renderMyRadio(){
   var radios=currentRadios();
@@ -2612,37 +2612,184 @@ function renderMyRadio(){
     '</div>';
   }).join('')+'</div>'+(canRegenRadios()?'<div style="margin-top:1rem;"><button class="btn-acc small" onclick="regenRadios()">🎲 VYGENEROVAT NOVÉ FREKVENCE</button></div>':'');
 }
-function renderContacts(){
+// ── KONTAKTY: Crew + Partneři (štítky), telefon s předvyplněnými závorkami ──
+var CT_COLORS=['#c49a14','#4a90d9','#27ae60','#e056fd','#e67e22','#1abc9c','#e74c3c','#9b59b6'];
+var ctView='crew',ctTagF='all';
+function ctTags(){var a=DB.get('contactTags');return Array.isArray(a)?a:[];}
+function ctTagById(id){return ctTags().filter(function(t){return t.id===id;})[0]||null;}
+function ctColor(t){return t?CT_COLORS[(t.c||0)%CT_COLORS.length]:'';}
+function ctEl(id){return document.getElementById(id);}
+
+function phoneFmt(raw){
+  var d=String(raw||'').replace(/\D/g,'').slice(0,12);
+  if(d.length<=3)return '('+d+')';
+  var o='('+d.slice(0,3)+') '+d.slice(3,6);
+  if(d.length>6)o+='-'+d.slice(6);
+  return o;
+}
+function phoneDigits(v){return String(v||'').replace(/\D/g,'');}
+function phoneMask(el){
+  if(!el||el.dataset.mask)return;el.dataset.mask='1';
+  function fix(){
+    var d=phoneDigits(el.value),v=phoneFmt(d);el.value=v;
+    var pos=d.length<=3?1+d.length:v.length;
+    try{el.setSelectionRange(pos,pos);}catch(e){}
+  }
+  el.addEventListener('input',fix);
+  el.addEventListener('focus',function(){if(!el.value)el.value='()';setTimeout(fix,0);});
+}
+window.addEventListener('DOMContentLoaded',function(){phoneMask(ctEl('cPhone'));phoneMask(ctEl('myPhone'));});
+
+function ctCopy(txt){
+  txt=String(txt||'');if(!txt)return;
+  function ok(){toast('Číslo '+txt+' zkopírováno ✓','success');}
+  function fb(){var t=document.createElement('textarea');t.value=txt;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();try{document.execCommand('copy');ok();}catch(e){}t.remove();}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
+}
+function contactsView(v){ctView=v==='partners'?'partners':'crew';renderContacts();}
+function ctSetTag(id){ctTagF=id;renderContacts();}
+
+function saveMyPhone(){
   var m=getMember();if(!m)return;
-  var contacts=(DB.get('contacts')||{})[m.id]||[];
-  var el=document.getElementById('contactsList');if(!el)return;
-  if(!contacts.length){el.innerHTML='<div class="empty-s">// Žádné kontakty</div>';return;}
-  el.innerHTML=contacts.map(function(c,i){
-    var fullName=((c.first||'')+' '+(c.last||'')).trim();
-    return '<div class="contact-card">'+
+  var members=DB.get('members')||[],me=members.find(function(x){return x.id===m.id;});if(!me)return;
+  var d=phoneDigits(ctEl('myPhone').value);
+  me.phone=d?phoneFmt(d):'';
+  DB.set('members',members);
+  setText('myPhoneStatus','// ULOŽENO');setTimeout(function(){setText('myPhoneStatus','');},2000);
+  toast(me.phone?'Číslo uloženo ✓':'Číslo odebráno','success');
+  renderContacts();
+}
+
+function ctAddTag(){
+  var m=getMember();
+  if(!m||!isAdmin()){toast('Štítky spravuje jen vedení','error');return;}
+  var inp=ctEl('ctTagNew'),v=inp.value.trim().replace(/\s+/g,' ');
+  if(!v){toast('Zadej název štítku','error');return;}
+  if(v.length>24){toast('Název je příliš dlouhý (max. 24 znaků)','error');return;}
+  var l=ctTags();
+  if(l.some(function(t){return t.name.toLowerCase()===v.toLowerCase();})){toast('Takový štítek už existuje','error');return;}
+  l.push({id:uid(),name:v,c:l.length%CT_COLORS.length});
+  DB.set('contactTags',l);
+  addLog('sys',m.displayName+' vytvořil štítek kontaktů: '+v+'.',{noDiscord:true});
+  inp.value='';toast('Štítek "'+v+'" vytvořen','success');renderContacts();
+}
+function ctDelTag(id){
+  if(!isAdmin())return;
+  var t=ctTagById(id);if(!t)return;
+  function go(){
+    DB.set('contactTags',ctTags().filter(function(x){return x.id!==id;}));
+    if(ctTagF===id)ctTagF='all';
+    toast('Štítek smazán','info');renderContacts();
+  }
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT ŠTÍTEK?',text:esc(t.name)+'<div class="tsc-sub">Kontakty zůstanou, jen přijdou o štítek.</div>',ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);
+  else if(confirm('Smazat štítek "'+t.name+'"?'))go();
+}
+function ctEditTag(i,btn){
+  var m=getMember();if(!m)return;
+  var c=((DB.get('contacts')||{})[m.id]||[])[i];if(!c)return;
+  var sel=document.createElement('select');sel.className='ct-tagsel';
+  sel.innerHTML='<option value="">— bez štítku —</option>'+ctTags().map(function(t){return '<option value="'+esc(t.id)+'"'+(c.tag===t.id?' selected':'')+'>'+esc(t.name)+'</option>';}).join('');
+  btn.replaceWith(sel);sel.focus();
+  sel.onchange=function(){
+    var contacts=DB.get('contacts')||{};
+    if(contacts[m.id]&&contacts[m.id][i]){contacts[m.id][i].tag=sel.value;DB.set('contacts',contacts);}
+    renderContacts();
+  };
+  sel.onblur=function(){renderContacts();};
+}
+
+function renderCrewContacts(m){
+  var el=ctEl('crewContacts');if(!el)return;
+  var inp=ctEl('myPhone');
+  if(inp&&document.activeElement!==inp)inp.value=m.phone?phoneFmt(m.phone):'()';
+  var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden;}).sort(function(a,b){
+    var d=POSITIONS.indexOf(a.position)-POSITIONS.indexOf(b.position);
+    return d!==0?d:String(a.displayName).localeCompare(String(b.displayName),'cs');
+  });
+  if(!ms.length){el.innerHTML='<div class="empty-s">// Žádní členové</div>';return;}
+  el.innerHTML=ms.map(function(x){
+    var n=rosterNames(x),nick=n.nick||x.displayName,full=(n.first+' '+n.last).trim();
+    var ved=isVedeni(x.position);
+    return '<div class="contact-card ct-crew" style="--ct:'+(ved?'var(--acc)':'var(--muted)')+'">'+
+      '<div class="ct-hex">'+esc(nick.charAt(0).toUpperCase())+'</div>'+
       '<div class="contact-info">'+
-        '<div class="contact-nick">'+esc(c.nick)+'</div>'+
-        (fullName?'<div class="contact-name">'+esc(fullName)+'</div>':'')+
-        '<div class="contact-phone">'+esc(c.phone)+'</div>'+
+        '<div class="contact-nick"><span class="prof-link" data-prof="'+esc(x.id)+'">'+esc(nick)+'</span> <span class="rs-pos '+(ved?'vedeni':'other')+'">'+esc(x.position)+'</span></div>'+
+        (full&&full!==nick?'<div class="contact-name">'+esc(full)+'</div>':'')+
+        (x.phone?'<button type="button" class="ct-phone" title="Kliknutím zkopíruješ" data-cp="'+esc(x.phone)+'" onclick="ctCopy(this.dataset.cp)">'+esc(x.phone)+'</button>'
+                :'<div class="ct-nophone">číslo nevyplněno</div>')+
+      '</div></div>';
+  }).join('');
+}
+
+function renderPartnerContacts(m){
+  var tags=ctTags();
+  if(ctTagF!=='all'&&!ctTagById(ctTagF))ctTagF='all';
+  var mgr=ctEl('ctTagMgr');
+  if(mgr){
+    mgr.classList.toggle('hidden',!isAdmin());
+    var ch=ctEl('ctTagChips');
+    if(ch)ch.innerHTML=tags.length?tags.map(function(t){
+      return '<span class="ht-chip" style="border-color:'+ctColor(t)+'">'+esc(t.name)+'<button title="Smazat štítek" onclick="ctDelTag(\''+t.id+'\')">✕</button></span>';
+    }).join(''):'<span class="smsg" style="color:var(--text)">Zatím žádné štítky — vytvoř první níže.</span>';
+  }
+  var sel=ctEl('cTag');
+  if(sel&&document.activeElement!==sel){
+    var cur=sel.value;
+    sel.innerHTML='<option value="">— bez štítku —</option>'+tags.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>';}).join('');
+    sel.value=tags.some(function(t){return t.id===cur;})?cur:'';
+  }
+  var fl=ctEl('ctFilter');
+  if(fl)fl.innerHTML=tags.length?'<button class="wf'+(ctTagF==='all'?' active':'')+'" onclick="ctSetTag(\'all\')">VŠE</button>'+tags.map(function(t){
+    return '<button class="wf'+(ctTagF===t.id?' active':'')+'" style="--tc:'+ctColor(t)+'" onclick="ctSetTag(\''+t.id+'\')">'+esc(t.name.toUpperCase())+'</button>';
+  }).join(''):'';
+  var el=ctEl('contactsList');if(!el)return;
+  var all=(DB.get('contacts')||{})[m.id]||[];
+  var rows=[];all.forEach(function(c,i){if(ctTagF==='all'||c.tag===ctTagF)rows.push({c:c,i:i});});
+  if(!rows.length){el.innerHTML='<div class="empty-s">// '+(all.length?'V tomto štítku nikdo není':'Žádné kontakty')+'</div>';return;}
+  el.innerHTML=rows.map(function(r){
+    var c=r.c,t=ctTagById(c.tag),full=((c.first||'')+' '+(c.last||'')).trim();
+    return '<div class="contact-card"'+(t?' style="--ct:'+ctColor(t)+'"':'')+'>'+
+      '<div class="ct-hex">'+esc(String(c.nick||'?').charAt(0).toUpperCase())+'</div>'+
+      '<div class="contact-info">'+
+        '<div class="contact-nick">'+esc(c.nick)+' <button type="button" class="ct-tag'+(t?'':' none')+'" title="Změnit štítek" onclick="ctEditTag('+r.i+',this)">'+(t?esc(t.name):'+ ŠTÍTEK')+'</button></div>'+
+        (full?'<div class="contact-name">'+esc(full)+'</div>':'')+
+        (c.note?'<div class="ct-note">'+esc(c.note)+'</div>':'')+
+        '<button type="button" class="ct-phone" title="Kliknutím zkopíruješ" data-cp="'+esc(c.phone)+'" onclick="ctCopy(this.dataset.cp)">'+esc(c.phone)+'</button>'+
       '</div>'+
-      '<button class="btn-micro del" onclick="deleteContact('+i+')">✕</button>'+
+      '<button class="btn-micro del" title="Smazat kontakt" onclick="deleteContact('+r.i+')">✕</button>'+
     '</div>';
   }).join('');
 }
 
+function renderContacts(){
+  var m=getMember();if(!m)return;
+  var crew=ctView==='crew';
+  var a=ctEl('ctTabCrew'),b=ctEl('ctTabPartners');
+  if(a)a.classList.toggle('active',crew);
+  if(b)b.classList.toggle('active',!crew);
+  var pc=ctEl('ctCrew'),pp=ctEl('ctPartners');
+  if(pc)pc.classList.toggle('hidden',!crew);
+  if(pp)pp.classList.toggle('hidden',crew);
+  renderCrewContacts(m);
+  renderPartnerContacts(m);
+}
+
 function addContact(){
   var m=getMember();if(!m)return;
-  var nick=document.getElementById('cNick').value.trim();
-  var phone=document.getElementById('cPhone').value.trim();
-  var first=document.getElementById('cFirst').value.trim();
-  var last=document.getElementById('cLast').value.trim();
-  var st=document.getElementById('contactStatus');
-  if(!nick||!phone){st.textContent='// VYPLŇTE POVINNÁ POLE';return;}
+  var nick=ctEl('cNick').value.trim();
+  var phoneRaw=ctEl('cPhone').value;
+  var first=ctEl('cFirst').value.trim();
+  var last=ctEl('cLast').value.trim();
+  var note=ctEl('cNote').value.trim();
+  var tag=ctEl('cTag').value;
+  var st=ctEl('contactStatus');
+  if(!nick||!phoneDigits(phoneRaw)){st.textContent='// VYPLŇTE POVINNÁ POLE';return;}
   var contacts=DB.get('contacts')||{};
   if(!contacts[m.id])contacts[m.id]=[];
-  contacts[m.id].push({nick:nick,phone:phone,first:first,last:last});
+  contacts[m.id].push({nick:nick,phone:phoneFmt(phoneRaw),first:first,last:last,note:note,tag:tag});
   DB.set('contacts',contacts);
-  ['cNick','cPhone','cFirst','cLast'].forEach(function(i){document.getElementById(i).value='';});
+  ['cNick','cFirst','cLast','cNote'].forEach(function(i){ctEl(i).value='';});
+  ctEl('cPhone').value='()';
   st.textContent='// PŘIDÁNO';setTimeout(function(){st.textContent='';},2000);
   toast(nick+' přidán','success');renderContacts();
 }

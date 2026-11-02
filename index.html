@@ -10,7 +10,7 @@
   <link rel="shortcut icon" href="images/favicon.ico"/>
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
   <script>try{var u=parseInt(localStorage.getItem("tsc_ui_scale"),10);if(u>=80&&u<=150)document.documentElement.style.setProperty("--ui",u+"%");}catch(e){}</script>
-  <link rel="stylesheet" href="tsc.css?v=20261031a"/>
+  <link rel="stylesheet" href="tsc.css?v=20261031b"/>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
 </head>
 <body>
@@ -295,18 +295,48 @@
       <!-- KONTAKTY -->
       <div id="mt-contacts" class="mt">
         <div class="ph"><div class="pt">📱 // KONTAKTY</div></div>
-        <div class="form-panel" style="margin:1.2rem;">
-          <div class="fp-title">// PŘIDAT KONTAKT</div>
-          <div class="form-grid">
-            <div class="field-group"><label class="fl">PŘEZDÍVKA *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cNick" placeholder="Přezdívka..."/></div></div>
-            <div class="field-group"><label class="fl">TELEFON *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cPhone" placeholder="(685)845 ..."/></div></div>
-            <div class="field-group"><label class="fl">JMÉNO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cFirst" placeholder="Jméno"/></div></div>
-            <div class="field-group"><label class="fl">PŘÍJMENÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cLast" placeholder="Příjmení"/></div></div>
-          </div>
-          <div class="fp-ftr"><button class="btn-acc small" onclick="addContact()">+ PŘIDAT</button><span id="contactStatus" class="smsg"></span></div>
+        <div class="task-tabs">
+          <button id="ctTabCrew" class="ttab active" onclick="contactsView('crew')">👥 CREW</button>
+          <button id="ctTabPartners" class="ttab" onclick="contactsView('partners')">🤝 PARTNEŘI</button>
         </div>
-        <div class="sh">// MÉ KONTAKTY</div>
-        <div id="contactsList" class="stream"></div>
+
+        <div id="ctCrew">
+          <div class="form-panel" style="margin:1.2rem;">
+            <div class="fp-title">// MOJE ČÍSLO (ostatní ho uvidí u tvého jména)</div>
+            <div class="form-grid">
+              <div class="field-group"><label class="fl">TELEFON</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="myPhone" value="()" inputmode="tel" placeholder="(000) 000-000" onkeydown="if(event.key==='Enter')saveMyPhone()"/></div></div>
+            </div>
+            <div class="fp-ftr"><button class="btn-acc small" onclick="saveMyPhone()">ULOŽIT ČÍSLO</button><button class="btn-ghost small" onclick="goNav('m','roster')">🪪 OTEVŘÍT CREW LIST</button><span id="myPhoneStatus" class="smsg"></span></div>
+          </div>
+          <div class="sh">// LIDÉ Z FRAKCE</div>
+          <div id="crewContacts" class="ct-grid"></div>
+        </div>
+
+        <div id="ctPartners" class="hidden">
+          <div id="ctTagMgr" class="form-panel hidden" style="margin:1.2rem;">
+            <div class="fp-title">// ŠTÍTKY PARTNERŮ (spravuje vedení)</div>
+            <div id="ctTagChips" class="ht-list"></div>
+            <div class="form-grid" style="margin-top:.8rem;margin-bottom:.4rem;">
+              <div class="field-group fg-full"><label class="fl">NOVÝ ŠTÍTEK</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="ctTagNew" maxlength="24" placeholder="např. Zbraně, Auta, Drogy, Doklady..." onkeydown="if(event.key==='Enter')ctAddTag()"/></div></div>
+            </div>
+            <div class="fp-ftr"><button class="btn-acc small" onclick="ctAddTag()">+ PŘIDAT ŠTÍTEK</button></div>
+          </div>
+          <div class="form-panel" style="margin:1.2rem;">
+            <div class="fp-title">// PŘIDAT PARTNERA / KONTAKT</div>
+            <div class="form-grid">
+              <div class="field-group"><label class="fl">PŘEZDÍVKA *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cNick" placeholder="Přezdívka..."/></div></div>
+              <div class="field-group"><label class="fl">TELEFON *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cPhone" value="()" inputmode="tel" placeholder="(000) 000-000"/></div></div>
+              <div class="field-group"><label class="fl">JMÉNO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cFirst" placeholder="Jméno"/></div></div>
+              <div class="field-group"><label class="fl">PŘÍJMENÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cLast" placeholder="Příjmení"/></div></div>
+              <div class="field-group"><label class="fl">ŠTÍTEK</label><div class="iw"><span class="ip">&gt;_</span><select id="cTag"></select></div></div>
+              <div class="field-group"><label class="fl">CO MÁ / NABÍZÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cNote" maxlength="120" placeholder="např. prodává zbraně, shání auta..."/></div></div>
+            </div>
+            <div class="fp-ftr"><button class="btn-acc small" onclick="addContact()">+ PŘIDAT</button><span id="contactStatus" class="smsg"></span></div>
+          </div>
+          <div class="sh">// MOJI PARTNEŘI A KONTAKTY</div>
+          <div id="ctFilter" class="wh-filters"></div>
+          <div id="contactsList" class="ct-grid"></div>
+        </div>
       </div>
 
     </main>
@@ -620,7 +650,7 @@
             <div class="field-group"><label class="fl">SEKUNDÁRNÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rSecondary" placeholder="např. 101,0"/></div></div>
             <div class="field-group"><label class="fl">AKCE</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rAction" placeholder="např. 102,0"/></div></div>
             <div class="field-group"><label class="fl">VEDENÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rVedeni" placeholder="např. 103,0"/></div></div>
-            <div class="field-group fg-full"><label class="fl">AUTOMATICKÁ ZMĚNA</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="rAuto" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Ve zvolených časech každý den nové náhodné frekvence (100–999)</span></label></div><div id="rAutoInfo" class="smsg" style="color:var(--muted);margin-top:.3rem;"></div><div id="rTimes" class="rt-wrap"></div></div>
+            <div class="field-group fg-full"><label class="fl">AUTOMATICKÁ ZMĚNA</label><div class="iw" style="padding:.4rem .8rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;"><input type="checkbox" id="rAuto" style="accent-color:var(--acc)"/><span style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--textb)">Ve zvolených časech každý den nové náhodné frekvence (100–9999)</span></label></div><div id="rAutoInfo" class="smsg" style="color:var(--muted);margin-top:.3rem;"></div><div id="rTimes" class="rt-wrap"></div></div>
           </div>
           <div class="fp-ftr"><button class="btn-acc small" onclick="saveRadios()">ULOŽIT</button> <button id="rRegenBtn" class="btn-acc small" onclick="regenRadios()">🎲 VYGENEROVAT NOVÉ FREKVENCE</button><span id="radioSaveStatus" class="smsg"></span></div>
         </div>
@@ -691,6 +721,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="tsc.js?v=20261031a"></script>
+<script src="tsc.js?v=20261031c"></script>
 </body>
 </html>
