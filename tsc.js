@@ -448,7 +448,7 @@ function triggerPanic(){
 
 function doDiscordLogin(){
   setText('loginErr','');
-  sb.auth.signInWithOAuth({provider:'discord',options:{redirectTo:location.origin+location.pathname,scopes:'identify'}})
+  sb.auth.signInWithOAuth({provider:'discord',options:{redirectTo:location.origin+location.pathname,scopes:'identify guilds.members.read'}})
     .then(function(r){if(r&&r.error)setText('loginErr','// DISCORD: '+String(r.error.message||r.error).toUpperCase());});
 }
 
@@ -487,10 +487,10 @@ async function enterPortal(session,isFreshLogin){
     DB.cache={};currentMemberId=null;setText('loginErr',msg);return false;
   }
   var isDiscord=!!(user.app_metadata&&user.app_metadata.provider==='discord');
-  if(!(user.app_metadata&&user.app_metadata.frakce)&&isDiscord){
+  if(isDiscord&&(!(user.app_metadata&&user.app_metadata.frakce)||session.provider_token)){
     setText('loginErr','// OVĚŘUJI DISCORD ÚČET...');
     try{
-      var cr=await fetch('/api/discord-claim',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}});
+      var cr=await fetch('/api/discord-claim',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({providerToken:session.provider_token||''})});
       var cj={};try{cj=await cr.json();}catch(e){}
       if(!cr.ok)return reject('// '+String(cj.error||('CHYBA '+cr.status)).toUpperCase());
       var rs=await sb.auth.refreshSession();
@@ -6407,6 +6407,21 @@ window.admSavePos=function(){
   toast('Admin práva uložena','success');renderPanel(true);
   try{refreshView();}catch(e){}
 };
+window.roleSave=function(){
+  if(!isBoss()){toast('Role smí nastavit jen Mastermind','error');return;}
+  var rules=[];
+  for(var i=0;i<3;i++){
+    var id=($('rc-id'+i).value||'').replace(/\D/g,'');
+    if(id)rules.push({roleId:id,label:($('rc-lb'+i).value||'').trim().slice(0,30),admin:$('rc-ad'+i).checked});
+  }
+  var gid=($('rc-gid').value||'').replace(/\D/g,'');
+  var on=$('rc-on').checked;
+  if(on&&(!gid||!rules.length)){toast('Zadej ID serveru a aspoň jednu roli','error');return;}
+  var me=getMember();
+  DB.set('rolecfg',{on:on,guildId:gid,rules:rules,by:me.displayName,date:nowStr()});
+  addLog('member',me.displayName+' upravil automatický přístup podle Discord rolí ('+(on?'zapnuto':'vypnuto')+').',{noDiscord:true});
+  toast('Nastavení rolí uloženo','success');renderPanel(true);
+};
 window.reqDeny=function(did){
   if(!isBoss())return;
   DB.set('accessreq',(DB.get('accessreq')||[]).filter(function(x){return String(x.discordId)!==String(did);}));
@@ -6452,7 +6467,19 @@ function renderPanel(force){
         '<button class="btn-micro del" onclick="reqDeny(\''+esc(r.discordId)+'\')">✕</button></span></div>';
     }).join(''):'<div class="empty-s" style="padding:.8rem">// Nikdo nečeká na schválení</div>')+
     '<div class="att-sum" style="margin:.4rem 0 1rem">Kdo se přihlásí přes Discord a není na seznamu členů, objeví se tady. Schválený dostane skrytý účet (není vidět v počtu členů a nepočítá se do limitu 16).</div>';
-  p.innerHTML=rqHtml+'<div class="fp-title">// ADMIN PRÁVA — KDO MÁ ADMINA</div>'+
+  var rc=DB.get('rolecfg')||{},rr=rc.rules||[],rows='';
+  for(var i=0;i<3;i++){
+    var q=rr[i]||{};
+    rows+='<div class="form-grid" style="margin-bottom:.4rem"><div class="field-group"><label class="fl">ID ROLE '+(i+1)+'</label><div class="iw"><span class="ip">#</span><input type="text" id="rc-id'+i+'" value="'+esc(q.roleId||'')+'" placeholder="ID role"/></div></div>'+
+      '<div class="field-group"><label class="fl">POPIS</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rc-lb'+i+'" value="'+esc(q.label||'')+'" placeholder="např. GenK AT"/></div></div>'+
+      '<div class="field-group fg-full"><label class="ping-chk"><input type="checkbox" id="rc-ad'+i+'"'+(q.admin?' checked':'')+'/><span>Tato role dává ADMIN přístup</span></label></div></div>';
+  }
+  var roleHtml='<div class="fp-title">// AUTOMATICKÝ PŘÍSTUP PODLE DISCORD ROLE</div>'+
+    '<div class="form-grid"><div class="field-group"><label class="fl">ID SERVERU (GenK)</label><div class="iw"><span class="ip">#</span><input type="text" id="rc-gid" value="'+esc(rc.guildId||'')+'" placeholder="ID Discord serveru"/></div></div>'+
+    '<div class="field-group"><label class="fl">ZAPNUTO</label><div class="iw" style="padding:.4rem .8rem"><label class="ping-chk"><input type="checkbox" id="rc-on"'+(rc.on?' checked':'')+'/><span>Pouštět podle rolí</span></label></div></div></div>'+rows+
+    '<div class="fp-ftr"><button class="btn-acc small" onclick="roleSave()">ULOŽIT ROLE</button></div>'+
+    '<div class="att-sum" style="margin:.4rem 0 1rem">Kdo se přihlásí přes Discord a má jednu z rolí, dostane automaticky skrytý účet (admin podle zaškrtnutí). Role se kontrolují při každém Discord přihlášení — když ji ztratí, přístup se odebere. Role daného člověka se na webu jinak nikde nečtou.</div>';
+  p.innerHTML=rqHtml+roleHtml+'<div class="fp-title">// ADMIN PRÁVA — KDO MÁ ADMINA</div>'+
     '<div class="att-sum" style="margin-bottom:.6rem">1) Hodnosti, které mají admin automaticky (Mastermind vždy):</div>'+
     '<div class="ht-list" style="margin-bottom:.7rem">'+POSITIONS.map(function(pos){
       var on=ADMIN_POS.indexOf(pos)!==-1,lock=pos==='Mastermind';
