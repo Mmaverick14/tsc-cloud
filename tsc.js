@@ -446,6 +446,12 @@ function triggerPanic(){
   DB.flush().then(function(){return sb.auth.signOut();}).then(function(){DB.cache={};});
 }
 
+function doDiscordLogin(){
+  setText('loginErr','');
+  sb.auth.signInWithOAuth({provider:'discord',options:{redirectTo:location.origin+location.pathname,scopes:'identify'}})
+    .then(function(r){if(r&&r.error)setText('loginErr','// DISCORD: '+String(r.error.message||r.error).toUpperCase());});
+}
+
 function showLoginBox(){
   var b=document.getElementById('loginBox');if(b)b.style.visibility='visible';
   var btn=document.getElementById('loginBtn');if(btn)btn.disabled=false;
@@ -480,12 +486,31 @@ async function enterPortal(session,isFreshLogin){
     try{await sb.auth.signOut();}catch(e){}
     DB.cache={};currentMemberId=null;setText('loginErr',msg);return false;
   }
+  var isDiscord=!!(user.app_metadata&&user.app_metadata.provider==='discord');
+  if(!(user.app_metadata&&user.app_metadata.frakce)&&isDiscord){
+    setText('loginErr','// OVĚŘUJI DISCORD ÚČET...');
+    try{
+      var cr=await fetch('/api/discord-claim',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}});
+      var cj={};try{cj=await cr.json();}catch(e){}
+      if(!cr.ok)return reject('// '+String(cj.error||('CHYBA '+cr.status)).toUpperCase());
+      var rs=await sb.auth.refreshSession();
+      if(rs.error||!rs.data.session)return reject('// NEPODAŘILO SE OBNOVIT PŘIHLÁŠENÍ');
+      session=rs.data.session;user=session.user;
+      tscToken=session.access_token;
+    }catch(e){return reject('// CHYBA: '+(e.message||e));}
+  }
   if(!(user.app_metadata&&user.app_metadata.frakce))return reject('// ÚČET NENÍ ČLENEM FRAKCE');
   try{await DB.load();}catch(e){console.error(e);return reject('// CHYBA NAČÍTÁNÍ DAT: '+(e.message||e));}
+  applyAdminCfg();
   migratePositions();
   initData();
   var members=DB.get('members')||[];
+  var did=String((user.user_metadata&&(user.user_metadata.provider_id||user.user_metadata.sub))||'');
   var m=members.find(function(x){return x.authId===user.id;});
+  if(!m&&isDiscord&&did){
+    m=members.find(function(x){return String(x.discordId||'')===did;});
+    if(m&&!m.authId){m.authId=user.id;DB.set('members',members);}
+  }
   if(!m){
 
     m=members.find(function(x){return x.email&&x.email.toLowerCase()===(user.email||'').toLowerCase();});
@@ -6351,3 +6376,70 @@ var _at=window.aTab;
 window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='rules')render('a');return r;};
 })();
 
+/* ===== Oprávnění: kdo má Admina (jen Mastermind) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+var DEF=['Mastermind','Overseer','Counselor'];
+function isBoss(){var m=getMember();return !!m&&m.position==='Mastermind';}
+
+/* načte z DB, které hodnosti mají admin napevno (ADMIN_POS se mění na místě) */
+window.applyAdminCfg=function(){
+  var c=DB.get('admincfg'),list=(c&&Array.isArray(c.pos))?c.pos.filter(function(p){return POSITIONS.indexOf(p)!==-1;}):DEF.slice();
+  if(list.indexOf('Mastermind')===-1)list.unshift('Mastermind');
+  ADMIN_POS.length=0;list.forEach(function(p){ADMIN_POS.push(p);});
+};
+
+window.admSavePos=function(){
+  if(!isBoss()){toast('Admin práva smí měnit jen Mastermind','error');return;}
+  var pos=['Mastermind'];
+  document.querySelectorAll('#admPanel .adm-pos:checked').forEach(function(c){if(pos.indexOf(c.value)===-1)pos.push(c.value);});
+  var old=ADMIN_POS.slice(),me=getMember();
+  DB.set('admincfg',{pos:pos,by:me.displayName,date:nowStr()});
+  applyAdminCfg();
+  var ms=DB.get('members')||[];
+  ms.forEach(function(m){
+    if(pos.indexOf(m.position)!==-1)m.adminAccess=true;
+    else if(old.indexOf(m.position)!==-1)m.adminAccess=false;
+  });
+  DB.set('members',ms);
+  addLog('member',me.displayName+' změnil hodnosti s adminem: '+pos.join(', ')+'.',{embed:rich(C_PURPLE,'🛡 ADMIN PRÁVA — HODNOSTI','Admin mají hodnosti: **'+pos.join(', ')+'**',[],{by:me.displayName})});
+  toast('Admin práva uložena','success');renderPanel(true);
+  try{refreshView();}catch(e){}
+};
+window.admToggle=function(id){
+  if(!isBoss()){toast('Admin práva smí měnit jen Mastermind','error');return;}
+  var ms=DB.get('members')||[],m=ms.filter(function(x){return x.id===id;})[0];if(!m)return;
+  if(ADMIN_POS.indexOf(m.position)!==-1){toast('Admin plyne z hodnosti — změň ho výše','error');return;}
+  m.adminAccess=!m.adminAccess;DB.set('members',ms);
+  var me=getMember();
+  addLog('member',me.displayName+(m.adminAccess?' přidělil':' odebral')+' admin přístup členovi '+m.displayName+'.',{embed:rich(m.adminAccess?C_GREEN:C_RED,m.adminAccess?'🛡 ADMIN PŘIDĚLEN':'🛡 ADMIN ODEBRÁN','**'+m.displayName+'**',[['🎖️ Hodnost',m.position]],{by:me.displayName})});
+  toast('Admin '+(m.adminAccess?'přidělen':'odebrán'),'info');renderPanel(true);
+};
+
+function renderPanel(force){
+  var host=$('at-settings');if(!host||!isBoss())return;
+  var p=$('admPanel');
+  if(!p){p=document.createElement('div');p.id='admPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';host.insertBefore(p,host.firstChild);}
+  if(!force&&p.contains(document.activeElement))return;
+  var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden;});
+  p.innerHTML='<div class="fp-title">// ADMIN PRÁVA — KDO MÁ ADMINA</div>'+
+    '<div class="att-sum" style="margin-bottom:.6rem">1) Hodnosti, které mají admin automaticky (Mastermind vždy):</div>'+
+    '<div class="ht-list" style="margin-bottom:.7rem">'+POSITIONS.map(function(pos){
+      var on=ADMIN_POS.indexOf(pos)!==-1,lock=pos==='Mastermind';
+      return '<label class="ping-chk" style="padding:.3rem .6rem;border:1px solid var(--border)"><input type="checkbox" class="adm-pos" value="'+esc(pos)+'"'+(on?' checked':'')+(lock?' disabled':'')+'/><span>'+esc(pos)+(lock?' 🔒':'')+'</span></label>';
+    }).join('')+'</div>'+
+    '<div class="fp-ftr" style="margin-bottom:1rem"><button class="btn-acc small" onclick="admSavePos()">ULOŽIT HODNOSTI</button></div>'+
+    '<div class="att-sum" style="margin-bottom:.4rem">2) Jednotliví členové (výjimky mimo hodnost). Discord přihlášení vyžaduje vyplněné Discord ID.</div>'+
+    ms.map(function(m){
+      var fromPos=ADMIN_POS.indexOf(m.position)!==-1;
+      return '<div class="prof-li"><span>'+esc(m.displayName)+' <small style="color:var(--text)">· '+esc(m.position)+' · Discord ID: '+(m.discordId?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--red)">✗ chybí</span>')+'</small></span>'+
+        '<span>'+(fromPos?'<span class="badge-admin">ADMIN (z hodnosti)</span>':
+          '<button class="btn-'+(m.adminAccess?'danger':'acc small')+'" style="padding:.3rem .7rem" onclick="admToggle(\''+m.id+'\')">'+(m.adminAccess?'ODEBRAT ADMIN':'DÁT ADMIN')+'</button>')+'</span></div>';
+    }).join('');
+}
+var _rs=window.renderSettings;
+if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderPanel(false);}catch(e){console.error(e);}return r;};
+var _rv=window.refreshView;
+if(typeof _rv==='function')window.refreshView=function(){try{if(currentMemberId)applyAdminCfg();}catch(e){}return _rv.apply(this,arguments);};
+})();
