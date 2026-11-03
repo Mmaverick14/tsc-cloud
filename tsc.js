@@ -6407,6 +6407,26 @@ window.admSavePos=function(){
   toast('Admin práva uložena','success');renderPanel(true);
   try{refreshView();}catch(e){}
 };
+window.reqDeny=function(did){
+  if(!isBoss())return;
+  DB.set('accessreq',(DB.get('accessreq')||[]).filter(function(x){return String(x.discordId)!==String(did);}));
+  toast('Žádost zamítnuta','info');renderPanel(true);
+};
+window.reqApprove=function(did,adm){
+  if(!isBoss()){toast('Žádosti schvaluje jen Mastermind','error');return;}
+  var reqs=DB.get('accessreq')||[],r=reqs.filter(function(x){return String(x.discordId)===String(did);})[0];if(!r)return;
+  var ms=DB.get('members')||[];
+  if(ms.some(function(x){return String(x.discordId||'')===String(did);})){toast('Člen s tímto Discord ID už existuje','error');}
+  else{
+    ms.push({id:uid(),authId:'',email:'',displayName:r.name||'GenK AT',position:'Associate',adminAccess:!!adm,note:'Skrytý účet — schváleno přes Discord',discordId:String(did),firstName:'',lastName:'',nick:'',strikes:0,panic:false,hidden:true,joined:ymd(new Date())});
+    DB.set('members',ms);
+    var me=getMember();
+    addLog('member',me.displayName+' schválil skrytý přístup pro '+(r.name||did)+(adm?' (s adminem)':'')+'.',{embed:rich(C_GREEN,'🔑 PŘÍSTUP SCHVÁLEN','**'+(r.name||did)+'** (<@'+did+'>)',[['👁 Účet','Skrytý — nepočítá se do limitu'],['🛡 Admin',adm?'Ano':'Ne']],{by:me.displayName})});
+    toast('Přístup schválen — může se přihlásit','success');
+  }
+  DB.set('accessreq',reqs.filter(function(x){return String(x.discordId)!==String(did);}));
+  renderPanel(true);
+};
 window.admToggle=function(id){
   if(!isBoss()){toast('Admin práva smí měnit jen Mastermind','error');return;}
   var ms=DB.get('members')||[],m=ms.filter(function(x){return x.id===id;})[0];if(!m)return;
@@ -6423,7 +6443,16 @@ function renderPanel(force){
   if(!p){p=document.createElement('div');p.id='admPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';host.insertBefore(p,host.firstChild);}
   if(!force&&p.contains(document.activeElement))return;
   var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden;});
-  p.innerHTML='<div class="fp-title">// ADMIN PRÁVA — KDO MÁ ADMINA</div>'+
+  var rq=DB.get('accessreq');rq=Array.isArray(rq)?rq:[];
+  var rqHtml='<div class="fp-title">// ŽÁDOSTI O PŘÍSTUP ('+rq.length+')</div>'+
+    (rq.length?rq.map(function(r){
+      return '<div class="prof-li"><span>'+esc(r.name||'?')+' <small style="color:var(--text)">· Discord ID '+esc(r.discordId)+' · '+esc(new Date(r.ts).toLocaleString('cs-CZ'))+'</small></span>'+
+        '<span style="display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end"><button class="btn-acc small" onclick="reqApprove(\''+esc(r.discordId)+'\',false)">SCHVÁLIT (SKRYTĚ)</button>'+
+        '<button class="btn-acc small" onclick="reqApprove(\''+esc(r.discordId)+'\',true)">+ ADMIN</button>'+
+        '<button class="btn-micro del" onclick="reqDeny(\''+esc(r.discordId)+'\')">✕</button></span></div>';
+    }).join(''):'<div class="empty-s" style="padding:.8rem">// Nikdo nečeká na schválení</div>')+
+    '<div class="att-sum" style="margin:.4rem 0 1rem">Kdo se přihlásí přes Discord a není na seznamu členů, objeví se tady. Schválený dostane skrytý účet (není vidět v počtu členů a nepočítá se do limitu 16).</div>';
+  p.innerHTML=rqHtml+'<div class="fp-title">// ADMIN PRÁVA — KDO MÁ ADMINA</div>'+
     '<div class="att-sum" style="margin-bottom:.6rem">1) Hodnosti, které mají admin automaticky (Mastermind vždy):</div>'+
     '<div class="ht-list" style="margin-bottom:.7rem">'+POSITIONS.map(function(pos){
       var on=ADMIN_POS.indexOf(pos)!==-1,lock=pos==='Mastermind';
@@ -6440,6 +6469,16 @@ function renderPanel(force){
 }
 var _rs=window.renderSettings;
 if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderPanel(false);}catch(e){console.error(e);}return r;};
+var seenReq=-1;
+setInterval(function(){
+  if(document.hidden||!currentMemberId||!isBoss())return;
+  sb.from(TABLE).select('value').eq('key','accessreq').maybeSingle().then(function(r){
+    var v=r.data&&r.data.value;if(!Array.isArray(v))return;
+    DB.cache.accessreq=v;
+    if(seenReq>=0&&v.length>seenReq)toast('🔑 Nová žádost o přístup (Nastavení → Admin práva)','info',6000);
+    seenReq=v.length;
+  });
+},30000);
 var _rv=window.refreshView;
 if(typeof _rv==='function')window.refreshView=function(){try{if(currentMemberId)applyAdminCfg();}catch(e){}return _rv.apply(this,arguments);};
 })();
