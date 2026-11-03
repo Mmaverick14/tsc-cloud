@@ -446,12 +446,6 @@ function triggerPanic(){
   DB.flush().then(function(){return sb.auth.signOut();}).then(function(){DB.cache={};});
 }
 
-function doDiscordLogin(){
-  setText('loginErr','');
-  sb.auth.signInWithOAuth({provider:'discord',options:{redirectTo:location.origin+location.pathname,scopes:'identify guilds.members.read'}})
-    .then(function(r){if(r&&r.error)setText('loginErr','// DISCORD: '+String(r.error.message||r.error).toUpperCase());});
-}
-
 function showLoginBox(){
   var b=document.getElementById('loginBox');if(b)b.style.visibility='visible';
   var btn=document.getElementById('loginBtn');if(btn)btn.disabled=false;
@@ -486,31 +480,12 @@ async function enterPortal(session,isFreshLogin){
     try{await sb.auth.signOut();}catch(e){}
     DB.cache={};currentMemberId=null;setText('loginErr',msg);return false;
   }
-  var isDiscord=!!(user.app_metadata&&user.app_metadata.provider==='discord');
-  if(isDiscord&&(!(user.app_metadata&&user.app_metadata.frakce)||session.provider_token)){
-    setText('loginErr','// OVĚŘUJI DISCORD ÚČET...');
-    try{
-      var cr=await fetch('/api/discord-claim',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({providerToken:session.provider_token||''})});
-      var cj={};try{cj=await cr.json();}catch(e){}
-      if(!cr.ok)return reject('// '+String(cj.error||('CHYBA '+cr.status)).toUpperCase());
-      var rs=await sb.auth.refreshSession();
-      if(rs.error||!rs.data.session)return reject('// NEPODAŘILO SE OBNOVIT PŘIHLÁŠENÍ');
-      session=rs.data.session;user=session.user;
-      tscToken=session.access_token;
-    }catch(e){return reject('// CHYBA: '+(e.message||e));}
-  }
   if(!(user.app_metadata&&user.app_metadata.frakce))return reject('// ÚČET NENÍ ČLENEM FRAKCE');
   try{await DB.load();}catch(e){console.error(e);return reject('// CHYBA NAČÍTÁNÍ DAT: '+(e.message||e));}
-  applyAdminCfg();
   migratePositions();
   initData();
   var members=DB.get('members')||[];
-  var did=String((user.user_metadata&&(user.user_metadata.provider_id||user.user_metadata.sub))||'');
   var m=members.find(function(x){return x.authId===user.id;});
-  if(!m&&isDiscord&&did){
-    m=members.find(function(x){return String(x.discordId||'')===did;});
-    if(m&&!m.authId){m.authId=user.id;DB.set('members',members);}
-  }
   if(!m){
 
     m=members.find(function(x){return x.email&&x.email.toLowerCase()===(user.email||'').toLowerCase();});
@@ -6376,136 +6351,3 @@ var _at=window.aTab;
 window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='rules')render('a');return r;};
 })();
 
-/* ===== Oprávnění: kdo má Admina (jen Mastermind) ===== */
-(function(){
-'use strict';
-function $(id){return document.getElementById(id);}
-var DEF=['Mastermind','Overseer','Counselor'];
-function isBoss(){var m=getMember();return !!m&&m.position==='Mastermind';}
-
-/* načte z DB, které hodnosti mají admin napevno (ADMIN_POS se mění na místě) */
-window.applyAdminCfg=function(){
-  var c=DB.get('admincfg'),list=(c&&Array.isArray(c.pos))?c.pos.filter(function(p){return POSITIONS.indexOf(p)!==-1;}):DEF.slice();
-  if(list.indexOf('Mastermind')===-1)list.unshift('Mastermind');
-  ADMIN_POS.length=0;list.forEach(function(p){ADMIN_POS.push(p);});
-};
-
-window.admSavePos=function(){
-  if(!isBoss()){toast('Admin práva smí měnit jen Mastermind','error');return;}
-  var pos=['Mastermind'];
-  document.querySelectorAll('#admPanel .adm-pos:checked').forEach(function(c){if(pos.indexOf(c.value)===-1)pos.push(c.value);});
-  var old=ADMIN_POS.slice(),me=getMember();
-  DB.set('admincfg',{pos:pos,by:me.displayName,date:nowStr()});
-  applyAdminCfg();
-  var ms=DB.get('members')||[];
-  ms.forEach(function(m){
-    if(pos.indexOf(m.position)!==-1)m.adminAccess=true;
-    else if(old.indexOf(m.position)!==-1)m.adminAccess=false;
-  });
-  DB.set('members',ms);
-  addLog('member',me.displayName+' změnil hodnosti s adminem: '+pos.join(', ')+'.',{embed:rich(C_PURPLE,'🛡 ADMIN PRÁVA — HODNOSTI','Admin mají hodnosti: **'+pos.join(', ')+'**',[],{by:me.displayName})});
-  toast('Admin práva uložena','success');renderPanel(true);
-  try{refreshView();}catch(e){}
-};
-window.roleSave=function(){
-  if(!isBoss()){toast('Role smí nastavit jen Mastermind','error');return;}
-  var rules=[];
-  for(var i=0;i<3;i++){
-    var id=($('rc-id'+i).value||'').replace(/\D/g,'');
-    if(id)rules.push({roleId:id,label:($('rc-lb'+i).value||'').trim().slice(0,30),admin:$('rc-ad'+i).checked});
-  }
-  var gid=($('rc-gid').value||'').replace(/\D/g,'');
-  var on=$('rc-on').checked;
-  if(on&&(!gid||!rules.length)){toast('Zadej ID serveru a aspoň jednu roli','error');return;}
-  var me=getMember();
-  DB.set('rolecfg',{on:on,guildId:gid,rules:rules,by:me.displayName,date:nowStr()});
-  addLog('member',me.displayName+' upravil automatický přístup podle Discord rolí ('+(on?'zapnuto':'vypnuto')+').',{noDiscord:true});
-  toast('Nastavení rolí uloženo','success');renderPanel(true);
-};
-window.reqDeny=function(did){
-  if(!isBoss())return;
-  DB.set('accessreq',(DB.get('accessreq')||[]).filter(function(x){return String(x.discordId)!==String(did);}));
-  toast('Žádost zamítnuta','info');renderPanel(true);
-};
-window.reqApprove=function(did,adm){
-  if(!isBoss()){toast('Žádosti schvaluje jen Mastermind','error');return;}
-  var reqs=DB.get('accessreq')||[],r=reqs.filter(function(x){return String(x.discordId)===String(did);})[0];if(!r)return;
-  var ms=DB.get('members')||[];
-  if(ms.some(function(x){return String(x.discordId||'')===String(did);})){toast('Člen s tímto Discord ID už existuje','error');}
-  else{
-    ms.push({id:uid(),authId:'',email:'',displayName:r.name||'GenK AT',position:'Associate',adminAccess:!!adm,note:'Skrytý účet — schváleno přes Discord',discordId:String(did),firstName:'',lastName:'',nick:'',strikes:0,panic:false,hidden:true,joined:ymd(new Date())});
-    DB.set('members',ms);
-    var me=getMember();
-    addLog('member',me.displayName+' schválil skrytý přístup pro '+(r.name||did)+(adm?' (s adminem)':'')+'.',{embed:rich(C_GREEN,'🔑 PŘÍSTUP SCHVÁLEN','**'+(r.name||did)+'** (<@'+did+'>)',[['👁 Účet','Skrytý — nepočítá se do limitu'],['🛡 Admin',adm?'Ano':'Ne']],{by:me.displayName})});
-    toast('Přístup schválen — může se přihlásit','success');
-  }
-  DB.set('accessreq',reqs.filter(function(x){return String(x.discordId)!==String(did);}));
-  renderPanel(true);
-};
-window.admToggle=function(id){
-  if(!isBoss()){toast('Admin práva smí měnit jen Mastermind','error');return;}
-  var ms=DB.get('members')||[],m=ms.filter(function(x){return x.id===id;})[0];if(!m)return;
-  if(ADMIN_POS.indexOf(m.position)!==-1){toast('Admin plyne z hodnosti — změň ho výše','error');return;}
-  m.adminAccess=!m.adminAccess;DB.set('members',ms);
-  var me=getMember();
-  addLog('member',me.displayName+(m.adminAccess?' přidělil':' odebral')+' admin přístup členovi '+m.displayName+'.',{embed:rich(m.adminAccess?C_GREEN:C_RED,m.adminAccess?'🛡 ADMIN PŘIDĚLEN':'🛡 ADMIN ODEBRÁN','**'+m.displayName+'**',[['🎖️ Hodnost',m.position]],{by:me.displayName})});
-  toast('Admin '+(m.adminAccess?'přidělen':'odebrán'),'info');renderPanel(true);
-};
-
-function renderPanel(force){
-  var host=$('at-settings');if(!host||!isBoss())return;
-  var p=$('admPanel');
-  if(!p){p=document.createElement('div');p.id='admPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';host.insertBefore(p,host.firstChild);}
-  if(!force&&p.contains(document.activeElement))return;
-  var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden;});
-  var rq=DB.get('accessreq');rq=Array.isArray(rq)?rq:[];
-  var rqHtml='<div class="fp-title">// ŽÁDOSTI O PŘÍSTUP ('+rq.length+')</div>'+
-    (rq.length?rq.map(function(r){
-      return '<div class="prof-li"><span>'+esc(r.name||'?')+' <small style="color:var(--text)">· Discord ID '+esc(r.discordId)+' · '+esc(new Date(r.ts).toLocaleString('cs-CZ'))+'</small></span>'+
-        '<span style="display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end"><button class="btn-acc small" onclick="reqApprove(\''+esc(r.discordId)+'\',false)">SCHVÁLIT (SKRYTĚ)</button>'+
-        '<button class="btn-acc small" onclick="reqApprove(\''+esc(r.discordId)+'\',true)">+ ADMIN</button>'+
-        '<button class="btn-micro del" onclick="reqDeny(\''+esc(r.discordId)+'\')">✕</button></span></div>';
-    }).join(''):'<div class="empty-s" style="padding:.8rem">// Nikdo nečeká na schválení</div>')+
-    '<div class="att-sum" style="margin:.4rem 0 1rem">Kdo se přihlásí přes Discord a není na seznamu členů, objeví se tady. Schválený dostane skrytý účet (není vidět v počtu členů a nepočítá se do limitu 16).</div>';
-  var rc=DB.get('rolecfg')||{},rr=rc.rules||[],rows='';
-  for(var i=0;i<3;i++){
-    var q=rr[i]||{};
-    rows+='<div class="form-grid" style="margin-bottom:.4rem"><div class="field-group"><label class="fl">ID ROLE '+(i+1)+'</label><div class="iw"><span class="ip">#</span><input type="text" id="rc-id'+i+'" value="'+esc(q.roleId||'')+'" placeholder="ID role"/></div></div>'+
-      '<div class="field-group"><label class="fl">POPIS</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rc-lb'+i+'" value="'+esc(q.label||'')+'" placeholder="např. GenK AT"/></div></div>'+
-      '<div class="field-group fg-full"><label class="ping-chk"><input type="checkbox" id="rc-ad'+i+'"'+(q.admin?' checked':'')+'/><span>Tato role dává ADMIN přístup</span></label></div></div>';
-  }
-  var roleHtml='<div class="fp-title">// AUTOMATICKÝ PŘÍSTUP PODLE DISCORD ROLE</div>'+
-    '<div class="form-grid"><div class="field-group"><label class="fl">ID SERVERU (GenK)</label><div class="iw"><span class="ip">#</span><input type="text" id="rc-gid" value="'+esc(rc.guildId||'')+'" placeholder="ID Discord serveru"/></div></div>'+
-    '<div class="field-group"><label class="fl">ZAPNUTO</label><div class="iw" style="padding:.4rem .8rem"><label class="ping-chk"><input type="checkbox" id="rc-on"'+(rc.on?' checked':'')+'/><span>Pouštět podle rolí</span></label></div></div></div>'+rows+
-    '<div class="fp-ftr"><button class="btn-acc small" onclick="roleSave()">ULOŽIT ROLE</button></div>'+
-    '<div class="att-sum" style="margin:.4rem 0 1rem">Kdo se přihlásí přes Discord a má jednu z rolí, dostane automaticky skrytý účet (admin podle zaškrtnutí). Role se kontrolují při každém Discord přihlášení — když ji ztratí, přístup se odebere. Role daného člověka se na webu jinak nikde nečtou.</div>';
-  p.innerHTML=rqHtml+roleHtml+'<div class="fp-title">// ADMIN PRÁVA — KDO MÁ ADMINA</div>'+
-    '<div class="att-sum" style="margin-bottom:.6rem">1) Hodnosti, které mají admin automaticky (Mastermind vždy):</div>'+
-    '<div class="ht-list" style="margin-bottom:.7rem">'+POSITIONS.map(function(pos){
-      var on=ADMIN_POS.indexOf(pos)!==-1,lock=pos==='Mastermind';
-      return '<label class="ping-chk" style="padding:.3rem .6rem;border:1px solid var(--border)"><input type="checkbox" class="adm-pos" value="'+esc(pos)+'"'+(on?' checked':'')+(lock?' disabled':'')+'/><span>'+esc(pos)+(lock?' 🔒':'')+'</span></label>';
-    }).join('')+'</div>'+
-    '<div class="fp-ftr" style="margin-bottom:1rem"><button class="btn-acc small" onclick="admSavePos()">ULOŽIT HODNOSTI</button></div>'+
-    '<div class="att-sum" style="margin-bottom:.4rem">2) Jednotliví členové (výjimky mimo hodnost). Discord přihlášení vyžaduje vyplněné Discord ID.</div>'+
-    ms.map(function(m){
-      var fromPos=ADMIN_POS.indexOf(m.position)!==-1;
-      return '<div class="prof-li"><span>'+esc(m.displayName)+' <small style="color:var(--text)">· '+esc(m.position)+' · Discord ID: '+(m.discordId?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--red)">✗ chybí</span>')+'</small></span>'+
-        '<span>'+(fromPos?'<span class="badge-admin">ADMIN (z hodnosti)</span>':
-          '<button class="btn-'+(m.adminAccess?'danger':'acc small')+'" style="padding:.3rem .7rem" onclick="admToggle(\''+m.id+'\')">'+(m.adminAccess?'ODEBRAT ADMIN':'DÁT ADMIN')+'</button>')+'</span></div>';
-    }).join('');
-}
-var _rs=window.renderSettings;
-if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderPanel(false);}catch(e){console.error(e);}return r;};
-var seenReq=-1;
-setInterval(function(){
-  if(document.hidden||!currentMemberId||!isBoss())return;
-  sb.from(TABLE).select('value').eq('key','accessreq').maybeSingle().then(function(r){
-    var v=r.data&&r.data.value;if(!Array.isArray(v))return;
-    DB.cache.accessreq=v;
-    if(seenReq>=0&&v.length>seenReq)toast('🔑 Nová žádost o přístup (Nastavení → Admin práva)','info',6000);
-    seenReq=v.length;
-  });
-},30000);
-var _rv=window.refreshView;
-if(typeof _rv==='function')window.refreshView=function(){try{if(currentMemberId)applyAdminCfg();}catch(e){}return _rv.apply(this,arguments);};
-})();
