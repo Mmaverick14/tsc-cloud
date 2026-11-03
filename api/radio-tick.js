@@ -69,7 +69,7 @@ function rngFrom(seed) {
 function autoRadios(cfg, slot) {
   const r = rngFrom(hashStr((cfg.salt || 'x') + '|' + slot)), used = {}, out = [];
   while (out.length < 4) {
-    const n = ((1000 + Math.floor(r() * 8991)) / 10).toFixed(1).replace('.', ',');
+    const n = String(100 + Math.floor(r() * 9900));
     if (!used[n]) { used[n] = 1; out.push(n); }
   }
   return { primary: out[0], secondary: out[1], action: out[2], vedeni: out[3] };
@@ -135,7 +135,7 @@ module.exports = async (req, res) => {
         allowed_mentions: { parse: ['roles', 'everyone', 'users'] },
         embeds: [{
           title: '📻 Automatická změna frekvencí',
-          description: 'Platí od **' + hh + '**' + note + ' — předchozí frekvence už nefungují.',
+          description: 'Platí od **' + hh + '**' + note + '  předchozí frekvence už nefungují.',
           color: 0xc49a14,
           fields: [
             { name: '🟡 Primární', value: '`' + f.primary + '`', inline: true },

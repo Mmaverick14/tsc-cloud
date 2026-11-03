@@ -1490,13 +1490,14 @@ function saveRadios(){
   if(cfg.on)radioTick();
 }
 
+function rn(v){return String(v==null?'':v).split(/[.,]/)[0].replace(/\D/g,'');}
 function radioEmbed(title,desc,f){
   return {
     title:title,description:desc,color:0xc49a14,
     fields:[
-      {name:'🟡 Primární',value:'`'+f.primary+'`',inline:true},
-      {name:'🔵 Sekundární',value:'`'+f.secondary+'`',inline:true},
-      {name:'🟢 Akce',value:'`'+f.action+'`',inline:true}
+      {name:'🟡 Primární',value:'`'+rn(f.primary)+'`',inline:true},
+      {name:'🔵 Sekundární',value:'`'+rn(f.secondary)+'`',inline:true},
+      {name:'🟢 Akce',value:'`'+rn(f.action)+'`',inline:true}
     ],
     footer:{text:'Vysílačka'},timestamp:new Date().toISOString()
   };
@@ -1573,7 +1574,7 @@ function rngFrom(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Ma
 function autoRadios(cfg,slot){
   var r=rngFrom(hashStr((cfg.salt||'x')+'|'+slot));var used={},out=[];
   while(out.length<4){var n=String(100+Math.floor(r()*9900));if(!used[n]){used[n]=1;out.push(n);}}
-  return {primary:out[0],secondary:out[1],action:out[2],vedeni:out[3]};
+  return {primary:rn(out[0]),secondary:rn(out[1]),action:rn(out[2]),vedeni:rn(out[3])};
 }
 function currentRadios(){
   var cfg=DB.get('radioauto2')||{};
