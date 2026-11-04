@@ -6468,7 +6468,7 @@ window.oocPost=function(){
   var t=TYPES[type];
   addLog('ooc',m.displayName+' zveřejnil OOC oznámení: "'+title+'".',{
     extraPing:mentions.join(' '),
-    embed:rich(t[1],'🗨 OOC OZNÁMENÍ','**'+dT+'**\n'+dB,[['Typ',t[0]],['Autor',m.displayName]],{by:m.displayName})});
+    embed:rich(t[1],'🗨 OOC OZNÁMENÍ','**'+dT+'**\n'+dB,[['Typ',t[0]],['Autor',m.discordId?'<@'+m.discordId+'>':m.displayName]],{by:m.displayName})});
   $('ooc-title').value='';$('ooc-body').value='';$('ooc-type').value='info';
   st.style.color='';st.textContent='// ZVEŘEJNĚNO';setTimeout(function(){st.textContent='';},2000);
   toast('OOC oznámení zveřejněno','success');render();
