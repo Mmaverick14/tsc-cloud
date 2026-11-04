@@ -1080,6 +1080,29 @@ var CLOTH_CATS=[
   {key:'decals', label:'Nášivky & Doplňky'}
 ];
 
+function clothCodeHtml(s){
+  if(!s.code)return '';
+  return '<div class="cs-code" title="Klikni pro zkopírování" onclick="clothCopyCode(\''+s.id+'\')">'+
+    '<div class="cs-code-l">🔑 KÓD OUTFITU <span>KLIKNI = KOPÍROVAT</span></div>'+
+    '<div class="cs-code-v">'+esc(s.code)+'</div></div>';
+}
+function clothCopyCode(id){
+  var s=(DB.get('clothing')||[]).find(function(x){return x.id===id;});
+  if(!s||!s.code)return;
+  var txt=s.code;
+  function ok(){toast('Kód outfitu zkopírován ✓','success');}
+  function fb(){var t=document.createElement('textarea');t.value=txt;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();try{document.execCommand('copy');ok();}catch(e){}t.remove();}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
+}
+function editClothCode(id){
+  var arr=DB.get('clothing')||[],s=arr.find(function(x){return x.id===id;});if(!s)return;
+  var v=prompt('Kód outfitu pro set "'+s.name+'" (prázdné = smazat kód):',s.code||'');
+  if(v===null)return;
+  s.code=v.trim();DB.set('clothing',arr);
+  toast(s.code?'Kód uložen':'Kód smazán','success');
+  renderAdminClothing();renderClothing();
+}
+
 function renderClothing(){
   var sets=DB.get('clothing')||[];
   var el=document.getElementById('clothSets');
@@ -1104,6 +1127,7 @@ function renderClothing(){
       '<div class="cs-title">'+esc(s.name)+'</div>'+
       imgH+
       (s.desc?'<div class="cs-desc">'+esc(s.desc)+'</div>':'')+
+      clothCodeHtml(s)+
       '<table class="cs-table">'+rows+'</table>'+
     '</div>';
   }).join('');
@@ -1138,7 +1162,8 @@ function addCloth(){
   var st=document.getElementById('addClothStatus');
   if(!name){st.textContent='// ZADEJTE NÁZEV SETU';return;}
   var cats=['masks','chains','jackets','under','vests','bags','hands','pants','shoes','decals'];
-  var setData={id:uid(),name:name,desc:desc,img:img,imgIsUrl:imgIsUrl};
+  var codeEl=document.getElementById('cl-code');
+  var setData={id:uid(),name:name,desc:desc,img:img,imgIsUrl:imgIsUrl,code:codeEl?codeEl.value.trim():''};
   cats.forEach(function(c){
     var mi=document.getElementById('cl-'+c+'-m');
     var di=document.getElementById('cl-'+c+'-d');
@@ -1148,13 +1173,12 @@ function addCloth(){
   var items=DB.get('clothing')||[];
   items.push(setData);
   DB.set('clothing',items);
-  addLog('cloth','Admin přidal outfit set: "'+name+'".',{extraPing:pingBox('ping-cloth'),embed:rich(C_PINK,'👕 NOVÝ OUTFIT SET','**'+name+'**'+(desc?'\n'+desc:''),[],{img:img,big:true,by:(getMember()?getMember().displayName:'Admin')})});
-  st.textContent='// SET PŘIDÁN';
+  addLog('cloth','Admin přidal outfit set: "'+name+'".',{extraPing:pingBox('ping-cloth'),embed:rich(C_PINK,'👕 NOVÝ OUTFIT SET','**'+name+'**'+(desc?'\n'+desc:''),setData.code?[['🔑 Kód outfitu','`'+setData.code+'`',false]]:[],{img:img,big:true,by:(getMember()?getMember().displayName:'Admin')})});  st.textContent='// SET PŘIDÁN';
   setTimeout(function(){st.textContent='';},3000);
   document.getElementById('cl-name').value='';
   document.getElementById('cl-desc').value='';
   if(document.getElementById('cl-img'))document.getElementById('cl-img').value='';
-  if(document.getElementById('cl-img-url'))document.getElementById('cl-img-url').value='';
+  if(document.getElementById('cl-img-url'))document.getElementById('cl-img-url').value='';if(codeEl)codeEl.value='';
   if(document.getElementById('cl-img-preview'))document.getElementById('cl-img-preview').innerHTML='—';
   cats.forEach(function(c){
     var mi=document.getElementById('cl-'+c+'-m');var di=document.getElementById('cl-'+c+'-d');
@@ -1195,7 +1219,9 @@ function renderAdminClothing(){
       '<div class="cs-title">'+esc(s.name)+'</div>'+
       imgH+
       (s.desc?'<div class="cs-desc">'+esc(s.desc)+'</div>':'')+
+      clothCodeHtml(s)+
       '<table class="cs-table">'+rows+'</table>'+
+      '<button class="cloth-del-btn" style="margin-top:.5rem;width:100%;border-color:var(--acc-dim);color:var(--acc)" onclick="editClothCode(\''+s.id+'\')">🔑 '+(s.code?'ZMĚNIT KÓD':'PŘIDAT KÓD')+'</button>'+
       '<button class="cloth-del-btn" style="margin-top:.5rem;width:100%;" onclick="delCloth(\''+s.id+'\')">✕ SMAZAT SET</button>'+
     '</div>';
   }).join('');

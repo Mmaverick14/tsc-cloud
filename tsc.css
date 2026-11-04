@@ -1874,3 +1874,10 @@ body.panic-off #panicBtn{display:none!important}
 
 /* OOC oznámení */
 .log-type.ooc{background:rgba(155,89,182,.1);color:#b07cc6;border:1px solid #4a3060}
+
+/* ── KÓD OUTFITU ── */
+.cs-code{margin:0;padding:.55rem .7rem;border-bottom:1px solid var(--border);cursor:pointer;background:color-mix(in srgb,var(--acc) 6%,var(--surf));transition:background .18s}
+.cs-code:hover{background:color-mix(in srgb,var(--acc) 14%,var(--surf))}
+.cs-code-l{font-size:.62rem;font-weight:600;letter-spacing:.16em;color:var(--acc);display:flex;justify-content:space-between;gap:.5rem}
+.cs-code-l span{color:var(--muted);letter-spacing:.08em}
+.cs-code-v{margin-top:.3rem;font-family:ui-monospace,Menlo,Consolas,monospace!important;font-size:.72rem;color:var(--textb);word-break:break-all;max-height:4.2rem;overflow:hidden}
