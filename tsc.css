@@ -1871,3 +1871,6 @@ body.panic-off #panicBtn{display:none!important}
 .ct-nophone{margin-top:.3rem;font-size:.75rem;color:var(--muted);letter-spacing:.08em}
 .ct-crew .rs-pos{font-size:.58rem;letter-spacing:.1em}
 @media(max-width:700px){.ct-grid{grid-template-columns:1fr;padding:.7rem .7rem 2rem}}
+
+/* OOC oznámení */
+.log-type.ooc{background:rgba(155,89,182,.1);color:#b07cc6;border:1px solid #4a3060}

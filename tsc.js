@@ -832,7 +832,8 @@ function currentIds(m){
   return {
     board:(DB.get('board')||[]).map(function(p){return p.id;}),
     tasks:(tasks[m.id]||[]).filter(function(t){return !t.done;}).map(function(t){return t.id;}),
-    messages:(msgs[m.id]||[]).map(function(x){return x.id;})
+    messages:(msgs[m.id]||[]).map(function(x){return x.id;}),
+    ooc:(DB.get('ooc')||[]).filter(function(p){return p.authorId!==m.id;}).map(function(p){return p.id;})
   };
 }
 function updateNewDots(){
@@ -847,7 +848,8 @@ function updateNewDots(){
   var flags={
     board:cur.board.some(function(id){return (s.board||[]).indexOf(id)===-1;})||(needConfirm&&activeTab!=='board'),
     tasks:cur.tasks.some(function(id){return (s.tasks||[]).indexOf(id)===-1;}),
-    messages:cur.messages.some(function(id){return (s.messages||[]).indexOf(id)===-1;})
+    messages:cur.messages.some(function(id){return (s.messages||[]).indexOf(id)===-1;}),
+    ooc:cur.ooc.some(function(id){return (s.ooc||[]).indexOf(id)===-1;})
   };
   Object.keys(flags).forEach(function(t){
     var btn=document.querySelector('#memberScreen .nb[onclick*="mTab(\''+t+'\'"]');
@@ -3320,6 +3322,10 @@ function notifSources(m){
     if(p.author===m.displayName)return;
     out.push({id:'b_'+p.id,icon:p.type==='urgent'?'🚨':'📣',title:p.type==='confirm'?'Oznámení k potvrzení':'Nové oznámení',text:p.title,go:['m','board'],ts:(parseCz(p.date)||new Date()).getTime()});
   });
+  (DB.get('ooc')||[]).forEach(function(p){
+    if(p.authorId===m.id)return;
+    out.push({id:'o_'+p.id,icon:p.type==='urgent'?'🚨':'🗨',title:'Nové OOC oznámení',text:p.title,go:['m','ooc'],ts:(parseCz(p.date)||new Date()).getTime()});
+  });
   var now=Date.now();
   (DB.get('events')||[]).forEach(function(e){
     var d=evStart(e);if(!d)return;
@@ -4829,7 +4835,7 @@ var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={
     (DB.get('board')||[]).forEach(function(p){
       if(p.type==='confirm'&&!(conf[p.id]&&conf[p.id].indexOf(m.id)!==-1)&&board.indexOf(p.id)===-1)board.push(p.id);
     });
-    return {board:board.length,tasks:unseen('tasks').length,messages:unseen('messages').length};
+    return {board:board.length,tasks:unseen('tasks').length,messages:unseen('messages').length,ooc:unseen('ooc').length};
   }
   function setBadge(el,n){
     if(!el)return;
@@ -4847,7 +4853,8 @@ var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={
     setBadge(bb,c.board);
     setBadge(document.getElementById('taskBadge'),c.tasks);
     setBadge(document.getElementById('msgBadge'),c.messages);
-    var total=c.board+c.tasks+c.messages;
+    setBadge(document.getElementById('oocBadge'),c.ooc);
+    var total=c.board+c.tasks+c.messages+c.ooc;
     document.title=(total?'('+total+') ':'')+BASE_TITLE;
   }
   var _ub=window.updateBadges;
@@ -5852,7 +5859,7 @@ var WEEKS=16;
      ══════════════════════════════════════════════ */
   var NG={
     member:{sel:'#memberScreen .sb-nav',g:[
-      ['PŘEHLED',['board','tasks','messages','calendar','rules']],      
+      ['PŘEHLED',['board','ooc','tasks','messages','calendar','rules']],
       ['OPERACE',['warehouse','boosting','heist','clothing','business']],
       ['FINANCE & PAPÍRY',['finance','excuse','report']],
       ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
@@ -6351,3 +6358,131 @@ var _at=window.aTab;
 window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='rules')render('a');return r;};
 })();
 
+/* ===== OOC oznámení (kdo smí psát nastavuje vedení) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+
+if(!SECTIONS.some(function(x){return x.key==='ooc';}))SECTIONS.push({key:'ooc',label:'OOC oznámení'});
+LOG_ICONS.ooc='🗨';LOG_LABELS.ooc='OOC';
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.ooc='A';
+
+function posts(){var a=DB.get('ooc');return Array.isArray(a)?a:[];}
+function cfg(){
+  var c=DB.get('oocCfg')||{};
+  return {positions:Array.isArray(c.positions)?c.positions:[],members:Array.isArray(c.members)?c.members:[]};
+}
+function isMgr(m){return !!m&&ADMIN_POS.indexOf(m.position)!==-1;}
+function canWrite(m){
+  if(!m||m.panic)return false;
+  if(isMgr(m))return true;
+  var c=cfg();
+  return c.positions.indexOf(m.position)!==-1||c.members.indexOf(m.id)!==-1;
+}
+var TYPES={info:['ℹ️ INFO',C_BLUE,'INFO'],warning:['⚠️ DŮLEŽITÉ',C_ORANGE,'DŮLEŽITÉ'],urgent:['🚨 URGENTNÍ',C_RED,'URGENTNÍ']};
+
+/* vložení záložky do menu a obsahu */
+(function inject(){
+  var nav=document.querySelector('#memberScreen .sb-nav'),main=document.querySelector('#memberScreen .main');
+  if(!nav||!main||$('mt-ooc'))return;
+  var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"mTab('ooc',this)");
+  b.innerHTML='<span class="ni">🗨</span><span class="nl">OOC</span><span class="nbadge red" id="oocBadge"></span>';
+  var af=nav.querySelector('.nb[onclick*="\'board\'"]');
+  if(af)af.insertAdjacentElement('afterend',b);else nav.appendChild(b);
+  main.insertAdjacentHTML('beforeend','<div id="mt-ooc" class="mt"><div class="ph"><div class="pt">🗨 // OOC OZNÁMENÍ</div></div><div id="oocRoot"></div></div>');
+})();
+
+function build(){
+  var el=$('oocRoot');
+  el.innerHTML='<div id="oocForm"></div><div id="oocCfg"></div><div class="sh">// OOC OZNÁMENÍ</div><div id="oocList" class="board-posts"></div>';
+  el.dataset.built='1';
+  $('oocCfg').addEventListener('change',function(){
+    var m=getMember();if(!isMgr(m))return;
+    var c={positions:[],members:[]};
+    $('oocCfg').querySelectorAll('input[data-p]:checked').forEach(function(i){c.positions.push(i.getAttribute('data-p'));});
+    $('oocCfg').querySelectorAll('input[data-m]:checked').forEach(function(i){c.members.push(i.getAttribute('data-m'));});
+    DB.set('oocCfg',c);
+    addLog('ooc',m.displayName+' upravil, kdo smí psát OOC oznámení.',{noDiscord:true});
+    toast('Oprávnění uložena','success');
+  });
+}
+
+function formHtml(){
+  return '<div class="form-panel" style="margin:1.2rem"><div class="fp-title">// NOVÉ OOC OZNÁMENÍ</div><div class="form-grid">'+
+    '<div class="field-group fg-full"><label class="fl">NADPIS *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="ooc-title" maxlength="100"/></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">OBSAH * (označení hráče: @jméno)</label><textarea id="ooc-body" class="adm-ta" style="min-height:90px" maxlength="2000"></textarea></div>'+
+    '<div class="field-group"><label class="fl">TYP</label><div class="iw"><span class="ip">&gt;_</span><select id="ooc-type"><option value="info">INFO</option><option value="warning">DŮLEŽITÉ</option><option value="urgent">URGENTNÍ</option></select></div></div>'+
+    '</div><div class="fp-ftr"><button class="btn-acc small" onclick="oocPost()">ZVEŘEJNIT</button>'+
+    '<label class="ping-chk"><input type="checkbox" id="ooc-ping"/><span>🔔 Označit Member</span></label><span id="oocSt" class="smsg"></span></div></div>';
+}
+
+function cfgHtml(){
+  var c=cfg();
+  var poss=POSITIONS.filter(function(p){return ADMIN_POS.indexOf(p)===-1;});
+  var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden&&ADMIN_POS.indexOf(x.position)===-1;})
+    .sort(function(a,b){return String(a.displayName).localeCompare(String(b.displayName),'cs');});
+  return '<div class="form-panel" style="margin:1.2rem"><div class="fp-title">// KDO SMÍ PSÁT OOC OZNÁMENÍ</div>'+
+    '<div class="rx-hint" style="margin:0 0 .6rem">Mastermind, Overseer a Counselor smí psát vždy. Změny se ukládají hned.</div>'+
+    '<div class="fl" style="margin:.4rem 0">PODLE POZICE</div><div class="pick-list" style="max-height:none">'+
+    poss.map(function(p){return '<label class="pick-item"><input type="checkbox" data-p="'+esc(p)+'"'+(c.positions.indexOf(p)!==-1?' checked':'')+'/><span>'+esc(p)+'</span></label>';}).join('')+'</div>'+
+    '<div class="fl" style="margin:.8rem 0 .4rem">KONKRÉTNÍ LIDÉ</div><div class="pick-list">'+
+    (ms.length?ms.map(function(x){return '<label class="pick-item"><input type="checkbox" data-m="'+esc(x.id)+'"'+(c.members.indexOf(x.id)!==-1?' checked':'')+'/><span>'+esc(x.displayName)+' <em>('+esc(x.position)+')</em></span></label>';}).join(''):'<span class="pick-item off">Žádní členové</span>')+
+    '</div></div>';
+}
+
+function render(){
+  var m=getMember(),el=$('oocRoot');if(!m||!el)return;
+  if(!el.dataset.built)build();
+  var w=canWrite(m)?'1':'0',f=$('oocForm');
+  if(f.dataset.w!==w){f.dataset.w=w;f.innerHTML=w==='1'?formHtml():'<div class="radio-info" style="margin:1.2rem">Oznámení tady zveřejňuje jen vedení a lidé, kterým to vedení povolilo.</div>';}
+  var c=$('oocCfg');
+  if(isMgr(m)){
+    if(!c.contains(document.activeElement)){
+      var h=cfgHtml();if(c.dataset.h!==h){c.dataset.h=h;c.innerHTML=h;}
+    }
+  }else if(c.innerHTML){c.innerHTML='';c.dataset.h='';}
+  var L=posts().slice().reverse();
+  $('oocList').innerHTML=L.length?L.map(function(p){
+    var t=TYPES[p.type]||TYPES.info,del=isMgr(m)||p.authorId===m.id;
+    return '<div class="board-post '+esc(p.type)+'"><div class="bp-header"><div class="bp-title">'+esc(p.title)+'</div>'+
+      '<div style="display:flex;gap:.5rem;align-items:center"><span class="bp-type '+esc(p.type)+'">'+t[2]+'</span>'+
+      (del?'<button class="btn-micro del" onclick="oocDel(\''+esc(p.id)+'\')">✕</button>':'')+'</div></div>'+
+      '<div class="bp-body">'+esc(mentionView(p.body))+'</div>'+
+      '<div class="bp-footer"><span class="bp-date">'+esc(p.date)+' — '+esc(p.author)+'</span></div></div>';
+  }).join(''):'<div class="empty-s">// Zatím žádná OOC oznámení</div>';
+}
+
+window.oocPost=function(){
+  var m=getMember();
+  if(!canWrite(m)){toast('Na OOC oznámení nemáš oprávnění','error');return;}
+  var title=$('ooc-title').value.trim(),body=$('ooc-body').value.trim(),type=$('ooc-type').value,st=$('oocSt');
+  if(!title||!body){st.style.color='var(--red)';st.textContent='// VYPLŇ NADPIS A OBSAH';return;}
+  if(!TYPES[type])type='info';
+  var arr=posts();
+  arr.push({id:uid(),title:title,body:body,type:type,date:nowStr(),author:m.displayName,authorId:m.id});
+  if(arr.length>300)arr=arr.slice(-300);
+  DB.set('ooc',arr);
+  var dT=resolveMentions(title),dB=resolveMentions(body),mentions=[],rx=/<@!?(\d{5,})>/g,mm;
+  while((mm=rx.exec(dT+' '+dB))){var tag='<@'+mm[1]+'>';if(mentions.indexOf(tag)===-1)mentions.push(tag);}
+  var mp=pingBox('ooc-ping');if(mp)mentions.push(mp);
+  var t=TYPES[type];
+  addLog('ooc',m.displayName+' zveřejnil OOC oznámení: "'+title+'".',{
+    extraPing:mentions.join(' '),
+    embed:rich(t[1],'🗨 OOC OZNÁMENÍ','**'+dT+'**\n'+dB,[['Typ',t[0]],['Autor',m.displayName]],{by:m.displayName})});
+  $('ooc-title').value='';$('ooc-body').value='';$('ooc-type').value='info';
+  st.style.color='';st.textContent='// ZVEŘEJNĚNO';setTimeout(function(){st.textContent='';},2000);
+  toast('OOC oznámení zveřejněno','success');render();
+};
+
+window.oocDel=function(id){
+  var m=getMember(),p=posts().filter(function(x){return x.id===id;})[0];
+  if(!p||!m||!(isMgr(m)||p.authorId===m.id))return;
+  function go(){DB.set('ooc',posts().filter(function(x){return x.id!==id;}));toast('Oznámení smazáno','info');render();}
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT OZNÁMENÍ?',text:esc(p.title),ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);
+  else if(window.confirm('Smazat oznámení?'))go();
+};
+
+if(typeof M_RENDER!=='undefined')M_RENDER.ooc=render;
+var _mt=window.mTab;
+window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='ooc')render();return r;};
+})();
