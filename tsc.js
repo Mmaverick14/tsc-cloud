@@ -6618,3 +6618,103 @@ document.addEventListener('click',function(e){
   if(im&&typeof boostZoom==='function'){e.preventDefault();boostZoom(im.src);}
 });
 })();
+
+
+/* ===== Sklad: nový item bez fotky (neninic.png) + označení člena vedení, který foto doplní ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+var PH='neninic.png';
+function isPh(v){return String(v||'').split('/').pop()===PH;}
+function leaders(){
+  return (DB.get('members')||[]).filter(function(m){return !m.hidden&&!m.panic&&(isVedeni(m.position)||m.adminAccess);})
+    .sort(function(a,b){return String(a.displayName).localeCompare(String(b.displayName),'cs');});
+}
+function fillSel(){
+  var s=$('wi-photo-who');if(!s)return;
+  var cur=s.value;
+  s.innerHTML='<option value="">— vyber člena vedení —</option>'+leaders().map(function(m){
+    return '<option value="'+esc(m.id)+'">'+esc(m.displayName)+' ('+esc(m.position)+')</option>';}).join('');
+  if(cur)s.value=cur;
+}
+function build(){
+  var img=$('wi-img');if(!img||$('wi-photo-later'))return;
+  var anchor=img.closest('.field-group');if(!anchor)return;
+  var g=document.createElement('div');g.className='field-group fg-full';
+  g.innerHTML='<label class="fl">FOTO ZATÍM NENÍ</label>'+
+    '<div class="iw" style="padding:.4rem .8rem"><label class="ping-chk"><input type="checkbox" id="wi-photo-later"/><span>📷 Foto doplním později — použít <b>'+PH+'</b></span></label></div>'+
+    '<div id="wi-photo-box" class="hidden" style="margin-top:.5rem">'+
+      '<div class="iw" style="padding:.4rem .8rem"><label class="ping-chk"><input type="checkbox" id="wi-photo-ping"/><span>🔔 Označit člena vedení, který foto doplní</span></label></div>'+
+      '<div id="wi-photo-who-wrap" class="iw hidden" style="margin-top:.4rem"><span class="ip">&gt;_</span><select id="wi-photo-who"></select></div>'+
+    '</div>';
+  anchor.parentNode.insertBefore(g,anchor.nextSibling);
+  $('wi-photo-later').onchange=function(){
+    var on=this.checked,i=$('wi-img');
+    i.value=on?PH:'';i.readOnly=on;
+    $('wi-photo-box').classList.toggle('hidden',!on);
+    if(!on){$('wi-photo-ping').checked=false;$('wi-photo-who-wrap').classList.add('hidden');}
+    previewImg(i.value);fillSel();
+  };
+  $('wi-photo-ping').onchange=function(){
+    $('wi-photo-who-wrap').classList.toggle('hidden',!this.checked);fillSel();
+  };
+}
+function resetUi(){
+  var l=$('wi-photo-later');if(!l)return;
+  l.checked=false;$('wi-img').readOnly=false;
+  $('wi-photo-ping').checked=false;$('wi-photo-box').classList.add('hidden');$('wi-photo-who-wrap').classList.add('hidden');
+}
+build();
+var _tg=window.toggleAddItem;
+if(typeof _tg==='function')window.toggleAddItem=function(){var r=_tg.apply(this,arguments);build();fillSel();return r;};
+
+var _ai=window.addItem;
+if(typeof _ai==='function')window.addItem=function(){
+  build();
+  var later=$('wi-photo-later'),isLater=!!(later&&later.checked);
+  var pingOn=isLater&&$('wi-photo-ping').checked,who=pingOn?$('wi-photo-who').value:'';
+  if(pingOn&&!who){setText('addItemStatus','// VYBER ČLENA VEDENÍ, KTERÝ DOPLNÍ FOTO');return;}
+  if(isLater)$('wi-img').value=PH;
+  var mem=who?(DB.get('members')||[]).filter(function(m){return m.id===who;})[0]:null;
+  var n0=(DB.get('warehouse')||[]).length,orig=window.addLog,r;
+  if(mem){
+    window.addLog=function(type,text,opts){
+      opts=opts||{};
+      var tag=mem.discordId?'<@'+mem.discordId+'>':'';
+      opts.extraPing=joinPings(opts.extraPing,tag);
+      return orig.call(this,type,text+' — foto doplní: '+mem.displayName,opts);
+    };
+  }
+  try{r=_ai.apply(this,arguments);}finally{window.addLog=orig;}
+  var arr=DB.get('warehouse')||[];
+  if(arr.length>n0){
+    if(mem){
+      var it=arr[arr.length-1];it.photoBy=mem.id;it.photoByName=mem.displayName;DB.set('warehouse',arr);
+      if(!mem.discordId)toast(mem.displayName+' nemá vyplněné Discord ID — na Discordu nebude označen','info',4500);
+    }
+    resetUi();
+    renderAdminWarehouse();renderMemberWarehouse();
+  }
+  return r;
+};
+
+function badge(scope){
+  var host=$(scope==='a'?'aWhGrid':'mWhGrid');if(!host)return;
+  var items=DB.get('warehouse')||[],dirty=false;
+  items.forEach(function(it){if(it.photoBy&&!isPh(it.img)&&isAdmin()){delete it.photoBy;delete it.photoByName;dirty=true;}});
+  if(dirty)DB.set('warehouse',items);
+  var sel=scope==='a'?'adminAddQty':'pickupItem';
+  host.querySelectorAll('.wh-item').forEach(function(card){
+    if(card.querySelector('.wh-photo-wait'))return;
+    var b=card.querySelector('[onclick*="'+sel+'"]'),m=b&&/\('([^']+)'\)/.exec(b.getAttribute('onclick')||'');
+    var it=m&&items.filter(function(x){return x.id===m[1];})[0];
+    if(!it||!isPh(it.img))return;
+    var nm=card.querySelector('.wh-name');
+    if(nm)nm.insertAdjacentHTML('afterend','<div class="wh-photo-wait">📷 Čeká na foto'+(it.photoByName?' — doplní '+esc(it.photoByName):'')+'</div>');
+  });
+}
+var _rm=window.renderMemberWarehouse;
+if(typeof _rm==='function')window.renderMemberWarehouse=function(){var r=_rm.apply(this,arguments);try{badge('m');}catch(e){}return r;};
+var _ra=window.renderAdminWarehouse;
+if(typeof _ra==='function')window.renderAdminWarehouse=function(){var r=_ra.apply(this,arguments);try{badge('a');}catch(e){}return r;};
+})();

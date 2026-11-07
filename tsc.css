@@ -1892,3 +1892,8 @@ body.panic-off #panicBtn{display:none!important}
 .att-file:hover{border-color:var(--acc);background:var(--acc-dark)}
 .att-hint{font-size:.72rem;color:var(--muted);margin-top:.25rem}
 @media(max-width:700px){.att-imgs img{max-width:100%}}
+
+
+/* ===== Sklad: čeká na foto ===== */
+.wh-photo-wait{font-size:.7rem;font-weight:600;letter-spacing:.06em;color:orange;border:1px dashed orange;padding:.15rem .4rem;margin:.2rem 0 .4rem;display:inline-block}
+#wi-img[readonly]{opacity:.7;cursor:not-allowed}
