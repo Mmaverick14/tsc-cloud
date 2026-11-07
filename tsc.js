@@ -2202,6 +2202,70 @@ function deleteItem(id){
 var BOOST_TIERS=['D','C','B','A','A+','S','S+'];
 var mBoostTier='all',aBoostTier='all',editBoostId=null;
 
+
+// ── Boosting: potřebné itemy (výběr ze skladu / vlastní text) ──
+var boostItemsState={'':[],'m':[]};
+function boostWhFind(name,id){
+  var wh=DB.get('warehouse')||[];var n=String(name||'').trim().toLowerCase();
+  return wh.find(function(i){return (id&&i.id===id)||(n&&String(i.name).toLowerCase()===n);})||null;
+}
+function boostItemsGet(p){
+  return (boostItemsState[p||'']||[]).map(function(x){return {name:x.name,qty:x.qty,wh:x.wh||''};});
+}
+function boostItemsSet(p,arr){
+  boostItemsState[p||'']=(arr||[]).map(function(x){return {name:x.name,qty:Math.max(1,parseInt(x.qty)||1),wh:x.wh||''};});
+  var i=bEl(p,'bo-itemin');if(i)i.value='';
+  var q=bEl(p,'bo-itemqty');if(q)q.value='1';
+  boostItemsRender(p);
+}
+function boostItemsDL(p){
+  var dl=bEl(p,'bo-itemdl');if(!dl)return;
+  dl.innerHTML=(DB.get('warehouse')||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'cs');})
+    .map(function(i){return '<option value="'+esc(i.name)+'"></option>';}).join('');
+}
+function boostItemAdd(p){
+  p=p||'';
+  var inp=bEl(p,'bo-itemin'),qEl=bEl(p,'bo-itemqty');if(!inp)return;
+  var name=inp.value.trim().replace(/\s+/g,' ');
+  if(!name){inp.focus();return;}
+  var qty=Math.max(1,parseInt(qEl.value)||1);
+  var w=boostWhFind(name,'');
+  if(w)name=w.name;
+  var list=boostItemsState[p];
+  var ex=list.find(function(x){return x.name.toLowerCase()===name.toLowerCase();});
+  if(ex)ex.qty+=qty;else list.push({name:name,qty:qty,wh:w?w.id:''});
+  inp.value='';qEl.value='1';inp.focus();
+  boostItemsRender(p);
+}
+function boostItemDel(p,idx){
+  boostItemsState[p||''].splice(idx,1);boostItemsRender(p);
+}
+function boostItemsRender(p){
+  var el=bEl(p,'bo-itemlist');if(!el)return;
+  var list=boostItemsState[p||''];
+  el.innerHTML=list.length?list.map(function(x,i){
+    return '<span class="ht-chip bi-chip'+(x.wh?' wh':'')+'"><b>'+x.qty+'×</b> '+esc(x.name)+
+      '<small>'+(x.wh?'SKLAD':'VLASTNÍ')+'</small>'+
+      '<button type="button" onclick="boostItemDel(\''+(p||'')+'\','+i+')" title="Odebrat">✕</button></span>';
+  }).join(''):'<span class="bi-empty">// zatím žádné itemy</span>';
+}
+function boostItemsText(items){
+  return (items||[]).map(function(x){return x.qty+'× '+x.name;}).join(', ');
+}
+function boostItemsHtml(items){
+  if(!items||!items.length)return '';
+  return '<div class="boost-items"><div class="bi-h">POTŘEBNÉ ITEMY</div><div class="bi-row">'+
+    items.map(function(x){
+      var w=boostWhFind(x.name,x.wh),cls='',tip='',extra='';
+      if(w){
+        var ok=(w.qty||0)>=x.qty;cls=ok?' ok':' low';
+        tip=' title="Na skladu: '+(w.qty||0)+' ks"';
+        if(!ok)extra=' <em>sklad '+(w.qty||0)+'</em>';
+      }
+      return '<span class="bi-tag'+cls+'"'+tip+'><b>'+x.qty+'×</b> '+esc(x.name)+extra+'</span>';
+    }).join('')+'</div></div>';
+}
+
 function boostList(tier){
   var list=(DB.get('boosting')||[]).filter(function(b){return tier==='all'||b.tier===tier;});
   return list.sort(function(a,b){
@@ -2225,6 +2289,7 @@ function boostCard(b,admin){
     '<div class="boost-stat"><span>CENA</span><b>'+(b.price?money(b.price):'—')+'</b></div>'+
     '<div class="boost-stat"><span>LOKACE</span><b class="boost-loc">'+(b.loc?esc(b.loc):'—')+'</b></div>'+
     '<div class="boost-stat"><span>BACKUP</span><b class="'+(b.backup?'bk-yes':'bk-no')+'">'+(b.backup?'POTŘEBA':'NE')+'</b></div>'+
+    boostItemsHtml(b.items)+
     (b.note?'<div class="boost-note">'+esc(b.note)+'</div>':'')+
     (b.addedBy?'<div class="boost-by">// PŘIDAL: '+esc(b.addedBy)+'</div>':'')+
     ((admin||own)?'<div style="display:flex;gap:.4rem;margin-top:.5rem;">'+
@@ -2279,6 +2344,7 @@ function resetBoostForm(p){
   ['bo-name','bo-speed','bo-handling','bo-price','bo-loc','bo-note','bo-img','bo-img2','bo-img3'].forEach(function(i){bEl(p,i).value='';});
   bEl(p,'bo-backup').checked=false;
   bEl(p,'bo-tier').value='D';
+  boostItemsSet(p,[]);
   bEl(p,'bo-preview').innerHTML='—';
   setText((p||'')+'boostFormTitle','// NOVÉ VOZIDLO');
   setText((p||'')+'boostSaveBtn','PŘIDAT');
@@ -2288,11 +2354,11 @@ var GALLERY_URL=(location.origin&&location.origin!=='null')?location.origin+'/':
 function boostExtras(imgs){
   return (imgs||[]).slice(1,4).map(function(i){var u=absImg(i);return u?{url:GALLERY_URL,image:{url:u}}:null;}).filter(Boolean);
 }
-function boostEmbed(title,by,name,tier,speed,loc,backup,note,imgs,price){
+function boostEmbed(title,by,name,tier,speed,loc,backup,note,imgs,price,items){
   imgs=imgs||[];
   var e=rich(C_ORANGE,title,'**'+name+'**',[
     ['🏁 Tier','Tier '+tier],['⚡ Rychlost',speed?speed+' MP/H':'—'],['💰 Cena',price?money(price):'—'],['🛡 Backup',backup?'POTŘEBA':'NE'],
-    ['📍 Lokace',loc||'neuvedena'],['📝 Poznámka',note,false]
+    ['📍 Lokace',loc||'neuvedena'],['🎒 Potřebné itemy',boostItemsText(items),false],['📝 Poznámka',note,false]
   ],{img:imgs[0],big:true,by:by});
   if(imgs.length>1)e.url=GALLERY_URL;
   return e;
@@ -2311,19 +2377,21 @@ function saveBoost(p){
   var img=imgs[0]||'',img2=imgs[1]||'',img3=imgs[2]||'';
   var st=bEl(p,'boostStatus');
   if(!name){st.textContent='// ZADEJTE NÁZEV AUTA';return;}
+  boostItemAdd(p); // co je napsané v poli itemů a není přidané, se přidá automaticky
+  var items=boostItemsGet(p);
   var exPing=pingBox((p||'')+'ping-boost');
   var list=DB.get('boosting')||[];
-  var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena')+' — Backup: '+(backup?'POTŘEBA':'ne')+(note?' — Poznámka: '+note:'');
-  var short=name+' (Tier '+tier+(speed?', '+speed+' MP/H':'')+') · Cena: '+(price?money(price):'neuvedena')+' · Lokace: '+(loc||'neuvedena')+'; Backup: '+(backup?'POTŘEBA':'NE')+(note?'; Poznámka: '+note:'');
+  var info='"'+name+'" (Tier '+tier+', '+(speed||'?')+' MP/H) — Lokace: '+(loc||'neuvedena')+' — Backup: '+(backup?'POTŘEBA':'ne')+(items.length?' — Itemy: '+boostItemsText(items):'')+(note?' — Poznámka: '+note:'');
+  var short=name+' (Tier '+tier+(speed?', '+speed+' MP/H':'')+') · Cena: '+(price?money(price):'neuvedena')+' · Lokace: '+(loc||'neuvedena')+'; Backup: '+(backup?'POTŘEBA':'NE')+(items.length?'; Itemy: '+boostItemsText(items):'')+(note?'; Poznámka: '+note:'');
   if(editBoostId){
     var b=list.find(function(x){return x.id===editBoostId;});
     if(!canEditBoost(b)){toast('Nemáš oprávnění','error');return;}
-    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.price=price;b.loc=loc;b.backup=backup;b.note=note;b.img=img;b.img2=img2;b.img3=img3;
-    addLog('boost',m.displayName+' upravil vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,imgs,price)});
+    b.name=name;b.tier=tier;b.speed=speed;b.handling=handling;b.price=price;b.loc=loc;b.backup=backup;b.note=note;b.img=img;b.img2=img2;b.img3=img3;b.items=items;
+    addLog('boost',m.displayName+' upravil vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 VOZIDLO UPRAVENO',m.displayName,name,tier,speed,loc,backup,note,imgs,price,items)});
     toast('Vozidlo upraveno','success');
   }else{
-    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,price:price,loc:loc,backup:backup,note:note,img:img,img2:img2,img3:img3,ownerId:m.id,addedBy:m.displayName});
-    addLog('boost',m.displayName+' přidal vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,imgs,price)});
+    list.push({id:uid(),name:name,tier:tier,speed:speed,handling:handling,price:price,loc:loc,backup:backup,note:note,items:items,img:img,img2:img2,img3:img3,ownerId:m.id,addedBy:m.displayName});
+    addLog('boost',m.displayName+' přidal vozidlo '+short,{extraPing:exPing,extraEmbeds:boostExtras(imgs),embed:boostEmbed('🚗 NOVÉ VOZIDLO',m.displayName,name,tier,speed,loc,backup,note,imgs,price,items)});
     toast(name+' přidáno','success');
   }
   DB.set('boosting',list);
@@ -2346,6 +2414,7 @@ function editBoost(id,p){
   bEl(p,'bo-img').value=b.img||'';
   bEl(p,'bo-img2').value=b.img2||'';
   bEl(p,'bo-img3').value=b.img3||'';
+  boostItemsSet(p,b.items||[]);
   previewBoostImg('',p);
   setText(p+'boostFormTitle','// UPRAVIT VOZIDLO');
   setText(p+'boostSaveBtn','ULOŽIT ZMĚNY');

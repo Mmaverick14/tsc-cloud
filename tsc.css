@@ -1908,3 +1908,21 @@ body.panic-off #panicBtn{display:none!important}
 
 /* ===== Kategorie: čeká na hook ===== */
 .hook-wait{color:orange;font-style:normal;font-size:.7rem;margin-left:.5rem;letter-spacing:.04em}
+
+/* ── BOOSTING: potřebné itemy ───────────── */
+.bi-add{display:grid;grid-template-columns:1fr 110px auto;gap:.5rem;align-items:stretch;}
+.bi-add .btn-acc{white-space:nowrap;}
+.bi-list{margin-top:.55rem;min-height:1.6rem;align-items:center;}
+.bi-empty{font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.06em;}
+.bi-chip b{color:var(--acc);}
+.bi-chip small{font-size:.5rem;color:var(--muted);letter-spacing:.08em;border:1px solid var(--border);padding:0 .25rem;}
+.bi-chip.wh{border-color:var(--acc);}
+.boost-items{padding:.35rem 0;border-top:1px solid var(--border);}
+.bi-h{font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:.08em;margin-bottom:.25rem;}
+.bi-row{display:flex;flex-wrap:wrap;gap:.25rem;}
+.bi-tag{font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--textb);background:var(--surf);border:1px solid var(--border);padding:.12rem .4rem;}
+.bi-tag b{color:var(--acc);}
+.bi-tag.ok{border-color:var(--green);}
+.bi-tag.low{border-color:var(--red);}
+.bi-tag em{font-style:normal;color:var(--red);font-size:.5rem;margin-left:.2rem;}
+@media(max-width:640px){.bi-add{grid-template-columns:1fr 90px;}.bi-add .btn-acc{grid-column:1/-1;}}
