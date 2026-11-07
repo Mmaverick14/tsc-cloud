@@ -1926,3 +1926,6 @@ body.panic-off #panicBtn{display:none!important}
 .bi-tag.low{border-color:var(--red);}
 .bi-tag em{font-style:normal;color:var(--red);font-size:.5rem;margin-left:.2rem;}
 @media(max-width:640px){.bi-add{grid-template-columns:1fr 90px;}.bi-add .btn-acc{grid-column:1/-1;}}
+
+/* ── SKLAD: jméno z výběru ──────────────── */
+select.wh-ev-input{cursor:pointer;}

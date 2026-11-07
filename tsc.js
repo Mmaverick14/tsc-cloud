@@ -981,8 +981,26 @@ function whView(items,cat,q,sort){
 }
 function whSearch(scope,v){if(scope==='m'){mWhQ=v;renderMemberWarehouse();}else{aWhQ=v;renderAdminWarehouse();}}
 function whSort(scope,v){if(scope==='m'){mWhSort=v;renderMemberWarehouse();}else{aWhSort=v;renderAdminWarehouse();}}
+// ── Sklad: výběr jména ze seznamu členů (výchozí = přihlášený člen) ──
+function whNameOpts(){
+  var cur=currentMemberId;
+  return (DB.get('members')||[]).filter(function(m){return !m.hidden||m.id===cur;})
+    .sort(function(a,b){return String(a.displayName).localeCompare(String(b.displayName),'cs');})
+    .map(function(m){return '<option value="'+esc(m.displayName)+'"'+(m.id===cur?' selected':'')+'>'+esc(m.displayName)+'</option>';}).join('');
+}
+function whFillDepName(){
+  var s=document.getElementById('depName');if(!s||s.tagName!=='SELECT')return;
+  var keep=s.value;s.innerHTML=whNameOpts();
+  if(keep&&Array.prototype.some.call(s.options,function(o){return o.value===keep;}))s.value=keep;
+}
+function whResetName(el){
+  if(!el)return;
+  if(el.tagName==='SELECT'){var m=getMember();if(m)el.value=m.displayName;}
+  else el.value='';
+}
 function renderMemberWarehouse(){
   syncCats();
+  whFillDepName();
   var items=DB.get('warehouse')||[];
   var filtered=whView(items,mWhCat,mWhQ,mWhSort);
   var el=document.getElementById('mWhGrid');
@@ -996,7 +1014,7 @@ function renderMemberWarehouse(){
       (item.note?'<div class="wh-note-text">'+esc(item.note)+'</div>':'')+
       '<div class="wh-qty-row"><span class="wh-qty '+qc+'">'+item.qty+'</span><span class="wh-unit"> KS</span></div>'+
             (item.min>0&&item.qty>0&&item.qty<=item.min?'<div class="wh-alert">NÍZKÁ ZÁSOBA</div>':'')+
-      '<div class="wh-pickup"><input class="wh-ev-input" type="text" placeholder="Vaše jméno..." id="pn-'+item.id+'"/>'+
+      '<div class="wh-pickup"><select class="wh-ev-input" id="pn-'+item.id+'">'+whNameOpts()+'</select>'+
       '<div class="wh-pickup-row"><input class="wh-ev-input small" type="number" value="1" min="1" max="'+item.qty+'" id="pa-'+item.id+'"/>'+
       '<button class="btn-pickup'+(item.qty===0?' btn-pickup-disabled':'')+'" onclick="pickupItem(\''+item.id+'\')"'+(item.qty===0?' disabled':'')+'>⬇ VYZVEDL</button>'+
       '</div><label class="ping-chk small"><input type="checkbox" id="pk-'+item.id+'"/><span>🔔 Označit Member</span></label></div></div>';
@@ -1032,10 +1050,11 @@ function pickupItem(itemId){
   var before=item.qty;item.qty=Math.max(0,item.qty-amt);DB.set('warehouse',items);
   addLog('ev',whoName(jmeno,m)+' vyzvedl '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📤',extraPing:pingBox('pk-'+itemId)});
   stockAlert(item,before);
-  nameEl.value='';amtEl.value='1';toast(amt+'x '+item.name+' vydáno ✓','success');renderMemberWarehouse();
+  whResetName(nameEl);amtEl.value='1';toast(amt+'x '+item.name+' vydáno ✓','success');renderMemberWarehouse();
 }
 
 function populateDepositSelect(){
+  whFillDepName();
   var items=DB.get('warehouse')||[];
   var sel=document.getElementById('depItem');
   if(!sel)return;
@@ -1060,7 +1079,7 @@ function depositItem(){
   item.qty=item.qty+amt;
   DB.set('warehouse',items);
   addLog('wh',whoName(jmeno,m)+' vložil '+amt+'× '+item.name+' ('+before+' → '+item.qty+')',{img:item.img,pingCat:item.cat,plain:true,icon:'📥',extraPing:pingBox('ping-dep')});
-  nameEl.value='';amtEl.value='1';
+  whResetName(nameEl);amtEl.value='1';
   st.textContent='// ✓ VLOŽENO DO SKLADU';
   setTimeout(function(){st.textContent='';},3000);
   toast(amt+'x '+item.name+' vloženo do skladu ✓','success');
@@ -6896,7 +6915,7 @@ if(typeof _dp==='function')window.depositItem=function(){
   addLog('wh',whoName(jmeno,m)+' vložil nový item: '+amt+'× '+nn+' (0 → '+amt+')'+(mem?' — foto doplní: '+mem.displayName:' — chybí foto'),
     {img:PH,pingCat:cat,plain:true,icon:'🆕',extraPing:joinPings(pingBox('ping-dep'),tag)});
   if(mem&&!mem.discordId)toast(mem.displayName+' nemá vyplněné Discord ID — na Discordu nebude označen','info',4500);
-  nameEl.value='';amtEl.value='1';$('dep-newname').value='';
+  whResetName(nameEl);amtEl.value='1';$('dep-newname').value='';
   $('dep-photo-ping').checked=false;$('dep-photo-who-wrap').classList.add('hidden');
   $('dep-newcatname').value='';$('dep-hook-ping').checked=false;$('dep-hook-who-wrap').classList.add('hidden');
   fillCat();$('dep-newcat').value=cat;
