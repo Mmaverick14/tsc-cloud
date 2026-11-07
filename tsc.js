@@ -6724,26 +6724,31 @@ if(typeof _ra==='function')window.renderAdminWarehouse=function(){var r=_ra.appl
 (function(){
 'use strict';
 function $(id){return document.getElementById(id);}
-var PH='neninic.png',NEW='__new__';
+var PH='neninic.png',NEW='__new__',NEWCAT='__newcat__';
 function leaders(){
   return (DB.get('members')||[]).filter(function(m){return !m.hidden&&!m.panic&&(isVedeni(m.position)||m.adminAccess);})
     .sort(function(a,b){return String(a.displayName).localeCompare(String(b.displayName),'cs');});
 }
 function fillWho(){
-  var s=$('dep-photo-who');if(!s)return;var cur=s.value;
-  s.innerHTML='<option value="">— vyber člena vedení —</option>'+leaders().map(function(m){
-    return '<option value="'+esc(m.id)+'">'+esc(m.displayName)+' ('+esc(m.position)+')</option>';}).join('');
-  if(cur)s.value=cur;
+  ['dep-photo-who','dep-hook-who'].forEach(function(id){
+    var s=$(id);if(!s)return;var cur=s.value;
+    s.innerHTML='<option value="">— vyber člena vedení —</option>'+leaders().map(function(m){
+      return '<option value="'+esc(m.id)+'">'+esc(m.displayName)+' ('+esc(m.position)+')</option>';}).join('');
+    if(cur)s.value=cur;
+  });
 }
 function fillCat(){
   var s=$('dep-newcat');if(!s)return;var cur=s.value;syncCats();
-  s.innerHTML=Object.keys(CAT).map(function(k){return '<option value="'+esc(k)+'">'+esc(CAT[k])+'</option>';}).join('');
-  if(cur&&CAT[cur]!==undefined)s.value=cur;
+  s.innerHTML=Object.keys(CAT).map(function(k){return '<option value="'+esc(k)+'">'+esc(CAT[k])+'</option>';}).join('')+
+    '<option value="'+NEWCAT+'">➕ NOVÁ KATEGORIE…</option>';
+  if(cur&&(CAT[cur]!==undefined||cur===NEWCAT))s.value=cur;
 }
 function toggle(){
   var sel=$('depItem'),box=$('dep-new');if(!sel||!box)return;
   var on=sel.value===NEW;box.classList.toggle('hidden',!on);
   if(on){fillCat();fillWho();}
+  var nb=$('dep-newcat-box'),nc=$('dep-newcat');
+  if(nb&&nc)nb.classList.toggle('hidden',!on||nc.value!==NEWCAT);
 }
 function build(){
   var f=document.querySelector('.wh-deposit-form');if(!f||$('dep-new'))return;
@@ -6751,12 +6756,17 @@ function build(){
   d.innerHTML=
     '<div class="field-group"><label class="fl">NÁZEV NOVÉHO ITEMU *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="dep-newname" maxlength="60" placeholder="Název..."/></div></div>'+
     '<div class="field-group"><label class="fl">KATEGORIE</label><div class="iw"><span class="ip">&gt;_</span><select id="dep-newcat" class="fw"></select></div></div>'+
+    '<div id="dep-newcat-box" class="field-group fg-full hidden"><label class="fl">NÁZEV NOVÉ KATEGORIE * (max. 24 znaků)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="dep-newcatname" maxlength="24" placeholder="např. Součástky..."/></div>'+
+      '<div class="iw" style="padding:.4rem .8rem;margin-top:.4rem"><label class="ping-chk"><input type="checkbox" id="dep-hook-ping"/><span>🔔 Označit člena vedení, který nastaví Discord hook kategorie</span></label></div>'+
+      '<div id="dep-hook-who-wrap" class="iw hidden" style="margin-top:.4rem"><span class="ip">&gt;_</span><select id="dep-hook-who" class="fw"></select></div></div>'+
     '<div class="field-group fg-full"><label class="fl">FOTO</label><div class="dep-ph"><img src="images/'+PH+'" alt="" onerror="this.style.display=\'none\'"/><span>Foto zatím není — nastaví se <b>'+PH+'</b>, vedení ho doplní.</span></div>'+
       '<div class="iw" style="padding:.4rem .8rem;margin-top:.4rem"><label class="ping-chk"><input type="checkbox" id="dep-photo-ping"/><span>🔔 Označit člena vedení, který foto doplní</span></label></div>'+
       '<div id="dep-photo-who-wrap" class="iw hidden" style="margin-top:.4rem"><span class="ip">&gt;_</span><select id="dep-photo-who" class="fw"></select></div></div>';
   f.insertBefore(d,f.querySelector('.dep-ftr'));
   $('depItem').addEventListener('change',toggle);
   $('dep-photo-ping').onchange=function(){$('dep-photo-who-wrap').classList.toggle('hidden',!this.checked);fillWho();};
+  $('dep-newcat').onchange=function(){$('dep-newcat-box').classList.toggle('hidden',this.value!==NEWCAT);fillWho();};
+  $('dep-hook-ping').onchange=function(){$('dep-hook-who-wrap').classList.toggle('hidden',!this.checked);fillWho();};
 }
 build();
 
@@ -6788,9 +6798,28 @@ if(typeof _dp==='function')window.depositItem=function(){
   if(!jmeno){nameEl.style.borderColor='var(--red)';nameEl.placeholder='Zadejte jméno!';setTimeout(function(){nameEl.style.borderColor='';nameEl.placeholder='Jméno...';},2000);return;}
   if(!nn){err('// ZADEJ NÁZEV NOVÉHO ITEMU');return;}
   if(pingOn&&!who){err('// VYBER ČLENA VEDENÍ');return;}
+  var newCat=cat===NEWCAT,catName='',hookWho='';
+  if(newCat){
+    catName=($('dep-newcatname').value||'').trim().replace(/\s+/g,' ');
+    if(!catName){err('// ZADEJ NÁZEV NOVÉ KATEGORIE');return;}
+    if(catName.length>24){err('// NÁZEV KATEGORIE MAX. 24 ZNAKŮ');return;}
+    var upc=catName.toUpperCase();
+    if(Object.keys(CAT).some(function(k){return CAT[k]===upc;})){err('// TAKOVÁ KATEGORIE UŽ EXISTUJE — VYBER JI ZE SEZNAMU');return;}
+    hookWho=$('dep-hook-ping').checked?$('dep-hook-who').value:'';
+    if($('dep-hook-ping').checked&&!hookWho){err('// VYBER ČLENA VEDENÍ PRO HOOK');return;}
+  }
   var items=DB.get('warehouse')||[];
   if(items.some(function(i){return String(i.name).toLowerCase()===nn.toLowerCase();})){err('// TAKOVÝ ITEM UŽ EXISTUJE — VYBER HO ZE SEZNAMU');return;}
   var mem=who?(DB.get('members')||[]).filter(function(x){return x.id===who;})[0]:null;
+  if(newCat){
+    var hm=hookWho?(DB.get('members')||[]).filter(function(x){return x.id===hookWho;})[0]:null;
+    var cl=(DB.get('whcats')||[]).slice();cat='c_'+uid();
+    var rec={key:cat,name:catName};if(hm){rec.hookBy=hm.id;rec.hookByName=hm.displayName;}
+    cl.push(rec);DB.set('whcats',cl);syncCats();
+    addLog('wh',whoName(jmeno,m)+' vytvořil novou kategorii skladu: '+catName+(hm?' — Discord hook nastaví: '+hm.displayName:' — chybí Discord hook'),
+      {plain:true,icon:'🗂',extraPing:(hm&&hm.discordId)?'<@'+hm.discordId+'>':''});
+    if(hm&&!hm.discordId)toast(hm.displayName+' nemá vyplněné Discord ID — na Discordu nebude označen','info',4500);
+  }
   var it={id:uid(),name:nn,cat:cat,qty:amt,min:0,img:PH,note:'',addedBy:m.displayName};
   if(mem){it.photoBy=mem.id;it.photoByName=mem.displayName;}
   items.push(it);DB.set('warehouse',items);
@@ -6800,10 +6829,45 @@ if(typeof _dp==='function')window.depositItem=function(){
   if(mem&&!mem.discordId)toast(mem.displayName+' nemá vyplněné Discord ID — na Discordu nebude označen','info',4500);
   nameEl.value='';amtEl.value='1';$('dep-newname').value='';
   $('dep-photo-ping').checked=false;$('dep-photo-who-wrap').classList.add('hidden');
+  $('dep-newcatname').value='';$('dep-hook-ping').checked=false;$('dep-hook-who-wrap').classList.add('hidden');
+  fillCat();$('dep-newcat').value=cat;
   st.style.color='';st.textContent='// ✓ NOVÝ ITEM VLOŽEN DO SKLADU';setTimeout(function(){st.textContent='';},3000);
   toast(amt+'× '+nn+' přidáno do skladu ✓','success');
   renderMemberWarehouse();
   window.populateDepositSelect();
   sel.value=it.id;toggle();
+};
+})();
+
+
+/* ===== Nastavení: štítek „hook nastaví …“ u kategorií vytvořených členem ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+var _r=window.renderSectionHooks;
+if(typeof _r==='function')window.renderSectionHooks=function(){
+  var r=_r.apply(this,arguments);
+  try{
+    customCats().forEach(function(c){
+      if(!c.hookBy)return;
+      var inp=$('sh-url-cat_'+c.key);if(!inp||inp.value.trim())return;
+      var span=inp.closest('.sec-hook-row').querySelector('.sec-hook-on span');
+      if(span&&!span.querySelector('.hook-wait'))span.insertAdjacentHTML('beforeend',' <em class="hook-wait">⚠ hook nastaví: '+esc(c.hookByName||'?')+'</em>');
+    });
+  }catch(e){}
+  return r;
+};
+var _s=window.saveSectionHooks;
+if(typeof _s==='function')window.saveSectionHooks=function(){
+  var r=_s.apply(this,arguments);
+  try{
+    var list=customCats().slice(),ch=false;
+    list.forEach(function(c){
+      var inp=$('sh-url-cat_'+c.key);
+      if(c.hookBy&&inp&&inp.value.trim()){delete c.hookBy;delete c.hookByName;ch=true;}
+    });
+    if(ch){DB.set('whcats',list);window.renderSectionHooks();}
+  }catch(e){}
+  return r;
 };
 })();

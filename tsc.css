@@ -1905,3 +1905,6 @@ body.panic-off #panicBtn{display:none!important}
 .dep-ph img{width:56px;height:42px;object-fit:cover;border:1px solid var(--border)}
 .dep-ph b{color:var(--acc)}
 @media(max-width:700px){.dep-new{grid-template-columns:1fr}}
+
+/* ===== Kategorie: čeká na hook ===== */
+.hook-wait{color:orange;font-style:normal;font-size:.7rem;margin-left:.5rem;letter-spacing:.04em}
