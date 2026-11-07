@@ -1881,3 +1881,14 @@ body.panic-off #panicBtn{display:none!important}
 .cs-code-l{font-size:.62rem;font-weight:600;letter-spacing:.16em;color:var(--acc);display:flex;justify-content:space-between;gap:.5rem}
 .cs-code-l span{color:var(--muted);letter-spacing:.08em}
 .cs-code-v{margin-top:.3rem;font-family:ui-monospace,Menlo,Consolas,monospace!important;font-size:.72rem;color:var(--textb);word-break:break-all;max-height:4.2rem;overflow:hidden}
+
+/* ===== Přílohy u příspěvků ===== */
+.bp-att{margin:-.2rem 0 .8rem}
+.att-imgs{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.4rem}
+.att-imgs img{max-width:220px;max-height:160px;object-fit:cover;border:1px solid var(--border);cursor:zoom-in;transition:border-color .18s}
+.att-imgs img:hover{border-color:var(--acc)}
+.att-files{display:flex;flex-wrap:wrap;gap:.4rem}
+.att-file{font-size:.85rem;color:var(--acc);border:1px dashed var(--brite);padding:.25rem .6rem;text-decoration:none;word-break:break-all}
+.att-file:hover{border-color:var(--acc);background:var(--acc-dark)}
+.att-hint{font-size:.72rem;color:var(--muted);margin-top:.25rem}
+@media(max-width:700px){.att-imgs img{max-width:100%}}

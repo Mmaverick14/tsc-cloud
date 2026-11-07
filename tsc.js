@@ -6512,3 +6512,109 @@ if(typeof M_RENDER!=='undefined')M_RENDER.ooc=render;
 var _mt=window.mTab;
 window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='ooc')render();return r;};
 })();
+
+
+/* ===== Kategorie skladu: Discord hook i pro vlastní kategorie ===== */
+(function(){
+  var BASE=CAT_PINGS.slice();
+  function sync(){
+    var list=BASE.concat(customCats().map(function(c){return {key:c.key,label:'Sklad — '+c.name};}));
+    CAT_PINGS.length=0;
+    list.forEach(function(x){CAT_PINGS.push(x);});
+  }
+  var _r=window.renderSectionHooks;
+  window.renderSectionHooks=function(){sync();return _r.apply(this,arguments);};
+  var _s=window.saveSectionHooks;
+  window.saveSectionHooks=function(){sync();return _s.apply(this,arguments);};
+})();
+
+/* ===== Přílohy u Oznámení a OOC ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+var MAX=6;
+
+function parse(txt){
+  var seen={},out=[];
+  String(txt||'').split(/[\s,]+/).forEach(function(u){
+    if(!/^https?:\/\/[^\s"'<>]+$/i.test(u)||seen[u]||out.length>=MAX)return;
+    seen[u]=1;
+    var path=u.split('?')[0],nm=path.split('/').pop()||'soubor';
+    try{nm=decodeURIComponent(nm);}catch(e){}
+    var img=/\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(path)||(/fivemanage\.com/i.test(u)&&!/\.[a-z0-9]{2,4}$/i.test(path));
+    out.push({url:u,name:nm.slice(0,60),img:img});
+  });
+  return out;
+}
+
+function html(files){
+  var imgs=files.filter(function(f){return f.img;}),oth=files.filter(function(f){return !f.img;});
+  return '<div class="bp-att">'+
+    (imgs.length?'<div class="att-imgs">'+imgs.map(function(f){
+      return '<img src="'+esc(f.url)+'" alt="'+esc(f.name)+'" loading="lazy" title="Klikni pro zvětšení"/>';}).join('')+'</div>':'')+
+    (oth.length?'<div class="att-files">'+oth.map(function(f){
+      return '<a class="att-file" href="'+esc(f.url)+'" target="_blank" rel="noopener noreferrer">📎 '+esc(f.name)+'</a>';}).join('')+'</div>':'')+
+  '</div>';
+}
+
+function capture(inputId,key,fn){
+  var inp=$(inputId),files=inp?parse(inp.value):[];
+  var n0=(DB.get(key)||[]).length,orig=window.addLog,r;
+  if(files.length){
+    window.addLog=function(type,text,opts){
+      opts=opts||{};
+      if(opts.embed){
+        var e=opts.embed,im=files.filter(function(f){return f.img;})[0];
+        if(im&&!e.image)e.image={url:im.url};
+        var links=files.map(function(f){return '['+(f.img?'🖼 ':'📎 ')+f.name+']('+f.url+')';}).join('\n');
+        e.fields=(e.fields||[]).concat([{name:'📎 Přílohy ('+files.length+')',value:clip(links,1000),inline:false}]);
+      }
+      return orig.call(this,type,text,opts);
+    };
+  }
+  try{r=fn();}finally{window.addLog=orig;}
+  var arr=DB.get(key)||[];
+  if(files.length&&arr.length>n0){
+    arr[arr.length-1].files=files;DB.set(key,arr);
+    if(inp)inp.value='';
+  }
+  return r;
+}
+var _pb=window.postBoard;
+if(typeof _pb==='function')window.postBoard=function(){var a=arguments,s=this;return capture('board-files','board',function(){return _pb.apply(s,a);});};
+var _po=window.oocPost;
+if(typeof _po==='function')window.oocPost=function(){var a=arguments,s=this;return capture('ooc-files','ooc',function(){return _po.apply(s,a);});};
+
+function field(id,host){
+  if(!host||$(id))return;
+  var g=document.createElement('div');g.className='field-group fg-full';
+  g.innerHTML='<label class="fl">PŘÍLOHY — ODKAZY NA FOTKY / SOUBORY (jeden na řádek, max. '+MAX+')</label>'+
+    '<textarea id="'+id+'" class="adm-ta" style="min-height:60px" placeholder="https://r2.fivemanage.com/...\nhttps://cdn.discordapp.com/attachments/..."></textarea>'+
+    '<div class="att-hint">Fotky se ukážou jako náhled, ostatní soubory jako odkaz.</div>';
+  host.appendChild(g);
+}
+
+function paint(){
+  [['boardPosts','board'],['adminBoardList','board'],['oocList','ooc']].forEach(function(p){
+    var host=$(p[0]);if(!host)return;
+    var list=(DB.get(p[1])||[]).slice().reverse();
+    host.querySelectorAll(':scope > .board-post').forEach(function(card,i){
+      var post=list[i];
+      if(!post||!post.files||!post.files.length||card.querySelector('.bp-att'))return;
+      var body=card.querySelector('.bp-body');
+      if(body)body.insertAdjacentHTML('afterend',html(post.files));
+    });
+  });
+}
+setInterval(function(){
+  if(document.hidden||!getMember())return;
+  field('board-files',document.querySelector('#at-board .form-panel .form-grid'));
+  field('ooc-files',document.querySelector('#oocForm .form-grid'));
+  paint();
+},800);
+
+document.addEventListener('click',function(e){
+  var im=e.target.closest&&e.target.closest('.bp-att img');
+  if(im&&typeof boostZoom==='function'){e.preventDefault();boostZoom(im.src);}
+});
+})();
