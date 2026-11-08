@@ -6959,3 +6959,88 @@ if(typeof _s==='function')window.saveSectionHooks=function(){
   return r;
 };
 })();
+
+
+/* ===== Sklad (člen): hledání položky v panelu „Vložit do skladu“ ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+
+/* styl (aby nebylo potřeba sahat do tsc.css) */
+if(!$('depSearchCss')){
+  var st=document.createElement('style');st.id='depSearchCss';
+  st.textContent='.dep-find-hint{font-size:.7rem;color:var(--muted);margin-top:.25rem;letter-spacing:.04em}'+
+    '.dep-find-hint b{color:var(--acc)}';
+  document.head.appendChild(st);
+}
+
+var all=[];            /* kompletní seznam <option> po každém sestavení selectu */
+var NEW='__new__';
+
+function snapshot(){
+  var sel=$('depItem');if(!sel)return;
+  all=[].slice.call(sel.options).map(function(o){return {v:o.value,t:o.textContent};});
+}
+
+function apply(pickFirst){
+  var sel=$('depItem'),inp=$('depFind'),hint=$('depFindHint');
+  if(!sel||!inp)return;
+  var q=norm(inp.value.trim()),prev=sel.value;
+  var list=all.filter(function(o){return o.v===NEW||!q||norm(o.t).indexOf(q)!==-1;});
+  var real=list.filter(function(o){return o.v!==NEW;});
+  sel.innerHTML='';
+  list.forEach(function(o){
+    var op=document.createElement('option');op.value=o.v;op.textContent=o.t;sel.appendChild(op);
+  });
+  /* co vybrat: dosavadní výběr, jinak první nalezená položka */
+  var want=prev;
+  if(q&&(pickFirst||!list.some(function(o){return o.v===prev;})||prev===NEW))want=real.length?real[0].v:prev;
+  if(list.some(function(o){return o.v===want;}))sel.value=want;
+  sel.dispatchEvent(new Event('change'));   /* přepne formulář „nový item“ */
+  if(hint){
+    hint.innerHTML=!q?'':(real.length?'Nalezeno: <b>'+real.length+'</b>'+(real.length>1?' — vyber ze seznamu nebo stiskni Enter pro první':''):'Nic nenalezeno — můžeš vložit jako <b>➕ NOVÝ ITEM</b>');
+  }
+}
+
+function build(){
+  var sel=$('depItem');if(!sel||$('depFind'))return;
+  var fg=sel.closest('.field-group');if(!fg)return;
+  var w=document.createElement('div');w.className='iw';w.style.marginBottom='.35rem';
+  w.innerHTML='<span class="ip">🔍</span><input type="search" id="depFind" placeholder="Hledat položku…" autocomplete="off" aria-label="Hledat položku ve skladu"/>';
+  fg.insertBefore(w,fg.querySelector('.iw'));
+  var hint=document.createElement('div');hint.id='depFindHint';hint.className='dep-find-hint';
+  fg.appendChild(hint);
+  var inp=$('depFind');
+  inp.addEventListener('input',function(){apply(false);});
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){e.preventDefault();apply(true);var a=$('depAmt');if(a){a.focus();a.select();}}
+    else if(e.key==='ArrowDown'){e.preventDefault();sel.focus();}
+    else if(e.key==='Escape'){inp.value='';apply(false);}
+  });
+}
+
+build();
+
+/* po každém sestavení seznamu položek (otevření záložky, přidání nové položky…) */
+var _pd=window.populateDepositSelect;
+if(typeof _pd==='function')window.populateDepositSelect=function(){
+  var r=_pd.apply(this,arguments);
+  build();snapshot();apply(false);
+  return r;
+};
+
+/* po úspěšném vložení vyčistit hledání, ať je seznam zase celý */
+var _dp=window.depositItem;
+if(typeof _dp==='function')window.depositItem=function(){
+  var r=_dp.apply(this,arguments);
+  var inp=$('depFind');
+  if(inp&&inp.value){inp.value='';window.populateDepositSelect();}
+  return r;
+};
+
+/* seznam se vždy skládá znovu z plného snapshotu */
+if(typeof window.populateDepositSelect==='function'){
+  try{window.populateDepositSelect();}catch(e){}
+}
+})();
