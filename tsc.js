@@ -7044,3 +7044,31 @@ if(typeof window.populateDepositSelect==='function'){
   try{window.populateDepositSelect();}catch(e){}
 }
 })();
+
+
+/* ===== Sklad: hledání položky nad mřížkou (člen i admin) ===== */
+(function(){
+'use strict';
+function build(scope){
+  var tab=document.getElementById(scope==='a'?'at-warehouse':'mt-warehouse');
+  if(!tab||tab.querySelector('.wh-search'))return;
+  var inp=document.createElement('input');
+  inp.type='search';inp.className='wh-search';
+  inp.placeholder='🔍 Hledat položku ve skladu…';
+  inp.setAttribute('aria-label','Hledat položku ve skladu');
+  inp.autocomplete='off';
+  inp.addEventListener('input',function(){whSearch(scope,inp.value);});
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){inp.value='';whSearch(scope,'');}
+  });
+  var tools=tab.querySelector('.wh-tools');
+  if(tools){tools.insertBefore(inp,tools.firstChild);}
+  else{
+    var grid=document.getElementById(scope==='a'?'aWhGrid':'mWhGrid');
+    if(grid)grid.parentNode.insertBefore(inp,grid);
+  }
+}
+function run(){build('m');build('a');}
+run();
+setInterval(function(){if(!document.hidden)run();},1500);
+})();
