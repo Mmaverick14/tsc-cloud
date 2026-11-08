@@ -6865,8 +6865,10 @@ if(typeof _pd==='function')window.populateDepositSelect=function(){
   var r=_pd.apply(this,arguments);
   if(sel){
     var o=document.createElement('option');o.value=NEW;o.textContent='➕ NOVÝ ITEM (není v seznamu)';
-    sel.insertBefore(o,sel.firstChild);
-    if(cur&&sel.querySelector('option[value="'+cur+'"]'))sel.value=cur;
+    sel.appendChild(o);
+    var ph=document.createElement('option');ph.value='';ph.textContent='🔍 Vyber položku (nebo ji vyhledej výše)…';
+    sel.insertBefore(ph,sel.firstChild);
+    sel.value=(cur&&sel.querySelector('option[value="'+cur+'"]'))?cur:'';
     toggle();
   }
   return r;
