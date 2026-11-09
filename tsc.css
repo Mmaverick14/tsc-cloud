@@ -1957,3 +1957,25 @@ select.wh-ev-input{cursor:pointer;}
 .esc-gal img:hover{border-color:var(--acc)}
 .esc-by{margin-top:.8rem;font-size:.72rem;color:var(--muted);letter-spacing:.06em}
 @media(max-width:700px){.esc-list{padding:.7rem .7rem 2rem}.esc-gal img{height:110px}.esc-sel{max-width:46%}}
+
+/* --- Únikové cesty: přepis lišty (silnější selektory, ať je nepřebije jiný styl) --- */
+html body .esc-tools{display:flex!important;flex-wrap:wrap;gap:.3rem;align-items:center;padding:.5rem!important;background:var(--surf)!important;border:1px solid var(--brite)!important;border-bottom:0!important}
+html body .esc-sep{width:1px;height:1.6rem;background:var(--brite);margin:0 .2rem}
+html body .esc-tools .esc-tb{display:inline-flex!important;align-items:center;justify-content:center;min-width:2.1rem;height:2.1rem;padding:0 .5rem!important;background:var(--card)!important;border:1px solid var(--brite)!important;border-radius:0!important;color:var(--textb)!important;font-size:.9rem;cursor:pointer;box-shadow:none!important;text-transform:none!important;letter-spacing:0!important}
+html body .esc-tools .esc-tb:hover{border-color:var(--acc)!important;color:var(--acc)!important}
+html body .esc-tools .esc-tb svg{width:16px;height:16px;fill:currentColor;stroke:currentColor;stroke-width:1.4;stroke-linecap:round}
+html body .esc-tools .esc-tb svg circle{stroke:none}
+html body .esc-tools .esc-cb{flex-direction:column;gap:1px;padding:0 .55rem!important;position:relative}
+html body .esc-cb .esc-A{font-weight:800;font-size:1rem;line-height:1;color:var(--textb)}
+html body .esc-cb .esc-bar{display:block;width:18px;height:4px;border:1px solid rgba(255,255,255,.25)}
+html body .esc-tools .esc-sel{height:2.1rem}
+html body .esc-pop{position:fixed;z-index:9700;width:236px;padding:.8rem;background:var(--card);border:1px solid var(--acc-dim);box-shadow:0 14px 40px rgba(0,0,0,.7)}
+html body .esc-pop-t{font-size:.68rem;font-weight:600;letter-spacing:.18em;color:var(--acc);margin-bottom:.55rem}
+html body .esc-sw{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+html body .esc-s{aspect-ratio:1;border:1px solid rgba(255,255,255,.2)!important;border-radius:0!important;cursor:pointer;padding:0!important;min-width:0}
+html body .esc-s:hover{outline:2px solid var(--acc);outline-offset:1px}
+html body .esc-pop-r{display:flex;flex-direction:column;gap:.5rem;margin-top:.7rem}
+html body .esc-cust{display:flex;align-items:center;justify-content:space-between;font-size:.72rem;letter-spacing:.1em;color:var(--text)}
+html body .esc-cust input{width:44px;height:28px;padding:0;border:1px solid var(--brite);background:transparent;cursor:pointer}
+html body .esc-none{background:transparent!important;border:1px solid var(--brite)!important;border-radius:0!important;color:var(--text)!important;font-size:.7rem;letter-spacing:.1em;padding:.4rem!important;cursor:pointer}
+html body .esc-none:hover{border-color:var(--acc)!important;color:var(--acc)!important}

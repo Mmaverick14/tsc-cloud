@@ -7174,18 +7174,23 @@ function build(){
       '<div class="esc-tools" id="escTools">'+
         '<select id="escFont" class="esc-sel">'+fo+'</select>'+
         '<select id="escSize" class="esc-sel">'+so+'</select>'+
-        '<label class="esc-col" title="Barva písma">A<input type="color" id="escColor" value="#c49a14"/></label>'+
-        '<label class="esc-col hl" title="Barva zvýraznění">▮<input type="color" id="escHl" value="#7a6010"/></label>'+
+        '<span class="esc-sep"></span>'+
+        '<button type="button" class="esc-tb esc-cb" id="escColorBtn" title="Barva písma"><span class="esc-A">A</span><i class="esc-bar" id="escColorBar" style="background:#c49a14"></i></button>'+
+        '<button type="button" class="esc-tb esc-cb" id="escHlBtn" title="Zvýraznění textu"><span class="esc-A hl">▐</span><i class="esc-bar" id="escHlBar" style="background:#7a6010"></i></button>'+
+        '<span class="esc-sep"></span>'+
         '<button type="button" class="esc-tb" data-c="bold" title="Tučné"><b>B</b></button>'+
         '<button type="button" class="esc-tb" data-c="italic" title="Kurzíva"><i>I</i></button>'+
         '<button type="button" class="esc-tb" data-c="underline" title="Podtržené"><u>U</u></button>'+
         '<button type="button" class="esc-tb" data-c="strikeThrough" title="Přeškrtnuté"><s>S</s></button>'+
-        '<button type="button" class="esc-tb" data-c="justifyLeft" title="Vlevo">⯇</button>'+
-        '<button type="button" class="esc-tb" data-c="justifyCenter" title="Na střed">≡</button>'+
-        '<button type="button" class="esc-tb" data-c="justifyRight" title="Vpravo">⯈</button>'+
-        '<button type="button" class="esc-tb" data-c="insertUnorderedList" title="Odrážky">• —</button>'+
+        '<span class="esc-sep"></span>'+
+        '<button type="button" class="esc-tb" data-c="justifyLeft" title="Vlevo"><svg viewBox="0 0 16 16"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8"/></svg></button>'+
+        '<button type="button" class="esc-tb" data-c="justifyCenter" title="Na střed"><svg viewBox="0 0 16 16"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8"/></svg></button>'+
+        '<button type="button" class="esc-tb" data-c="justifyRight" title="Vpravo"><svg viewBox="0 0 16 16"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8"/></svg></button>'+
+        '<span class="esc-sep"></span>'+
+        '<button type="button" class="esc-tb" data-c="insertUnorderedList" title="Odrážky"><svg viewBox="0 0 16 16"><path d="M6 3.5h8M6 8h8M6 12.5h8"/><circle cx="2.7" cy="3.5" r="1"/><circle cx="2.7" cy="8" r="1"/><circle cx="2.7" cy="12.5" r="1"/></svg></button>'+
         '<button type="button" class="esc-tb" data-c="insertOrderedList" title="Číslování">1.</button>'+
-        '<button type="button" class="esc-tb" data-c="removeFormat" title="Smazat formátování">✕ FORMÁT</button>'+
+        '<span class="esc-sep"></span>'+
+        '<button type="button" class="esc-tb esc-clr" data-c="removeFormat" title="Smazat formátování">🧹</button>'+
       '</div>'+
       '<div id="escEd" class="esc-ed" contenteditable="true" data-ph="Popiš trasu: kudy jet, kde zabočit, kde se schovat…"></div></div>'+
     '<div class="field-group fg-full"><label class="fl">FOTKY — ODKAZY (jeden na řádek, max. '+MAXPH+')</label>'+
@@ -7216,7 +7221,7 @@ function build(){
   var tools=$('escTools');
   tools.addEventListener('mousedown',function(e){if(e.target.closest('.esc-tb'))e.preventDefault();});
   tools.addEventListener('click',function(e){
-    var b=e.target.closest('.esc-tb');if(b)cmd(b.getAttribute('data-c'));
+    var b=e.target.closest('.esc-tb[data-c]');if(b)cmd(b.getAttribute('data-c'));
   });
   $('escFont').onchange=function(){
     if(this.value)cmd('fontName',this.value);this.selectedIndex=0;
@@ -7227,8 +7232,34 @@ function build(){
     ed.querySelectorAll('font[size="7"]').forEach(function(f){f.removeAttribute('size');f.style.fontSize=px+'px';});
     fixFonts(ed);
   };
-  $('escColor').onchange=function(){cmd('foreColor',this.value);};
-  $('escHl').onchange=function(){cmd('hiliteColor',this.value);};
+  var SW=['#ffffff','#e0d5b0','#c49a14','#e0b52a','#e67e22','#e74c3c','#c0392b','#e056fd','#9b59b6','#4a90d9','#38bdd8','#1abc9c','#27ae60','#6ab04c','#8a8a8a','#000000'];
+  function closePal(){var p=$('escPop');if(p)p.remove();}
+  function openPal(btn,kind){
+    var had=$('escPop')&&$('escPop').dataset.k===kind;closePal();if(had)return;
+    var p=document.createElement('div');p.id='escPop';p.className='esc-pop';p.dataset.k=kind;
+    p.innerHTML='<div class="esc-pop-t">'+(kind==='fore'?'BARVA PÍSMA':'ZVÝRAZNĚNÍ TEXTU')+'</div><div class="esc-sw">'+
+      SW.map(function(c){return '<button type="button" class="esc-s" data-col="'+c+'" style="background:'+c+'" title="'+c+'"></button>';}).join('')+'</div>'+
+      '<div class="esc-pop-r"><label class="esc-cust">VLASTNÍ BARVA <input type="color" value="#c49a14"/></label>'+
+      (kind==='back'?'<button type="button" class="esc-none" data-col="transparent">BEZ ZVÝRAZNĚNÍ</button>':'')+'</div>';
+    document.body.appendChild(p);
+    var r=btn.getBoundingClientRect(),w=p.offsetWidth;
+    p.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';p.style.top=(r.bottom+6)+'px';
+    function apply(c){
+      cmd(kind==='fore'?'foreColor':'hiliteColor',c);
+      var bar=btn.querySelector('.esc-bar');if(bar&&c!=='transparent')bar.style.background=c;
+      closePal();
+    }
+    p.addEventListener('mousedown',function(e){if(!e.target.closest('input'))e.preventDefault();});
+    p.addEventListener('click',function(e){var s=e.target.closest('[data-col]');if(s)apply(s.getAttribute('data-col'));});
+    p.querySelector('input').onchange=function(){apply(this.value);};
+  }
+  $('escColorBtn').addEventListener('mousedown',function(e){e.preventDefault();});
+  $('escHlBtn').addEventListener('mousedown',function(e){e.preventDefault();});
+  $('escColorBtn').onclick=function(){openPal(this,'fore');};
+  $('escHlBtn').onclick=function(){openPal(this,'back');};
+  document.addEventListener('mousedown',function(e){
+    if(!e.target.closest('#escPop')&&!e.target.closest('.esc-cb'))closePal();
+  });
   ed.addEventListener('paste',function(e){
     e.preventDefault();
     var cd=e.clipboardData||window.clipboardData,h=cd.getData('text/html'),t=cd.getData('text/plain');
