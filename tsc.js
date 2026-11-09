@@ -7076,292 +7076,185 @@ setInterval(function(){if(!document.hidden)run();},1500);
 })();
 
 
-/* ===== Únikové cesty (popis s formátováním + fotky) ===== */
+/* ===== Únikovky: typy + filtr, lepší Discord (formátování, galerie fotek, úpravy, ruční odeslání) ===== */
+/* Vlož na ÚplNÝ KONEC tsc.js (za blok „Únikové cesty“). */
 (function(){
 'use strict';
 function $(id){return document.getElementById(id);}
-function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
-if(!SECTIONS.some(function(x){return x.key==='escape';}))SECTIONS.push({key:'escape',label:'Únikové cesty'});
-LOG_ICONS.escape='🛣';LOG_LABELS.escape='ÚNIKOVKY';
-if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.escape='B';
-
-var MAXPH=12,editId=null,saved=null;
-var FONTS=[['Písmo…',''],['Jost','Jost'],['Rajdhani','Rajdhani'],['Cormorant Garamond','Cormorant Garamond'],['Orbitron','Orbitron'],['Share Tech Mono','Share Tech Mono'],['Arial','Arial'],['Georgia','Georgia'],['Courier New','Courier New']];
-var SIZES=[12,14,16,18,20,24,28,32,40,48];
-var FSZ={1:10,2:13,3:16,4:18,5:24,6:32,7:48};
+var TAGS=['Auto','Motorka','Pěšky','Vrtulník','Loď','Jiné'];
+var TCOL={'Auto':'#c49a14','Motorka':'#e67e22','Pěšky':'#27ae60','Vrtulník':'#4a90d9','Loď':'#38bdd8','Jiné':'#8a8a8a'};
+var curEdit=null,tagF='all';
 
 function list(){var a=DB.get('escapes');return Array.isArray(a)?a:[];}
-function canEdit(){return !!isAdmin();}
-
-/* ── sanitizace (whitelist) — HTML se ukládá i zobrazuje jen přes ni ── */
-var OKT={B:1,STRONG:1,I:1,EM:1,U:1,S:1,STRIKE:1,BR:1,P:1,DIV:1,SPAN:1,FONT:1,UL:1,OL:1,LI:1,H2:1,H3:1,BLOCKQUOTE:1,SUB:1,SUP:1};
-var COL=/^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|[a-z]{3,20})$/i;
-var OKC={
-  'color':COL,'background-color':COL,
-  'font-size':/^\d{1,3}(\.\d+)?(px|pt|em|rem|%)$/,
-  'font-family':/^[\w\s,'"-]{1,80}$/,
-  'text-align':/^(left|right|center|justify)$/,
-  'font-weight':/^(normal|bold|\d{3})$/,
-  'font-style':/^(normal|italic)$/,
-  'text-decoration':/^(none|underline|line-through)( (underline|line-through))?$/,
-  'text-decoration-line':/^(none|underline|line-through)( (underline|line-through))?$/
-};
-function clean(src,dst){
-  Array.prototype.forEach.call(src.childNodes,function(n){
-    if(n.nodeType===3){dst.appendChild(document.createTextNode(n.nodeValue));return;}
-    if(n.nodeType!==1)return;
-    var t=n.tagName;
-    if(t==='SCRIPT'||t==='STYLE'||t==='IFRAME'||t==='OBJECT'||t==='TEMPLATE')return;
-    if(!OKT[t]){clean(n,dst);return;}
-    var e=document.createElement(t==='FONT'?'span':(t==='STRIKE'?'s':t.toLowerCase())),css=[];
-    if(t==='FONT'){
-      var c=n.getAttribute('color'),f=n.getAttribute('face'),z=n.getAttribute('size');
-      if(c&&COL.test(c))css.push('color:'+c);
-      if(f&&OKC['font-family'].test(f))css.push('font-family:'+f+' !important');
-      if(z&&FSZ[z])css.push('font-size:'+FSZ[z]+'px');
-    }
-    for(var i=0;i<n.style.length;i++){
-      var p=n.style[i],v=(n.style.getPropertyValue(p)||'').trim();
-      if(OKC[p]&&OKC[p].test(v))css.push(p+':'+v+(p==='font-family'?' !important':''));
-    }
-    if(css.length)e.setAttribute('style',css.join(';'));
-    clean(n,e);dst.appendChild(e);
-  });
-}
-function sanitize(html){
-  var d=new DOMParser().parseFromString('<body>'+String(html||'')+'</body>','text/html'),o=document.createElement('div');
-  clean(d.body,o);return o.innerHTML;
-}
-function plainOf(html){var d=document.createElement('div');d.innerHTML=sanitize(html);return (d.textContent||'').trim();}
-
-/* font-family musí mít !important (jinak ho přebije globální styl webu) */
-function fixFonts(ed){
-  ed.querySelectorAll('font').forEach(function(f){
-    var s=document.createElement('span');
-    if(f.getAttribute('face'))s.style.setProperty('font-family',f.getAttribute('face'),'important');
-    if(f.getAttribute('color'))s.style.color=f.getAttribute('color');
-    if(f.style.fontSize)s.style.fontSize=f.style.fontSize;
-    else if(f.getAttribute('size')&&FSZ[f.getAttribute('size')])s.style.fontSize=FSZ[f.getAttribute('size')]+'px';
-    while(f.firstChild)s.appendChild(f.firstChild);
-    f.parentNode.replaceChild(s,f);
-  });
-  ed.querySelectorAll('[style*="font-family"]').forEach(function(e){
-    var v=e.style.fontFamily;if(v)e.style.setProperty('font-family',v,'important');
-  });
-}
-
-/* ── záložka (menu + obsah) ── */
-(function inject(){
-  var nav=document.querySelector('#memberScreen .sb-nav'),main=document.querySelector('#memberScreen .main');
-  if(!nav||!main||$('mt-escape'))return;
-  var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"mTab('escape',this)");
-  b.innerHTML='<span class="ni">🛣</span><span class="nl">ÚNIKOVKY</span>';
-  var af=nav.querySelector('.nb[onclick*="\'heist\'"]');
-  if(af)af.insertAdjacentElement('afterend',b);else nav.appendChild(b);
-  main.insertAdjacentHTML('beforeend','<div id="mt-escape" class="mt"><div class="ph"><div class="pt">🛣 // ÚNIKOVÉ CESTY</div></div><div id="escRoot"></div></div>');
-})();
-
-/* ── sestavení editoru ── */
-function build(){
-  var root=$('escRoot');root.dataset.built='1';
-  var fo=FONTS.map(function(f){return '<option value="'+esc(f[1])+'">'+esc(f[0])+'</option>';}).join('');
-  var so='<option value="">Výška…</option>'+SIZES.map(function(s){return '<option value="'+s+'">'+s+' px</option>';}).join('');
-  root.innerHTML=
-  '<div id="escForm" class="form-panel" style="margin:1.2rem"><div class="fp-title" id="escFT">// NOVÁ ÚNIKOVÁ CESTA</div><div class="form-grid">'+
-    '<div class="field-group"><label class="fl">NÁZEV *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="esc-title" maxlength="80" placeholder="např. Fleeca Vinewood — trasa A"/></div></div>'+
-    '<div class="field-group"><label class="fl">LOKACE / OBLAST</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="esc-place" maxlength="80" placeholder="např. Vinewood, Sandy Shores…"/></div></div>'+
-    '<div class="field-group fg-full"><label class="fl">POPIS</label>'+
-      '<div class="esc-tools" id="escTools">'+
-        '<select id="escFont" class="esc-sel">'+fo+'</select>'+
-        '<select id="escSize" class="esc-sel">'+so+'</select>'+
-        '<span class="esc-sep"></span>'+
-        '<button type="button" class="esc-tb esc-cb" id="escColorBtn" title="Barva písma"><span class="esc-A">A</span><i class="esc-bar" id="escColorBar" style="background:#c49a14"></i></button>'+
-        '<button type="button" class="esc-tb esc-cb" id="escHlBtn" title="Zvýraznění textu"><span class="esc-A hl">▐</span><i class="esc-bar" id="escHlBar" style="background:#7a6010"></i></button>'+
-        '<span class="esc-sep"></span>'+
-        '<button type="button" class="esc-tb" data-c="bold" title="Tučné"><b>B</b></button>'+
-        '<button type="button" class="esc-tb" data-c="italic" title="Kurzíva"><i>I</i></button>'+
-        '<button type="button" class="esc-tb" data-c="underline" title="Podtržené"><u>U</u></button>'+
-        '<button type="button" class="esc-tb" data-c="strikeThrough" title="Přeškrtnuté"><s>S</s></button>'+
-        '<span class="esc-sep"></span>'+
-        '<button type="button" class="esc-tb" data-c="justifyLeft" title="Vlevo"><svg viewBox="0 0 16 16"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8"/></svg></button>'+
-        '<button type="button" class="esc-tb" data-c="justifyCenter" title="Na střed"><svg viewBox="0 0 16 16"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8"/></svg></button>'+
-        '<button type="button" class="esc-tb" data-c="justifyRight" title="Vpravo"><svg viewBox="0 0 16 16"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8"/></svg></button>'+
-        '<span class="esc-sep"></span>'+
-        '<button type="button" class="esc-tb" data-c="insertUnorderedList" title="Odrážky"><svg viewBox="0 0 16 16"><path d="M6 3.5h8M6 8h8M6 12.5h8"/><circle cx="2.7" cy="3.5" r="1"/><circle cx="2.7" cy="8" r="1"/><circle cx="2.7" cy="12.5" r="1"/></svg></button>'+
-        '<button type="button" class="esc-tb" data-c="insertOrderedList" title="Číslování">1.</button>'+
-        '<span class="esc-sep"></span>'+
-        '<button type="button" class="esc-tb esc-clr" data-c="removeFormat" title="Smazat formátování">🧹</button>'+
-      '</div>'+
-      '<div id="escEd" class="esc-ed" contenteditable="true" data-ph="Popiš trasu: kudy jet, kde zabočit, kde se schovat…"></div></div>'+
-    '<div class="field-group fg-full"><label class="fl">FOTKY — ODKAZY (jeden na řádek, max. '+MAXPH+')</label>'+
-      '<textarea id="esc-photos" class="adm-ta" style="min-height:70px" placeholder="https://r2.fivemanage.com/...\nhttps://cdn.discordapp.com/attachments/..."></textarea>'+
-      '<div class="att-hint">Odkazy z Fivemanage nebo Discordu. Náhled je hned pod polem.</div><div id="escPrev" class="esc-prev"></div></div>'+
-  '</div><div class="fp-ftr"><button class="btn-acc small" id="escSave" onclick="escSave()">ULOŽIT</button>'+
-    '<button class="btn-ghost small" onclick="escCancel()">ZRUŠIT</button>'+
-    '<label class="ping-chk"><input type="checkbox" id="esc-ping"/><span>🔔 Označit Member na Discordu</span></label><span id="escSt" class="smsg"></span></div></div>'+
-  '<div class="sh">// ÚNIKOVÉ CESTY</div>'+
-  '<input type="search" id="escQ" class="wh-search lux-find" placeholder="🔍 Hledat (název, lokace, text)…" autocomplete="off"/>'+
-  '<div id="escList" class="esc-list"></div>';
-
-  var ed=$('escEd');
-  document.addEventListener('selectionchange',function(){
-    var s=getSelection();
-    if(s.rangeCount&&ed.contains(s.anchorNode))saved=s.getRangeAt(0).cloneRange();
-  });
-  function restore(){
-    ed.focus();
-    if(saved){var s=getSelection();s.removeAllRanges();s.addRange(saved);}
-  }
-  function cmd(c,v){
-    restore();
-    document.execCommand('styleWithCSS',false,c!=='fontSize');
-    document.execCommand(c,false,v==null?null:v);
-    fixFonts(ed);
-  }
-  var tools=$('escTools');
-  tools.addEventListener('mousedown',function(e){if(e.target.closest('.esc-tb'))e.preventDefault();});
-  tools.addEventListener('click',function(e){
-    var b=e.target.closest('.esc-tb[data-c]');if(b)cmd(b.getAttribute('data-c'));
-  });
-  $('escFont').onchange=function(){
-    if(this.value)cmd('fontName',this.value);this.selectedIndex=0;
-  };
-  $('escSize').onchange=function(){
-    var px=parseInt(this.value,10);this.selectedIndex=0;if(!px)return;
-    cmd('fontSize','7');
-    ed.querySelectorAll('font[size="7"]').forEach(function(f){f.removeAttribute('size');f.style.fontSize=px+'px';});
-    fixFonts(ed);
-  };
-  var SW=['#ffffff','#e0d5b0','#c49a14','#e0b52a','#e67e22','#e74c3c','#c0392b','#e056fd','#9b59b6','#4a90d9','#38bdd8','#1abc9c','#27ae60','#6ab04c','#8a8a8a','#000000'];
-  function closePal(){var p=$('escPop');if(p)p.remove();}
-  function openPal(btn,kind){
-    var had=$('escPop')&&$('escPop').dataset.k===kind;closePal();if(had)return;
-    var p=document.createElement('div');p.id='escPop';p.className='esc-pop';p.dataset.k=kind;
-    p.innerHTML='<div class="esc-pop-t">'+(kind==='fore'?'BARVA PÍSMA':'ZVÝRAZNĚNÍ TEXTU')+'</div><div class="esc-sw">'+
-      SW.map(function(c){return '<button type="button" class="esc-s" data-col="'+c+'" style="background:'+c+'" title="'+c+'"></button>';}).join('')+'</div>'+
-      '<div class="esc-pop-r"><label class="esc-cust">VLASTNÍ BARVA <input type="color" value="#c49a14"/></label>'+
-      (kind==='back'?'<button type="button" class="esc-none" data-col="transparent">BEZ ZVÝRAZNĚNÍ</button>':'')+'</div>';
-    document.body.appendChild(p);
-    var r=btn.getBoundingClientRect(),w=p.offsetWidth;
-    p.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';p.style.top=(r.bottom+6)+'px';
-    function apply(c){
-      cmd(kind==='fore'?'foreColor':'hiliteColor',c);
-      var bar=btn.querySelector('.esc-bar');if(bar&&c!=='transparent')bar.style.background=c;
-      closePal();
-    }
-    p.addEventListener('mousedown',function(e){if(!e.target.closest('input'))e.preventDefault();});
-    p.addEventListener('click',function(e){var s=e.target.closest('[data-col]');if(s)apply(s.getAttribute('data-col'));});
-    p.querySelector('input').onchange=function(){apply(this.value);};
-  }
-  $('escColorBtn').addEventListener('mousedown',function(e){e.preventDefault();});
-  $('escHlBtn').addEventListener('mousedown',function(e){e.preventDefault();});
-  $('escColorBtn').onclick=function(){openPal(this,'fore');};
-  $('escHlBtn').onclick=function(){openPal(this,'back');};
-  document.addEventListener('mousedown',function(e){
-    if(!e.target.closest('#escPop')&&!e.target.closest('.esc-cb'))closePal();
-  });
-  ed.addEventListener('paste',function(e){
-    e.preventDefault();
-    var cd=e.clipboardData||window.clipboardData,h=cd.getData('text/html'),t=cd.getData('text/plain');
-    document.execCommand('insertHTML',false,h?sanitize(h):esc(t));fixFonts(ed);
-  });
-  $('esc-photos').addEventListener('input',prevPhotos);
-  $('escQ').addEventListener('input',render);
-}
-
 function parsePhotos(txt){
   var seen={},out=[];
   String(txt||'').split(/[\s,]+/).forEach(function(u){
-    if(/^https?:\/\/[^\s"'<>]+$/i.test(u)&&!seen[u]&&out.length<MAXPH){seen[u]=1;out.push(u);}
+    if(/^https?:\/\/[^\s"'<>]+$/i.test(u)&&!seen[u]&&out.length<12){seen[u]=1;out.push(u);}
   });
   return out;
 }
-function prevPhotos(){
-  $('escPrev').innerHTML=parsePhotos($('esc-photos').value).map(function(u){
-    return '<img src="'+esc(u)+'" alt="" loading="lazy"/>';
-  }).join('');
-}
 
-/* ── ukládání ── */
-window.escCancel=function(){
-  editId=null;
-  $('esc-title').value='';$('esc-place').value='';$('escEd').innerHTML='';$('esc-photos').value='';$('esc-ping').checked=false;
-  $('escPrev').innerHTML='';$('escFT').textContent='// NOVÁ ÚNIKOVÁ CESTA';$('escSave').textContent='ULOŽIT';
-};
-window.escSave=function(){
-  var m=getMember(),st=$('escSt');
-  if(!m||!canEdit()){toast('Únikové cesty smí upravovat jen vedení','error');return;}
-  function err(t){st.style.color='var(--red)';st.textContent=t;}
-  var title=$('esc-title').value.trim(),place=$('esc-place').value.trim();
-  fixFonts($('escEd'));
-  var html=sanitize($('escEd').innerHTML),plain=plainOf(html),photos=parsePhotos($('esc-photos').value);
-  if(!title){err('// ZADEJ NÁZEV');return;}
-  if(!plain&&!photos.length){err('// PŘIDEJ POPIS NEBO ALESPOŇ JEDNU FOTKU');return;}
-  var arr=list(),isEdit=!!editId,e=isEdit?arr.filter(function(x){return x.id===editId;})[0]:null;
-  if(isEdit&&!e){editId=null;isEdit=false;}
-  if(!e){e={id:uid(),by:m.id,byName:m.displayName,date:nowStr()};arr.push(e);}
-  else e.edited=nowStr();
-  e.title=title;e.place=place;e.html=html;e.photos=photos;
-  DB.set('escapes',arr);
-  var ping=pingBox('esc-ping');
-  addLog('escape',m.displayName+(isEdit?' upravil':' přidal')+' únikovou cestu "'+title+'".',isEdit?{noDiscord:true}:{
-    extraPing:ping,
-    embed:rich(C_BLUE,'🛣 NOVÁ ÚNIKOVÁ CESTA','**'+title+'**'+(plain?'\n'+clip(plain,600):''),[['📍 Lokace',place||'neuvedena'],['🖼 Fotek',String(photos.length)]],{img:photos[0],big:true,by:m.displayName})});
-  escCancel();
-  st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);
-  toast(isEdit?'Únikovka upravena':'Únikovka přidána','success');render();
-};
-window.escEdit=function(id){
-  if(!canEdit())return;
-  var e=list().filter(function(x){return x.id===id;})[0];if(!e)return;
-  editId=id;
-  $('esc-title').value=e.title||'';$('esc-place').value=e.place||'';
-  $('escEd').innerHTML=sanitize(e.html||'');fixFonts($('escEd'));
-  $('esc-photos').value=(e.photos||[]).join('\n');prevPhotos();
-  $('escFT').textContent='// UPRAVIT ÚNIKOVOU CESTU';$('escSave').textContent='ULOŽIT ZMĚNY';
-  $('escFT').scrollIntoView({behavior:'smooth',block:'center'});
-};
-window.escDel=function(id){
-  if(!canEdit())return;
-  var e=list().filter(function(x){return x.id===id;})[0];if(!e)return;
-  function go(){
-    DB.set('escapes',list().filter(function(x){return x.id!==id;}));
-    if(editId===id)escCancel();
-    addLog('escape',rosterWho()+' smazal únikovou cestu "'+e.title+'".',{noDiscord:true});
-    toast('Únikovka smazána','info');render();
-  }
-  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT ÚNIKOVOU CESTU?',text:esc(e.title)+'<div class="tsc-sub">Tuto akci nelze vrátit.</div>',ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);
-  else if(window.confirm('Smazat únikovou cestu?'))go();
-};
-
-/* ── vykreslení ── */
-function card(x){
-  var ph=(x.photos||[]);
-  return '<div class="esc-card"><div class="esc-top"><div><div class="esc-t">'+esc(x.title)+'</div>'+
-    (x.place?'<div class="esc-pl">📍 '+esc(x.place)+'</div>':'')+'</div>'+
-    (canEdit()?'<div class="esc-act"><button class="btn-micro" onclick="escEdit(\''+esc(x.id)+'\')">✎</button><button class="btn-micro del" onclick="escDel(\''+esc(x.id)+'\')">✕</button></div>':'')+'</div>'+
-    (x.html?'<div class="esc-body">'+sanitize(x.html)+'</div>':'')+
-    (ph.length?'<div class="esc-gal">'+ph.map(function(u){return '<img src="'+esc(u)+'" alt="" loading="lazy" title="Klikni pro zvětšení"/>';}).join('')+'</div>':'')+
-    '<div class="esc-by">// '+esc(x.byName||'?')+' — '+esc(x.date||'')+(x.edited?' · upraveno '+esc(x.edited):'')+'</div></div>';
+/* ── HTML z editoru → Discord markdown ── */
+function wrap(m,i){
+  var s=/^(\s*)([\s\S]*?)(\s*)$/.exec(i);
+  return s[2]?s[1]+m+s[2]+m+s[3]:i;
 }
-function render(){
-  var m=getMember(),root=$('escRoot');if(!m||!root)return;
-  if(!root.dataset.built)build();
-  $('escForm').classList.toggle('hidden',!canEdit());
-  var q=norm($('escQ').value.trim());
-  var L=list().slice().reverse().filter(function(x){
-    return !q||norm((x.title||'')+' '+(x.place||'')+' '+plainOf(x.html)).indexOf(q)!==-1;
+function md(n){
+  var o='';
+  Array.prototype.forEach.call(n.childNodes,function(c){
+    if(c.nodeType===3){o+=c.nodeValue;return;}
+    if(c.nodeType!==1)return;
+    var t=c.tagName,i;
+    if(t==='UL'||t==='OL'){
+      var k=0;o+='\n';
+      Array.prototype.forEach.call(c.children,function(li){
+        if(li.tagName!=='LI')return;k++;
+        o+=(t==='OL'?k+'. ':'• ')+md(li).trim()+'\n';
+      });
+      return;
+    }
+    i=md(c);
+    if(t==='B'||t==='STRONG')o+=wrap('**',i);
+    else if(t==='I'||t==='EM')o+=wrap('*',i);
+    else if(t==='U')o+=wrap('__',i);
+    else if(t==='S'||t==='STRIKE')o+=wrap('~~',i);
+    else if(t==='BR')o+='\n';
+    else if(t==='H2'||t==='H3')o+='\n'+wrap('**',i.trim())+'\n';
+    else if(t==='BLOCKQUOTE')o+='\n> '+i.trim().replace(/\n/g,'\n> ')+'\n';
+    else if(t==='P'||t==='DIV')o+='\n'+i+'\n';
+    else o+=i;
   });
-  var h=L.length?L.map(card).join(''):'<div class="empty-s">// '+(q?'Nic nenalezeno':'Zatím žádné únikové cesty')+'</div>';
-  var host=$('escList');
-  if(host.dataset.h!==h){host.dataset.h=h;host.innerHTML=h;}
+  return o;
 }
-document.addEventListener('click',function(e){
-  var im=e.target.closest&&e.target.closest('.esc-gal img,.esc-body img');
-  if(im&&typeof boostZoom==='function'){e.preventDefault();boostZoom(im.src);}
-});
+function htmlToMd(html){
+  var b=new DOMParser().parseFromString('<body>'+String(html||'')+'</body>','text/html').body;
+  return md(b).replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
 
-if(typeof M_RENDER!=='undefined')M_RENDER.escape=render;
-var _mt=window.mTab;
-window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='escape')render();return r;};
+/* ── embed (hlavní + galerie dalších fotek) ── */
+function build(e,edited,by){
+  var photos=e.photos||[];
+  var fields=[['📍 Lokace',e.place||'neuvedena'],['🏷 Typ',e.tag||'—'],['🖼 Fotek',String(photos.length)]];
+  var desc='**'+e.title+'**'+(htmlToMd(e.html)?'\n\n'+htmlToMd(e.html):'');
+  var em=rich(C_BLUE,edited?'✏️ ÚNIKOVÁ CESTA UPRAVENA':'🛣 NOVÁ ÚNIKOVÁ CESTA',desc,fields,{img:photos[0],big:true,by:by});
+  if(photos.length>1)em.url=GALLERY_URL;
+  var extra=photos.slice(1,4).map(function(u){var a=absImg(u);return a?{url:GALLERY_URL,image:{url:a}}:null;}).filter(Boolean);
+  return {embed:em,extra:extra};
+}
+
+/* ── formulář: typ + „oznámit úpravu“ ── */
+function injectForm(){
+  var f=$('escForm');if(!f||$('esc-tag'))return;
+  var place=$('esc-place');if(!place)return;
+  var fg=place.closest('.field-group');
+  var g=document.createElement('div');g.className='field-group';
+  g.innerHTML='<label class="fl">TYP ÚTĚKU</label><div class="iw"><span class="ip">&gt;_</span><select id="esc-tag"><option value="">— bez typu —</option>'+
+    TAGS.map(function(t){return '<option>'+t+'</option>';}).join('')+'</select></div>';
+  fg.after(g);
+  var ftr=f.querySelector('.fp-ftr'),ping=$('esc-ping');
+  if(ftr&&ping){
+    var l=document.createElement('label');l.className='ping-chk';
+    l.innerHTML='<input type="checkbox" id="esc-notify-edit"/><span>📤 Při úpravě poslat na Discord</span>';
+    ping.closest('label').after(l);
+  }
+}
+
+/* ── wrapper nad uložením ── */
+var _save=window.escSave;
+if(typeof _save==='function')window.escSave=function(){
+  var m=getMember(),tEl=$('esc-title');
+  if(!m||!tEl)return _save.apply(this,arguments);
+  var editing=!!$('escSave')&&$('escSave').textContent==='ULOŽIT ZMĚNY';
+  var editId=editing?curEdit:null;
+  var snap={
+    title:tEl.value.trim(),place:($('esc-place').value||'').trim(),
+    html:$('escEd').innerHTML,photos:parsePhotos($('esc-photos').value),
+    tag:($('esc-tag')||{}).value||''
+  };
+  var pingOn=!!$('esc-ping')&&$('esc-ping').checked;
+  var notify=!!$('esc-notify-edit')&&$('esc-notify-edit').checked;
+  var n0=list().length,orig=window.addLog,r;
+  window.addLog=function(type,text,opts){
+    if(type==='escape'){
+      var b=build(snap,editing,m.displayName),s=DB.get('settings')||{};
+      var ping=pingOn&&s.memberRoleId?'<@&'+s.memberRoleId+'>':'';
+      if(!editing||notify)opts={extraPing:ping,extraEmbeds:b.extra,embed:b.embed};
+    }
+    return orig.call(this,type,text,opts);
+  };
+  try{r=_save.apply(this,arguments);}finally{window.addLog=orig;}
+  /* uložení typu k záznamu */
+  var arr=list(),e=null;
+  if(editId)e=arr.filter(function(x){return x.id===editId;})[0];
+  else if(arr.length>n0)e=arr[arr.length-1];
+  if(e&&e.title===snap.title){e.tag=snap.tag;DB.set('escapes',arr);}
+  if($('esc-notify-edit'))$('esc-notify-edit').checked=false;
+  return r;
+};
+var _edit=window.escEdit;
+if(typeof _edit==='function')window.escEdit=function(id){
+  var r=_edit.apply(this,arguments);curEdit=id;
+  var e=list().filter(function(x){return x.id===id;})[0];
+  injectForm();if(e&&$('esc-tag'))$('esc-tag').value=e.tag||'';
+  return r;
+};
+var _cancel=window.escCancel;
+if(typeof _cancel==='function')window.escCancel=function(){
+  var r=_cancel.apply(this,arguments);curEdit=null;
+  if($('esc-tag'))$('esc-tag').value='';
+  return r;
+};
+
+/* ── ruční odeslání na Discord ── */
+window.escDiscord=function(id){
+  var m=getMember();if(!m||!isAdmin()){toast('Odeslat smí jen vedení','error');return;}
+  var e=list().filter(function(x){return x.id===id;})[0];if(!e)return;
+  var s=DB.get('settings')||{},sec=(s.sections||{}).escape||{};
+  if(sec.on===false){toast('Sekce „Únikové cesty“ je v Nastavení vypnutá','error',4000);return;}
+  if(!(sec.url||'').trim()&&!s.webhook){toast('Chybí webhook (Nastavení → Discord)','error',4000);return;}
+  var b=build(e,false,m.displayName);
+  b.embed.title='🛣 ÚNIKOVÁ CESTA';
+  sendToDiscord('escape','',{embed:b.embed,extraEmbeds:b.extra});
+  addLog('escape',m.displayName+' znovu odeslal únikovku "'+e.title+'" na Discord.',{noDiscord:true});
+  toast('Únikovka odeslána na Discord ✓','success');
+};
+
+/* ── štítky na kartách, filtr, tlačítko Discord ── */
+if(!$('escExtraCss')){
+  var st=document.createElement('style');st.id='escExtraCss';
+  st.textContent='.esc-tagb{display:inline-block;margin-top:.3rem;font-size:.62rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:.08rem .5rem;border:1px solid var(--tc);color:var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent)}'+
+    '#escTagF{display:flex;flex-wrap:wrap;gap:2px;padding:0 1.2rem .6rem}'+
+    '@media(max-width:700px){#escTagF{padding:0 .7rem .6rem}}';
+  document.head.appendChild(st);
+}
+function paint(){
+  if(!getMember()||!$('escList'))return;
+  injectForm();
+  var wrapF=$('escTagF');
+  if(!wrapF){wrapF=document.createElement('div');wrapF.id='escTagF';wrapF.className='wh-filters';$('escList').before(wrapF);}
+  var used={};list().forEach(function(e){if(e.tag)used[e.tag]=1;});
+  var key=tagF+'|'+Object.keys(used).join(',');
+  if(wrapF.dataset.k!==key){
+    wrapF.dataset.k=key;
+    wrapF.innerHTML=Object.keys(used).length?
+      '<button class="wf'+(tagF==='all'?' active':'')+'" data-t="all">VŠE</button>'+TAGS.filter(function(t){return used[t];}).map(function(t){
+        return '<button class="wf'+(tagF===t?' active':'')+'" style="--tc:'+TCOL[t]+'" data-t="'+t+'">'+t.toUpperCase()+'</button>';}).join(''):'';
+  }
+  var arr=list();
+  Array.prototype.forEach.call($('escList').querySelectorAll('.esc-card'),function(c){
+    var t=c.querySelector('.esc-t');if(!t)return;
+    var e=arr.filter(function(x){return x.title===t.textContent;})[0];
+    if(e&&e.tag&&!c.querySelector('.esc-tagb'))
+      t.insertAdjacentHTML('afterend','<span class="esc-tagb" style="--tc:'+(TCOL[e.tag]||'#8a8a8a')+'">'+e.tag+'</span>');
+    var act=c.querySelector('.esc-act');
+    if(e&&act&&!act.querySelector('.esc-dc'))
+      act.insertAdjacentHTML('afterbegin','<button class="btn-micro esc-dc" title="Poslat na Discord" onclick="escDiscord(\''+e.id+'\')">📤</button>');
+    c.style.display=(tagF==='all'||(e&&e.tag===tagF))?'':'none';
+  });
+}
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest&&ev.target.closest('#escTagF [data-t]');
+  if(b){tagF=b.getAttribute('data-t');$('escTagF').dataset.k='';paint();}
+});
+setInterval(function(){if(!document.hidden)try{paint();}catch(e){}},800);
 })();
