@@ -4932,8 +4932,6 @@ var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={
   setInterval(tickCountdown,15000);
 })();
 
-;
-
 /* ===== doplnky.js ===== */
 (function(){
   function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
