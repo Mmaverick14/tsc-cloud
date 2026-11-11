@@ -5974,7 +5974,7 @@ var NG={
     ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
   admin:{sel:'#adminScreen .sb-nav',g:[
     ['PŘEHLED',['board','tasks','templates','messages','calendar','rules']],
-    ['INTERNÍ INFORMACE',['warehouse','boosting','heists','drugsales','vyroba','clothing']],
+    ['INTERNÍ INFORMACE',['warehouse','boosting','drugsales','heists','vyroba','clothing']],
     ['FINANCE',['finance','incomes','excuses','reports']],
     ['LIDÉ',['members','roster','radio']],
     ['SYSTÉM',['stats','log','settings']]]}
