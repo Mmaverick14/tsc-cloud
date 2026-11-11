@@ -7671,8 +7671,8 @@ LOG_ICONS.vyroba='🧪';LOG_LABELS.vyroba='VÝROBA';
 if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.vyroba='B';
 
 /* ── data ── */
-var DEF=[['Aceton',0,0],['Kys. fosforečná',150,60],['Genkadon',0,2],['Peroxid',65,120],['Cofein',0,0],
-         ['Propyleglicol',65,120],['Toulen',0,0],['Tech. benzín',128,60],['Kerosen',0,0]];
+var DEF=[['',0,0],['',0,0],['',0,0],['',0,0],['',0,0],
+         ['',0,0],['',0,0],['',0,0],['',0,0]];
 function items(){
   var a=DB.get('vy_items');if(Array.isArray(a))return a;
   return DEF.map(function(d,i){return {id:'d'+i,name:d[0],price:d[1],qty:d[2]};});
