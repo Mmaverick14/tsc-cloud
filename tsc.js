@@ -5969,7 +5969,7 @@ var WEEKS=16;
 var NG={
   member:{sel:'#memberScreen .sb-nav',g:[
     ['PŘEHLED',['board','ooc','tasks','messages','calendar','rules']],
-    ['INTERNÍ INFORMACE',['warehouse','boosting','heist','escape','clothing','vyroba','business']],
+    ['INTERNÍ INFORMACE',['warehouse','boosting','heist','escape','clothing','vyroba','prodej','business']],
     ['FINANCE & PAPÍRY',['finance','excuse','report']],
     ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
   admin:{sel:'#adminScreen .sb-nav',g:[
@@ -7890,4 +7890,186 @@ function render(){
 if(typeof M_RENDER!=='undefined')M_RENDER.vyroba=render;
 var _mt=window.mTab;
 window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='vyroba')render();return r;};
+})();
+
+/* ===== PRODEJ DROG: každý člen svoje, admin vidí všechny ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+function r2(n){return Math.round(n*100)/100;}
+
+if(!SECTIONS.some(function(x){return x.key==='drugsale';}))SECTIONS.push({key:'drugsale',label:'Prodej drog — jen vlastní webhook, bez něj se neposílá'});
+LOG_ICONS.drugsale='💊';LOG_LABELS.drugsale='PRODEJ DROG';
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.prodej='B';
+
+var DEF_DRUGS=['Tráva','Extáze','Metamfetamin'];
+var adminF='all';
+
+function all(){var a=DB.get('drugsales');return Array.isArray(a)?a:[];}
+function tot(x){return r2(num(x.qty)*num(x.price));}
+function sum(arr,f){return arr.reduce(function(s,x){return s+f(x);},0);}
+
+/* ── styl ── */
+if(!$('pdCss')){
+  var st=document.createElement('style');st.id='pdCss';
+  st.textContent=
+    '.pd-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem;margin:.2rem 1.2rem .9rem}'+
+    '.pd-box{margin:0 1.2rem 1rem;overflow-x:auto}'+
+    '.pd-tot{font-weight:700;color:var(--acc);white-space:nowrap}'+
+    '.pd-row{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.6rem .9rem;margin-bottom:1px;background:var(--card);border-left:3px solid var(--acc-dim)}'+
+    '.pd-row .pd-d{font-weight:700;color:var(--textb);min-width:110px}'+
+    '.pd-row .pd-m{flex:1;min-width:140px;font-size:.8rem;color:var(--text)}'+
+    '.pd-row .pd-m small{display:block;color:var(--muted)}'+
+    '.pd-flt{margin:0 1.2rem .8rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}'+
+    '@media(max-width:700px){.pd-stats,.pd-box,.pd-flt{margin-left:.7rem;margin-right:.7rem}}';
+  document.head.appendChild(st);
+}
+
+/* ── záložka (menu + obsah) ── */
+(function inject(){
+  var nav=document.querySelector('#memberScreen .sb-nav'),main=document.querySelector('#memberScreen .main');
+  if(!nav||!main||$('mt-prodej'))return;
+  var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"mTab('prodej',this)");
+  b.innerHTML='<span class="ni">💊</span><span class="nl">PRODEJ DROG</span>';
+  var af=nav.querySelector('.nb[onclick*="\'vyroba\'"]')||nav.querySelector('.nb[onclick*="\'clothing\'"]');
+  if(af)af.insertAdjacentElement('afterend',b);else nav.appendChild(b);
+  main.insertAdjacentHTML('beforeend','<div id="mt-prodej" class="mt"><div class="ph"><div class="pt">💊 // PRODEJ DROG</div></div><div id="pdRoot"></div></div>');
+})();
+
+/* ── formulář (sestaví se jednou) ── */
+function build(){
+  var root=$('pdRoot');root.dataset.built='1';
+  root.innerHTML=
+  '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// ZAPSAT PRODEJ</div><div class="form-grid">'+
+    '<div class="field-group fg-full"><label class="fl">DROGA * (vyber ze skladu, nebo napiš vlastní)</label><div class="iw"><span class="ip">&gt;_</span>'+
+      '<input type="text" id="pd-drug" list="pd-dl" maxlength="50" autocomplete="off" placeholder="Tráva, Extáze, Metamfetamin…"/><datalist id="pd-dl"></datalist></div></div>'+
+    '<div class="field-group"><label class="fl">MNOŽSTVÍ (ks / g) *</label><div class="iw"><span class="ip">#</span><input type="number" id="pd-qty" min="0" step="any" placeholder="0"/></div></div>'+
+    '<div class="field-group"><label class="fl">CENA ZA KUS ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="pd-price" min="0" step="any" placeholder="0"/></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">POZNÁMKA (komu, kde…)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="pd-note" maxlength="120" placeholder="Volitelné…"/></div></div>'+
+  '</div><div id="pd-prev" class="att-hint" style="margin-bottom:.6rem"></div>'+
+  '<div class="fp-ftr"><button class="btn-acc small" onclick="pdAdd()">💊 ZAPSAT PRODEJ</button><span id="pdSt" class="smsg"></span></div></div>'+
+  '<div class="sh">// MOJE PRODEJE</div><div id="pdMine"></div>'+
+  '<div id="pdAdmin"></div>';
+  function prev(){
+    var q=num($('pd-qty').value),p=num($('pd-price').value);
+    $('pd-prev').textContent=(q&&p)?'Celkem: '+money(r2(q*p)):'';
+  }
+  $('pd-qty').addEventListener('input',prev);$('pd-price').addEventListener('input',prev);
+  $('pd-drug').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('pd-qty').focus();}});
+  root.addEventListener('change',function(e){
+    if(e.target.id==='pdFilter'){adminF=e.target.value;renderAdmin();}
+  });
+}
+function fillDl(){
+  var dl=$('pd-dl');if(!dl)return;
+  var names={};
+  DEF_DRUGS.forEach(function(n){names[n]=1;});
+  (DB.get('warehouse')||[]).forEach(function(i){if(i.cat==='drugs')names[i.name]=1;});
+  all().forEach(function(x){if(x.drug)names[x.drug]=1;});
+  var h=Object.keys(names).sort(function(a,b){return a.localeCompare(b,'cs');}).map(function(n){return '<option value="'+esc(n)+'"></option>';}).join('');
+  if(dl.dataset.h!==h){dl.dataset.h=h;dl.innerHTML=h;}
+}
+
+/* ── zápis / mazání ── */
+window.pdAdd=function(){
+  var m=getMember();if(!m)return;
+  var st=$('pdSt');
+  function err(t){st.style.color='var(--red)';st.textContent=t;}
+  var drug=$('pd-drug').value.trim().replace(/\s+/g,' '),qty=num($('pd-qty').value),price=num($('pd-price').value),note=$('pd-note').value.trim();
+  if(!drug){err('// ZADEJ DROGU');return;}
+  if(!qty){err('// ZADEJ MNOŽSTVÍ');return;}
+  if(!price){err('// ZADEJ CENU ZA KUS');return;}
+  var arr=all(),rec={id:uid(),memberId:m.id,memberName:m.displayName,drug:drug,qty:qty,price:price,note:note,date:nowStr(),ts:Date.now(),weekKey:getWeekKey()};
+  arr.push(rec);
+  if(arr.length>5000)arr=arr.slice(-5000);
+  DB.set('drugsales',arr);
+  addLog('drugsale',m.displayName+' prodal '+qty+'× '+drug+' po '+money(price)+' (celkem '+money(tot(rec))+').',{
+    private:true,
+    embed:rich(C_GREEN,'💊 PRODEJ DROG',note||null,[['👤 Člen',m.displayName],['🌿 Droga',drug],['📦 Množství',String(qty)],['💲 Za kus',money(price)],['💰 Celkem',money(tot(rec))]],{by:m.displayName})});
+  ['pd-drug','pd-qty','pd-price','pd-note'].forEach(function(i){$(i).value='';});
+  $('pd-prev').textContent='';
+  st.style.color='';st.textContent='// ZAPSÁNO';setTimeout(function(){st.textContent='';},2000);
+  toast('Prodej zapsán ✓','success');render();
+};
+window.pdDel=function(id){
+  var m=getMember(),x=all().filter(function(y){return y.id===id;})[0];
+  if(!m||!x||!(isAdmin()||x.memberId===m.id))return;
+  function go(){
+    DB.set('drugsales',all().filter(function(y){return y.id!==id;}));
+    addLog('drugsale',m.displayName+' smazal záznam prodeje ('+x.memberName+': '+x.qty+'× '+x.drug+').',{noDiscord:true});
+    toast('Záznam smazán','info');render();
+  }
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT ZÁZNAM?',text:esc(x.qty+'× '+x.drug+' — '+x.date),ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);
+  else go();
+};
+
+/* ── vykreslování ── */
+function card(t,v,cls){return '<div class="inc-sum-card"><div class="inc-sum-title">'+t+'</div><div class="inc-sum-val '+(cls||'acc')+'">'+v+'</div></div>';}
+function byDrug(arr){
+  var o={};
+  arr.forEach(function(x){var k=x.drug;o[k]=o[k]||{n:0,q:0,s:0};o[k].n++;o[k].q+=num(x.qty);o[k].s+=tot(x);});
+  return Object.keys(o).map(function(k){return {d:k,n:o[k].n,q:r2(o[k].q),s:r2(o[k].s)};}).sort(function(a,b){return b.s-a.s;});
+}
+function statsHtml(arr){
+  var wk=getWeekKey(),week=arr.filter(function(x){return x.weekKey===wk;});
+  return '<div class="pd-stats">'+
+    card('TRŽBA CELKEM',money(r2(sum(arr,tot))))+
+    card('TENTO TÝDEN',money(r2(sum(week,tot))),'green')+
+    card('PRODEJŮ',String(arr.length))+
+    card('KUSŮ CELKEM',String(r2(sum(arr,function(x){return num(x.qty);}))))+'</div>';
+}
+function drugTable(arr){
+  var d=byDrug(arr);
+  if(!d.length)return '';
+  return '<div class="pd-box"><table class="mx"><thead><tr><th>DROGA</th><th>PRODEJŮ</th><th>KUSŮ</th><th>TRŽBA</th></tr></thead><tbody>'+
+    d.map(function(r){return '<tr><td>'+esc(r.d)+'</td><td>'+r.n+'</td><td>'+r.q+'</td><td class="pd-tot">'+money(r.s)+'</td></tr>';}).join('')+'</tbody></table></div>';
+}
+function rows(arr,showWho){
+  var m=getMember();
+  if(!arr.length)return '<div class="empty-s">// Zatím žádné prodeje</div>';
+  return '<div style="margin:0 1.2rem 1rem">'+arr.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,200).map(function(x){
+    var del=m&&(isAdmin()||x.memberId===m.id);
+    return '<div class="pd-row"><span class="pd-d">'+esc(x.drug)+'</span>'+
+      '<span class="pd-m">'+x.qty+' × '+money(x.price)+(showWho?' · <b>'+esc(x.memberName)+'</b>':'')+'<small>'+esc(x.date)+(x.note?' · '+esc(x.note):'')+'</small></span>'+
+      '<span class="pd-tot">'+money(tot(x))+'</span>'+
+      (del?'<button class="btn-micro del" onclick="pdDel(\''+esc(x.id)+'\')">✕</button>':'')+'</div>';
+  }).join('')+'</div>';
+}
+function renderMine(){
+  var m=getMember();if(!m)return;
+  var mine=all().filter(function(x){return x.memberId===m.id;});
+  $('pdMine').innerHTML=statsHtml(mine)+drugTable(mine)+rows(mine,false);
+}
+function renderAdmin(){
+  var host=$('pdAdmin'),m=getMember();if(!host||!m)return;
+  if(!isAdmin()){host.innerHTML='';host.dataset.h='';return;}
+  var A=all(),mem={};
+  A.forEach(function(x){var k=x.memberId;mem[k]=mem[k]||{name:x.memberName,n:0,q:0,s:0};mem[k].name=x.memberName;mem[k].n++;mem[k].q+=num(x.qty);mem[k].s+=tot(x);});
+  (DB.get('members')||[]).forEach(function(x){if(mem[x.id])mem[x.id].name=x.displayName;});
+  var ids=Object.keys(mem).sort(function(a,b){return mem[b].s-mem[a].s;});
+  if(adminF!=='all'&&!mem[adminF])adminF='all';
+  var sel='<select id="pdFilter" class="st-range"><option value="all">Všichni členové</option>'+
+    ids.map(function(id){return '<option value="'+esc(id)+'"'+(adminF===id?' selected':'')+'>'+esc(mem[id].name)+'</option>';}).join('')+'</select>';
+  var list=adminF==='all'?A:A.filter(function(x){return x.memberId===adminF;});
+  host.innerHTML='<div class="sh">// 🛡 PRODEJE VŠECH ČLENŮ (jen vedení)</div>'+
+    statsHtml(A)+
+    '<div class="pd-box"><table class="mx"><thead><tr><th>ČLEN</th><th>PRODEJŮ</th><th>KUSŮ</th><th>TRŽBA</th></tr></thead><tbody>'+
+      (ids.length?ids.map(function(id){var r=mem[id];return '<tr><td><span class="prof-link" data-prof="'+esc(id)+'">'+esc(r.name)+'</span></td><td>'+r.n+'</td><td>'+r2(r.q)+'</td><td class="pd-tot">'+money(r2(r.s))+'</td></tr>';}).join(''):'<tr><td colspan="4" class="na">—</td></tr>')+
+    '</tbody></table></div>'+
+    '<div class="sh">// SOUHRN PODLE DROGY'+(adminF==='all'?'':' — '+esc(mem[adminF].name))+'</div>'+drugTable(list)+
+    '<div class="pd-flt"><span class="fl" style="margin:0">ZOBRAZIT ZÁZNAMY:</span>'+sel+'</div>'+rows(list,true);
+}
+function render(){
+  var m=getMember(),root=$('pdRoot');if(!m||!root)return;
+  if(!root.dataset.built)build();
+  fillDl();
+  renderMine();
+  var f=$('pdFilter');
+  if(!(f&&document.activeElement===f))renderAdmin();
+}
+
+if(typeof M_RENDER!=='undefined')M_RENDER.prodej=render;
+var _mt=window.mTab;
+window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='prodej')render();return r;};
 })();
