@@ -7782,7 +7782,7 @@ function recalc(){
     var p=num(tr.querySelector('[data-f=price]').value),q=num(tr.querySelector('[data-f=qty]').value),t=r2(p*q);
     sum+=t;tr.querySelector('.vy-tot').textContent=money(t);
   });
-  $('vySum').textContent=money(r2(sum))+' Dollar';
+  $('vySum').textContent=money(r2(sum))+' ';
 }
 window.vyAddItem=function(){
   var m=getMember();if(!m)return;
