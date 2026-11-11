@@ -7663,3 +7663,235 @@ if(typeof _save==='function')window.saveBoost=function(p){
   resetBoostForm(p);renderAdminBoosting();renderMemberBoosting();
 };
 })();
+
+/* ===== VÝROBA: náklady várky, zápis výroby, prodej / předání gangům (vlož na ÚPLNÝ KONEC tsc.js) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+function r2(n){return Math.round(n*100)/100;}
+
+if(!SECTIONS.some(function(x){return x.key==='vyroba';}))SECTIONS.push({key:'vyroba',label:'Výroba extáze'});
+LOG_ICONS.vyroba='🧪';LOG_LABELS.vyroba='VÝROBA';
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.vyroba='B';
+
+/* ── data ── */
+var DEF=[['Aceton',0,0],['Kys. fosforečná',150,60],['Genkadon',0,2],['Peroxid',65,120],['Cofein',0,0],
+         ['Propyleglicol',65,120],['Toulen',0,0],['Tech. benzín',128,60],['Kerosen',0,0]];
+function items(){
+  var a=DB.get('vy_items');if(Array.isArray(a))return a;
+  return DEF.map(function(d,i){return {id:'d'+i,name:d[0],price:d[1],qty:d[2]};});
+}
+function batches(){var a=DB.get('vy_batches');return Array.isArray(a)?a:[];}
+function sales(){var a=DB.get('vy_sales');return Array.isArray(a)?a:[];}
+function total(arr){return arr.reduce(function(s,i){return s+num(i.price)*num(i.qty);},0);}
+function canDel(x){var m=getMember();return !!m&&(isAdmin()||x.byId===m.id);}
+
+/* ── styl ── */
+if(!$('vyCss')){
+  var st=document.createElement('style');st.id='vyCss';
+  st.textContent=
+    '.vy-wrap{padding:0 0 2rem}'+
+    '.vy-in{width:100%;min-width:0;background:transparent;border:0;border-bottom:1px solid var(--brite);color:var(--textb);font-size:.95rem;padding:.35rem .2rem;outline:0;text-align:right;color-scheme:dark}'+
+    '.vy-in.t{text-align:left}.vy-in:focus{border-bottom-color:var(--acc)}'+
+    '.vy-tbl{width:100%;border-collapse:collapse}'+
+    '.vy-tbl th{font-size:.7rem;letter-spacing:.14em;color:var(--acc);text-align:right;padding:.4rem .5rem;border-bottom:1px solid var(--acc-dim)}'+
+    '.vy-tbl th:first-child,.vy-tbl td:first-child{text-align:left}'+
+    '.vy-tbl td{padding:.15rem .4rem;border-bottom:1px solid var(--border);color:var(--textb);text-align:right;vertical-align:middle}'+
+    '.vy-tbl td.vy-tot{font-weight:600;white-space:nowrap}'+
+    '.vy-sum td{border-bottom:0;padding-top:.7rem;font-size:1.1rem;color:var(--acc);font-weight:700}'+
+    '.vy-ok{color:var(--green)!important}.vy-bad{color:var(--red)!important}'+
+    '.vy-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem;margin:.2rem 0 .9rem}'+
+    '.vy-stats .inc-sum-card{min-width:0}'+
+    '.vy-scroll{overflow-x:auto}'+
+    '.vy-paid{width:90px}';
+  document.head.appendChild(st);
+}
+
+/* ── záložka (menu + obsah) ── */
+(function inject(){
+  var nav=document.querySelector('#memberScreen .sb-nav'),main=document.querySelector('#memberScreen .main');
+  if(!nav||!main||$('mt-vyroba'))return;
+  var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"mTab('vyroba',this)");
+  b.innerHTML='<span class="ni">🧪</span><span class="nl">VÝROBA</span>';
+  var af=nav.querySelector('.nb[onclick*="\'clothing\'"]');
+  if(af)af.insertAdjacentElement('afterend',b);else nav.appendChild(b);
+  main.insertAdjacentHTML('beforeend','<div id="mt-vyroba" class="mt"><div class="ph"><div class="pt">🧪 // VÝROBA EXTÁZE</div></div><div id="vyRoot" class="vy-wrap"></div></div>');
+})();
+
+/* ── sestavení (jednou) ── */
+function build(){
+  var root=$('vyRoot');root.dataset.built='1';
+  root.innerHTML=
+  '<div id="vyStats" class="vy-stats" style="margin:1.1rem 1.2rem 0"></div>'+
+
+  '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// NÁKLADY NA VÁRKU</div>'+
+    '<div class="rx-hint" style="margin:0 0 .6rem">Můžou psát všichni. Název, cenu i počet kusů jde přepsat, nové itemy přidáš tlačítkem dole.</div>'+
+    '<div class="vy-scroll"><table class="vy-tbl"><thead><tr><th>ITEM</th><th>CENA</th><th>KS</th><th>CELKOVÁ CENA</th><th></th></tr></thead>'+
+    '<tbody id="vyTbody"></tbody><tfoot><tr class="vy-sum"><td colspan="3" style="text-align:right">SPOLU</td><td id="vySum" class="vy-tot">$0</td><td></td></tr></tfoot></table></div>'+
+    '<div class="fp-ftr" style="margin-top:.8rem"><input type="text" id="vyNewName" class="vy-in t" maxlength="40" placeholder="Název nového itemu…" style="max-width:260px"/>'+
+    '<button class="btn-acc small" onclick="vyAddItem()">+ PŘIDAT ITEM</button></div></div>'+
+
+  '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// ZAPSAT VÝROBU (kolik se z várky udělalo)</div><div class="form-grid">'+
+    '<div class="field-group"><label class="fl">DÁVKY</label><div class="iw"><span class="ip">#</span><input type="number" id="vyDoses" min="0" step="1" placeholder="0"/></div></div>'+
+    '<div class="field-group"><label class="fl">GRAMY *</label><div class="iw"><span class="ip">g</span><input type="number" id="vyGrams" min="0" step="1" placeholder="0"/></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vyBNote" maxlength="120" placeholder="Volitelné…"/></div></div>'+
+    '</div><div class="rx-hint" style="margin:0 0 .6rem">K záznamu se uloží aktuální SPOLU z tabulky výše jako náklady na tuto várku.</div>'+
+    '<div class="fp-ftr"><button class="btn-acc small" onclick="vyAddBatch()">🧪 ZAPSAT VÁRKU</button><span id="vyBSt" class="smsg"></span></div>'+
+    '<div id="vyBatches" class="vy-scroll" style="margin-top:.8rem"></div></div>'+
+
+  '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// PRODEJ / PŘEDÁNÍ (gangy, odběratelé)</div><div class="form-grid">'+
+    '<div class="field-group"><label class="fl">KOMU *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vyWho" maxlength="60" placeholder="Gang / jméno"/></div></div>'+
+    '<div class="field-group"><label class="fl">KOLIK DÁNO (g) *</label><div class="iw"><span class="ip">g</span><input type="number" id="vySGrams" min="0" step="1" placeholder="0"/></div></div>'+
+    '<div class="field-group"><label class="fl">OČEKÁVANÁ CENA ZPĚT ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="vyExp" min="0" step="1" placeholder="0"/></div></div>'+
+    '<div class="field-group"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vySNote" maxlength="120" placeholder="Volitelné…"/></div></div>'+
+    '</div><div class="fp-ftr"><button class="btn-acc small" onclick="vyAddSale()">📦 ZAPSAT PŘEDÁNÍ</button><span id="vySSt" class="smsg"></span></div>'+
+    '<div id="vySales" class="vy-scroll" style="margin-top:.8rem"></div></div>';
+
+  var rt=root;
+  rt.addEventListener('input',function(e){if(e.target.dataset&&e.target.dataset.vi)recalc();});
+  rt.addEventListener('change',function(e){
+    var t=e.target,d=t.dataset||{};
+    if(d.vi){
+      var arr=items(),it=arr.filter(function(x){return x.id===d.vi;})[0];if(!it)return;
+      it[d.f]=d.f==='name'?(t.value.trim().slice(0,40)||it.name):num(t.value);
+      DB.set('vy_items',arr);recalc();
+    }else if(d.vs){
+      var s=sales(),x=s.filter(function(y){return y.id===d.vs;})[0];if(!x)return;
+      var was=num(x.paid);x.paid=num(t.value);DB.set('vy_sales',s);
+      var me=getMember();
+      if(x.paid!==was)addLog('vyroba',me.displayName+' u předání pro "'+x.who+'" zapsal přijato '+money(x.paid)+' z '+money(x.expected)+'.',{
+        embed:rich(x.paid>=x.expected?C_GREEN:C_YELLOW,'💵 PLATBA ZA PŘEDÁNÍ',null,[['👥 Komu',x.who],['💰 Očekáváno',money(x.expected)],['✅ Přijato',money(x.paid)],['⏳ Chybí',money(Math.max(0,x.expected-x.paid))]],{by:me.displayName})});
+      renderLists();
+    }
+  });
+}
+
+/* ── tabulka nákladů ── */
+function renderTbl(){
+  var arr=items();
+  $('vyTbody').innerHTML=arr.map(function(it){
+    return '<tr data-r="'+esc(it.id)+'">'+
+      '<td><input class="vy-in t" data-vi="'+esc(it.id)+'" data-f="name" maxlength="40" value="'+esc(it.name)+'"/></td>'+
+      '<td><input class="vy-in" type="number" min="0" step="any" data-vi="'+esc(it.id)+'" data-f="price" value="'+(num(it.price)||'')+'"/></td>'+
+      '<td><input class="vy-in" type="number" min="0" step="1" data-vi="'+esc(it.id)+'" data-f="qty" value="'+(num(it.qty)||'')+'"/></td>'+
+      '<td class="vy-tot">'+money(r2(num(it.price)*num(it.qty)))+'</td>'+
+      '<td><button class="btn-micro del" title="Smazat item" onclick="vyDelItem(\''+esc(it.id)+'\')">✕</button></td></tr>';
+  }).join('');
+  recalc();
+}
+function recalc(){
+  var sum=0;
+  Array.prototype.forEach.call($('vyTbody').querySelectorAll('tr'),function(tr){
+    var p=num(tr.querySelector('[data-f=price]').value),q=num(tr.querySelector('[data-f=qty]').value),t=r2(p*q);
+    sum+=t;tr.querySelector('.vy-tot').textContent=money(t);
+  });
+  $('vySum').textContent=money(r2(sum))+' Dollar';
+}
+window.vyAddItem=function(){
+  var m=getMember();if(!m)return;
+  var inp=$('vyNewName'),name=inp.value.trim().replace(/\s+/g,' ');
+  if(!name){toast('Zadej název itemu','error');inp.focus();return;}
+  var arr=items();
+  if(arr.some(function(x){return x.name.toLowerCase()===name.toLowerCase();})){toast('Takový item už v tabulce je','error');return;}
+  arr.push({id:uid(),name:name,price:0,qty:0});DB.set('vy_items',arr);
+  addLog('vyroba',m.displayName+' přidal item do tabulky výroby: '+name+'.',{noDiscord:true});
+  inp.value='';toast('Item přidán','success');renderTbl();
+};
+window.vyDelItem=function(id){
+  var m=getMember(),arr=items(),it=arr.filter(function(x){return x.id===id;})[0];if(!m||!it)return;
+  function go(){
+    DB.set('vy_items',items().filter(function(x){return x.id!==id;}));
+    addLog('vyroba',m.displayName+' smazal item z tabulky výroby: '+it.name+'.',{noDiscord:true});
+    toast('Item smazán','info');renderTbl();
+  }
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT ITEM?',text:esc(it.name),ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);
+  else go();
+};
+
+/* ── výroba ── */
+window.vyAddBatch=function(){
+  var m=getMember();if(!m)return;
+  var st=$('vyBSt'),grams=num($('vyGrams').value),doses=Math.floor(num($('vyDoses').value)),note=$('vyBNote').value.trim();
+  if(!grams){st.style.color='var(--red)';st.textContent='// ZADEJ GRAMY';return;}
+  var cost=r2(total(items())),arr=batches();
+  var b={id:uid(),date:nowStr(),by:m.displayName,byId:m.id,doses:doses,grams:grams,cost:cost,note:note};
+  arr.push(b);DB.set('vy_batches',arr);
+  addLog('vyroba',m.displayName+' zapsal výrobu: '+grams+' g'+(doses?' ('+doses+' dávek)':'')+', náklady '+money(cost)+'.',{
+    embed:rich(C_PINK,'🧪 NOVÁ VÁRKA',note||null,[['⚖️ Vyrobeno',grams+' g'],['📦 Dávky',String(doses||'—')],['💸 Náklady',money(cost)],['📊 Cena za gram',money(r2(cost/grams))]],{by:m.displayName})});
+  ['vyGrams','vyDoses','vyBNote'].forEach(function(i){$(i).value='';});
+  st.style.color='';st.textContent='// ZAPSÁNO';setTimeout(function(){st.textContent='';},2000);
+  toast('Várka zapsána ✓','success');renderLists();
+};
+window.vyDelBatch=function(id){
+  var m=getMember(),b=batches().filter(function(x){return x.id===id;})[0];if(!m||!b||!canDel(b))return;
+  function go(){DB.set('vy_batches',batches().filter(function(x){return x.id!==id;}));
+    addLog('vyroba',m.displayName+' smazal záznam várky ('+b.grams+' g, '+b.date+').',{noDiscord:true});toast('Záznam smazán','info');renderLists();}
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT VÁRKU?',text:esc(b.grams+' g — '+b.date),ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);else go();
+};
+
+/* ── prodej / předání ── */
+window.vyAddSale=function(){
+  var m=getMember();if(!m)return;
+  var st=$('vySSt'),who=$('vyWho').value.trim(),grams=num($('vySGrams').value),exp=num($('vyExp').value),note=$('vySNote').value.trim();
+  function err(t){st.style.color='var(--red)';st.textContent=t;}
+  if(!who){err('// ZADEJ, KOMU');return;}
+  if(!grams){err('// ZADEJ GRAMY');return;}
+  var arr=sales();
+  arr.push({id:uid(),date:nowStr(),by:m.displayName,byId:m.id,who:who,grams:grams,expected:exp,paid:0,note:note});
+  DB.set('vy_sales',arr);
+  addLog('vyroba',m.displayName+' předal '+grams+' g — '+who+', očekává '+money(exp)+'.',{
+    embed:rich(C_ORANGE,'📦 PŘEDÁNO NA PRODEJ',note||null,[['👥 Komu',who],['⚖️ Množství',grams+' g'],['💰 Očekávaná cena zpět',money(exp)],['💲 Za gram',money(r2(exp/grams))]],{by:m.displayName})});
+  ['vyWho','vySGrams','vyExp','vySNote'].forEach(function(i){$(i).value='';});
+  st.style.color='';st.textContent='// ZAPSÁNO';setTimeout(function(){st.textContent='';},2000);
+  toast('Předání zapsáno ✓','success');renderLists();
+};
+window.vyDelSale=function(id){
+  var m=getMember(),s=sales().filter(function(x){return x.id===id;})[0];if(!m||!s||!canDel(s))return;
+  function go(){DB.set('vy_sales',sales().filter(function(x){return x.id!==id;}));
+    addLog('vyroba',m.displayName+' smazal předání pro "'+s.who+'" ('+s.grams+' g).',{noDiscord:true});toast('Záznam smazán','info');renderLists();}
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT PŘEDÁNÍ?',text:esc(s.who+' — '+s.grams+' g'),ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);else go();
+};
+
+/* ── seznamy + souhrn ── */
+function card(t,v,cls){return '<div class="inc-sum-card"><div class="inc-sum-title">'+t+'</div><div class="inc-sum-val '+(cls||'acc')+'">'+v+'</div></div>';}
+function renderLists(){
+  var B=batches(),S=sales();
+  var made=B.reduce(function(s,x){return s+num(x.grams);},0),cost=B.reduce(function(s,x){return s+num(x.cost);},0);
+  var given=S.reduce(function(s,x){return s+num(x.grams);},0),exp=S.reduce(function(s,x){return s+num(x.expected);},0),paid=S.reduce(function(s,x){return s+num(x.paid);},0);
+  var stock=made-given,left=Math.max(0,exp-paid);
+  $('vyStats').innerHTML=
+    card('VYROBENO CELKEM',made+' g')+card('NÁKLADY CELKEM',money(r2(cost)),'')+
+    card('PRŮMĚR / GRAM',made?money(r2(cost/made)):'—')+
+    card('PŘEDÁNO',given+' g')+card('SKLADEM (g)',stock+' g',stock<0?'':'green')+
+    card('OČEKÁVÁNO',money(r2(exp)))+card('PŘIJATO',money(r2(paid)),'green')+card('CHYBÍ',money(r2(left)),left?'':'green')+
+    card('ZISK (PŘIJATO − NÁKLADY)',money(r2(paid-cost)),paid-cost>=0?'green':'');
+  var bh=B.length?'<table class="vy-tbl"><thead><tr><th>DATUM</th><th>KDO</th><th>DÁVKY</th><th>GRAMY</th><th>NÁKLADY</th><th>/ GRAM</th><th></th></tr></thead><tbody>'+
+    B.slice().reverse().map(function(b){
+      return '<tr><td>'+esc(b.date)+(b.note?'<div class="att-hint">'+esc(b.note)+'</div>':'')+'</td><td>'+esc(b.by)+'</td><td>'+(b.doses||'—')+'</td><td class="vy-tot">'+b.grams+' g</td><td>'+money(b.cost)+'</td><td>'+(b.grams?money(r2(b.cost/b.grams)):'—')+'</td>'+
+        '<td>'+(canDel(b)?'<button class="btn-micro del" onclick="vyDelBatch(\''+esc(b.id)+'\')">✕</button>':'')+'</td></tr>';
+    }).join('')+'</tbody></table>':'<div class="empty-s">// Zatím žádná zapsaná výroba</div>';
+  $('vyBatches').innerHTML=bh;
+  var sh=S.length?'<table class="vy-tbl"><thead><tr><th>KOMU</th><th>GRAMY</th><th>OČEKÁVÁNO</th><th>PŘIJATO ($)</th><th>STAV</th><th></th></tr></thead><tbody>'+
+    S.slice().reverse().map(function(x){
+      var done=num(x.paid)>=num(x.expected)&&num(x.expected)>0;
+      return '<tr><td>'+esc(x.who)+'<div class="att-hint">'+esc(x.date)+' · '+esc(x.by)+(x.note?' · '+esc(x.note):'')+'</div></td><td>'+x.grams+' g</td><td>'+money(x.expected)+'</td>'+
+        '<td><input class="vy-in vy-paid" type="number" min="0" step="1" data-vs="'+esc(x.id)+'" value="'+(num(x.paid)||'')+'" placeholder="0"/></td>'+
+        '<td class="'+(done?'vy-ok':'vy-bad')+'">'+(done?'✓ ZAPLACENO':'chybí '+money(Math.max(0,num(x.expected)-num(x.paid))))+'</td>'+
+        '<td>'+(canDel(x)?'<button class="btn-micro del" onclick="vyDelSale(\''+esc(x.id)+'\')">✕</button>':'')+'</td></tr>';
+    }).join('')+'</tbody></table>':'<div class="empty-s">// Zatím žádné předání</div>';
+  $('vySales').innerHTML=sh;
+}
+
+function render(){
+  var m=getMember(),root=$('vyRoot');if(!m||!root)return;
+  if(!root.dataset.built){build();renderTbl();}
+  else if(!root.querySelector('#vyTbody').contains(document.activeElement))renderTbl();
+  var a=document.activeElement;
+  if(!(a&&a.dataset&&a.dataset.vs))renderLists();
+}
+
+if(typeof M_RENDER!=='undefined')M_RENDER.vyroba=render;
+var _mt=window.mTab;
+window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='vyroba')render();return r;};
+})();
