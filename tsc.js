@@ -7945,7 +7945,7 @@ function build(){
     '<div class="field-group fg-full"><label class="fl">DROGA * (vyber ze skladu, nebo napiš vlastní)</label><div class="iw"><span class="ip">&gt;_</span>'+
       '<input type="text" id="pd-drug" list="pd-dl" maxlength="50" autocomplete="off" placeholder="Tráva, Extáze, Metamfetamin…"/><datalist id="pd-dl"></datalist></div></div>'+
     '<div class="field-group"><label class="fl">MNOŽSTVÍ (ks / g) *</label><div class="iw"><span class="ip">#</span><input type="number" id="pd-qty" min="0" step="any" placeholder="0"/></div></div>'+
-    '<div class="field-group"><label class="fl">CENA ZA KUS ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="pd-price" min="0" step="any" placeholder="0"/></div></div>'+
+    /** '<div class="field-group"><label class="fl">CENA ZA KUS ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="pd-price" min="0" step="any" placeholder="0"/></div></div>'+ */
     '<div class="field-group fg-full"><label class="fl">POZNÁMKA (komu, kde…)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="pd-note" maxlength="120" placeholder="Volitelné…"/></div></div>'+
   '</div><div id="pd-prev" class="att-hint" style="margin-bottom:.6rem"></div>'+
   '<div class="fp-ftr"><button class="btn-acc small" onclick="pdAdd()">💊 ZAPSAT PRODEJ</button><span id="pdSt" class="smsg"></span></div></div>'+
