@@ -7664,7 +7664,7 @@ if(typeof _save==='function')window.saveBoost=function(p){
 };
 })();
 
-/* ===== VÝROBA: náklady várky, zápis výroby, prodej / předání gangům (vlož na ÚPLNÝ KONEC tsc.js) ===== */
+/* ===== VÝROBA: náklady várky, zápis výroby, prodej (vlož na ÚPLNÝ KONEC tsc.js) ===== */
 (function(){
 'use strict';
 function $(id){return document.getElementById(id);}
@@ -7740,8 +7740,8 @@ function build(){
     '<div class="fp-ftr"><button class="btn-acc small" onclick="vyAddBatch()">🧪 ZAPSAT VÁRKU</button><span id="vyBSt" class="smsg"></span></div>'+
     '<div id="vyBatches" class="vy-scroll" style="margin-top:.8rem"></div></div>'+
 
-  '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// PRODEJ / PŘEDÁNÍ (gangy, odběratelé)</div><div class="form-grid">'+
-    '<div class="field-group"><label class="fl">KOMU *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vyWho" maxlength="60" placeholder="Gang / jméno"/></div></div>'+
+  '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// PRODEJ / PŘEDÁNÍ (odběratelé)</div><div class="form-grid">'+
+    '<div class="field-group"><label class="fl">KOMU *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vyWho" maxlength="60" placeholder="Název Skupiny / Jméno"/></div></div>'+
     '<div class="field-group"><label class="fl">KOLIK DÁNO (g) *</label><div class="iw"><span class="ip">g</span><input type="number" id="vySGrams" min="0" step="1" placeholder="0"/></div></div>'+
     '<div class="field-group"><label class="fl">OČEKÁVANÁ CENA ZPĚT ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="vyExp" min="0" step="1" placeholder="0"/></div></div>'+
     '<div class="field-group"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vySNote" maxlength="120" placeholder="Volitelné…"/></div></div>'+
