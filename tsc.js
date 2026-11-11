@@ -7549,3 +7549,117 @@ document.addEventListener('click',function(ev){
 });
 setInterval(function(){if(!document.hidden)try{paint();}catch(e){}},800);
 })();
+
+/* ===== Boosting: víc lokací u jednoho auta (přidat může každý člen) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
+
+if(!$('boostLocCss')){
+  var st=document.createElement('style');st.id='boostLocCss';
+  st.textContent=
+    '.bl-box{padding:.3rem 0;border-top:1px solid var(--border)}'+
+    '.bl-h{font-family:"Share Tech Mono",monospace;font-size:.55rem;letter-spacing:.06em;color:var(--muted);margin-bottom:.25rem}'+
+    '.bl-row{display:flex;align-items:flex-start;gap:.4rem;padding:.2rem 0;font-size:.85rem;color:var(--textb);line-height:1.3;word-break:break-word}'+
+    '.bl-row span{flex:1;min-width:0}'+
+    '.bl-row small{display:block;font-family:"Share Tech Mono",monospace;font-size:.5rem;color:var(--muted);letter-spacing:.04em}'+
+    '.bl-row .btn-micro{padding:.1rem .35rem;font-size:.55rem}'+
+    '.bl-add{width:100%;margin-top:.35rem}';
+  document.head.appendChild(st);
+}
+
+function list(){return DB.get('boosting')||[];}
+function locsOf(b){
+  var a=[];
+  if(b.loc)a.push({loc:b.loc,by:b.addedBy||'',main:true});
+  (b.moreLocs||[]).forEach(function(x,i){a.push({loc:x.loc,by:x.by||'',byId:x.byId,i:i});});
+  return a;
+}
+function canDelLoc(x){
+  var m=getMember();
+  return !!m&&!x.main&&(isAdmin()||x.byId===m.id);
+}
+
+/* ── karta: seznam lokací + tlačítko ── */
+var _card=window.boostCard;
+if(typeof _card==='function')window.boostCard=function(b,admin){
+  var h=_card.apply(this,arguments);
+  var L=locsOf(b);
+  var box='<div class="bl-box"><div class="bl-h">LOKACE ('+L.length+')</div>'+
+    (L.length?L.map(function(x){
+      return '<div class="bl-row"><span>📍 '+esc(x.loc)+(x.by?'<small>// '+esc(x.by)+'</small>':'')+'</span>'+
+        (canDelLoc(x)?'<button class="btn-micro del" title="Odebrat lokaci" onclick="boostLocDel(\''+esc(b.id)+'\','+x.i+')">✕</button>':'')+'</div>';
+    }).join(''):'<div class="bl-row"><span>—</span></div>')+
+    '<button class="btn-pickup bl-add" onclick="boostLocAdd(\''+esc(b.id)+'\')">📍 + LOKACE</button></div>';
+  var re=/<div class="boost-stat"><span>LOKACE<\/span><b class="boost-loc">[\s\S]*?<\/b><\/div>/;
+  return re.test(h)?h.replace(re,function(){return box;}):h;
+};
+
+/* ── přidání lokace ── */
+function addLoc(b,loc,m){
+  var all=locsOf(b).map(function(x){return norm(x.loc);});
+  if(all.indexOf(norm(loc))!==-1){toast('Tahle lokace už u auta je','info');return false;}
+  b.moreLocs=b.moreLocs||[];
+  b.moreLocs.push({loc:loc,by:m.displayName,byId:m.id,date:nowStr()});
+  return true;
+}
+function logLoc(b,loc,m){
+  addLog('boost',m.displayName+' přidal lokaci k autu '+b.name+' (Tier '+b.tier+'): '+loc,{
+    embed:rich(C_ORANGE,'📍 NOVÁ LOKACE U VOZIDLA','**'+b.name+'**',[
+      ['🏁 Tier','Tier '+b.tier],['📍 Nová lokace',loc],['📚 Lokací celkem',String(locsOf(b).length)],['🧑 Přidal',m.displayName]
+    ],{img:b.img,by:m.displayName})});
+}
+window.boostLocAdd=function(id){
+  var m=getMember();if(!m)return;
+  var b=list().filter(function(x){return x.id===id;})[0];if(!b)return;
+  function go(val){
+    var loc=String(val||'').trim().replace(/\s+/g,' ').slice(0,120);
+    if(!loc){toast('Zadej lokaci','error');return;}
+    var arr=list(),t=arr.filter(function(x){return x.id===id;})[0];if(!t)return;
+    if(!addLoc(t,loc,m))return;
+    DB.set('boosting',arr);logLoc(t,loc,m);
+    toast('Lokace přidána ✓','success');
+    renderAdminBoosting();renderMemberBoosting();
+  }
+  if(typeof window.tscDialog==='function')
+    window.tscDialog({title:'📍 NOVÁ LOKACE',text:esc(b.name)+' · Tier '+esc(b.tier)+'<div class="tsc-sub">Kde jsi stejné auto našel?</div>',input:true,value:'',ok:'PŘIDAT',cancel:'ZRUŠIT'},go);
+  else go(prompt('Kde jsi stejné auto našel?',''));
+};
+window.boostLocDel=function(id,i){
+  var m=getMember();if(!m)return;
+  var arr=list(),b=arr.filter(function(x){return x.id===id;})[0];
+  if(!b||!b.moreLocs||!b.moreLocs[i])return;
+  var x=b.moreLocs[i];
+  if(!(isAdmin()||x.byId===m.id)){toast('Lokaci smí odebrat jen ten, kdo ji přidal, nebo vedení','error');return;}
+  function go(){
+    var arr2=list(),t=arr2.filter(function(y){return y.id===id;})[0];if(!t||!t.moreLocs)return;
+    t.moreLocs.splice(i,1);DB.set('boosting',arr2);
+    addLog('boost',m.displayName+' odebral lokaci "'+x.loc+'" u auta '+t.name+'.',{noDiscord:true});
+    toast('Lokace odebrána','info');renderAdminBoosting();renderMemberBoosting();
+  }
+  if(typeof window.tscDialog==='function')
+    window.tscDialog({title:'⚠ ODEBRAT LOKACI?',text:esc(x.loc),ok:'ODEBRAT',danger:true,cancel:'ZRUŠIT'},go);
+  else go();
+};
+
+/* ── nové auto, které už existuje (stejný název + tier) → přidá se jen lokace ── */
+var _save=window.saveBoost;
+if(typeof _save==='function')window.saveBoost=function(p){
+  var m=getMember();
+  if(!m||window.editBoostId||!bEl(p,'bo-name'))return _save.apply(this,arguments);
+  var name=bEl(p,'bo-name').value.trim(),tier=bEl(p,'bo-tier').value,loc=bEl(p,'bo-loc').value.trim();
+  if(!name)return _save.apply(this,arguments);
+  var arr=list(),ex=arr.filter(function(b){return norm(b.name)===norm(name)&&b.tier===tier;})[0];
+  if(!ex)return _save.apply(this,arguments);
+  var st=bEl(p,'boostStatus');
+  if(!loc){
+    if(st)st.textContent='// AUTO UŽ EXISTUJE — ZADEJ ALESPOŇ NOVOU LOKACI';
+    toast('„'+ex.name+'“ (Tier '+tier+') už existuje — zadej novou lokaci','error',4000);return;
+  }
+  if(!addLoc(ex,loc,m))return;
+  DB.set('boosting',arr);logLoc(ex,loc,m);
+  toast('Auto už existuje — lokace přidána k „'+ex.name+'“ ✓','success',4000);
+  resetBoostForm(p);renderAdminBoosting();renderMemberBoosting();
+};
+})();
