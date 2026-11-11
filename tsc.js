@@ -7737,8 +7737,8 @@ function build(){
     '<div class="field-group"><label class="fl">GRAMY *</label><div class="iw"><span class="ip">g</span><input type="number" id="vyGrams" min="0" step="1" placeholder="0"/></div></div>'+
     '<div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vyBNote" maxlength="120" placeholder="Volitelné…"/></div></div>'+
     '</div><div class="rx-hint" style="margin:0 0 .6rem">K záznamu se uloží aktuální SPOLU z tabulky výše jako náklady na tuto várku. Posílá automaticky na aplikaci potvrzením.</div>'+
-    '<div class="fp-ftr"><button class="btn-acc small" onclick="vyAddBatch()">🧪 ZAPSAT VÁRKU</button><span id="vyBSt" class="smsg"></span></div>'+
-    '<div id="vyBatches" class="vy-scroll" style="margin-top:.8rem"></div></div>'+
+    '</div><div class="fp-ftr"><button class="btn-acc small" onclick="vyAddSale()">📦 ZAPSAT PŘEDÁNÍ</button><span id="vySSt" class="smsg"></span></div>'
+    '<div id="vySales" class="vy-scroll" style="margin-top:.8rem"></div></div>';
 
   '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// PRODEJ / PŘEDÁNÍ (odběratelé)</div><div class="form-grid">'+
     '<div class="field-group"><label class="fl">KOMU *</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vyWho" maxlength="60" placeholder="Název Skupiny / Jméno"/></div></div>'+
