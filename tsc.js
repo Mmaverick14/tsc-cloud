@@ -5972,6 +5972,7 @@ var WEEKS=16;
      4) KOMPAKTNÍ BOČNÍ PANEL (skupiny, které jdou sbalit)
      ══════════════════════════════════════════════ */
 <<<<<<< HEAD
+<<<<<<< HEAD
 var NG={
   member:{sel:'#memberScreen .sb-nav',g:[
     ['PŘEHLED',['board','ooc','tasks','messages','calendar','rules']],
@@ -5986,6 +5987,8 @@ var NG={
     ['SYSTÉM',['stats','log','settings']]]}
 };
 =======
+=======
+>>>>>>> parent of 6e9f20b (Reorganize sidebar navigation groups)
   var NG={
     member:{sel:'#memberScreen .sb-nav',g:[
       ['PŘEHLED',['board','ooc','tasks','messages','calendar','rules']],
@@ -5999,6 +6002,9 @@ var NG={
       ['LIDÉ',['members','roster','radio']],
       ['SYSTÉM',['stats','log','settings']]]}
   };
+<<<<<<< HEAD
+>>>>>>> parent of 6e9f20b (Reorganize sidebar navigation groups)
+=======
 >>>>>>> parent of 6e9f20b (Reorganize sidebar navigation groups)
   var NG_KEY='tsc_nav_grp',hdrs={},lastActive={};
   function ngState(){try{return JSON.parse(lsGet(NG_KEY)||'{}')||{};}catch(e){return {};}}
