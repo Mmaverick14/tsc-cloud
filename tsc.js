@@ -8187,3 +8187,145 @@ window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='prodej')setT
 /* po zápisu/smazání se vše překreslí samo */
 setInterval(function(){if(document.hidden||!getMember())return;try{paintMember();paintAdmin();}catch(e){console.error(e);}},1000);
 })();
+
+/* ===== PRODEJ DROG: celková získaná částka + podíl frakce (nastavuje Mastermind) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+function r2(n){return Math.round(n*100)/100;}
+function all(){var a=DB.get('drugsales');return Array.isArray(a)?a:[];}
+function isBoss(){var m=getMember();return !!m&&m.position==='Mastermind';}
+function cfg(){
+  var c=DB.get('drugcfg')||{},v=parseFloat(c.fac);
+  return {fac:isNaN(v)?0:Math.min(100,Math.max(0,v)),by:c.by||'',date:c.date||''};
+}
+/* částka záznamu a její rozdělení (staré záznamy bez podílu = celé členovi) */
+function totalOf(x){return typeof x.total==='number'?x.total:r2(num(x.qty)*num(x.price));}
+function split(x){
+  if(x.fac!=null)return {fac:num(x.fac),mine:num(x.mine)};
+  return {fac:0,mine:totalOf(x)};
+}
+function sumSplit(arr){
+  var f=0,mi=0,t=0;
+  arr.forEach(function(x){var s=split(x);f+=s.fac;mi+=s.mine;t+=totalOf(x);});
+  return {total:r2(t),fac:r2(f),mine:r2(mi)};
+}
+function card(t,v,c){return '<div class="inc-sum-card"><div class="inc-sum-title">'+t+'</div><div class="inc-sum-val '+(c||'acc')+'">'+v+'</div></div>';}
+
+/* ── 1) pole „Celková částka“ ve formuláři člena ── */
+function injectField(){
+  var price=$('pd-price');if(!price||$('pd-total'))return;
+  var fg=price.closest('.field-group');if(!fg)return;
+  var g=document.createElement('div');g.className='field-group fg-full';
+  g.innerHTML='<label class="fl">CELKEM ZÍSKÁNO ($) — když vyplníš, cena za kus se dopočítá sama</label>'+
+    '<div class="iw"><span class="ip">$</span><input type="number" id="pd-total" min="0" step="any" placeholder="kolik jsi za prodej dostal"/></div>';
+  fg.after(g);
+  function prev(){
+    var q=num($('pd-qty').value),tv=num($('pd-total').value),p=num($('pd-price').value);
+    var t=tv>0?tv:r2(q*p),el=$('pd-prev');if(!el)return;
+    if(!t){el.textContent='';return;}
+    var c=cfg(),f=r2(t*c.fac/100);
+    el.textContent='Celkem: '+money(t)+' · frakce '+c.fac+' % = '+money(f)+' · zbyde tobě '+money(r2(t-f));
+  }
+  ['pd-total','pd-qty','pd-price'].forEach(function(i){$(i).addEventListener('input',prev);});
+}
+
+/* ── 2) zápis prodeje: uloží celkovou částku a rozdělení ── */
+var _add=window.pdAdd;
+if(typeof _add==='function')window.pdAdd=function(){
+  var m=getMember();if(!m)return;
+  injectField();
+  var T=$('pd-total'),tv=T?num(T.value):0,q=num($('pd-qty').value);
+  if(tv>0&&q)$('pd-price').value=String(tv/q);
+  var total=tv>0?tv:r2(q*num($('pd-price').value));
+  var c=cfg(),fac=r2(total*c.fac/100),mine=r2(total-fac);
+  var n0=all().length,orig=window.addLog,r;
+  window.addLog=function(type,text,opts){
+    if(type==='drugsale'&&opts&&opts.embed&&total>0){
+      opts.embed.fields=(opts.embed.fields||[]).concat([
+        {name:'🏛 Frakce ('+c.fac+' %)',value:money(fac),inline:true},
+        {name:'🧑 Člen dostane',value:money(mine),inline:true}]);
+    }
+    return orig.call(this,type,text,opts);
+  };
+  try{r=_add.apply(this,arguments);}finally{window.addLog=orig;}
+  var arr=all();
+  if(arr.length>n0){
+    var rec=arr[arr.length-1];
+    rec.total=total;rec.facPct=c.fac;rec.fac=fac;rec.mine=mine;
+    DB.set('drugsales',arr);
+    if(T)T.value='';
+    render2();
+  }
+  return r;
+};
+
+/* ── 3) členská záložka: kolik jde frakci a kolik zbyde mně ── */
+function paintMember(){
+  var m=getMember(),mine=$('pdMine');if(!m||!mine)return;
+  injectField();
+  var h=$('pdShareM');
+  if(!h){h=document.createElement('div');h.id='pdShareM';mine.parentNode.insertBefore(h,mine);}
+  var s=sumSplit(all().filter(function(x){return x.memberId===m.id;})),c=cfg();
+  var out='<div class="pd-stats">'+card('ZÍSKÁNO CELKEM',money(s.total))+card('FRAKCI PŘIPADLO',money(s.fac),'')+card('ZBYDE MNĚ',money(s.mine),'green')+'</div>'+
+    '<div class="att-hint" style="margin:-.4rem 1.2rem .8rem">Aktuální podíl frakce: <b>'+c.fac+' %</b>'+(c.by?' (nastavil '+esc(c.by)+(c.date?', '+esc(c.date):'')+')':'')+'. U každého prodeje se uloží podíl platný v den zápisu.</div>';
+  if(h.dataset.h!==out){h.dataset.h=out;h.innerHTML=out;}
+}
+function render2(){try{paintMember();paintAdmin();}catch(e){console.error(e);}}
+
+/* ── 4) Administrace: nastavení podílu (jen Mastermind) + přehled ── */
+function buildPanel(){
+  var tab=$('at-drugsales'),root=$('pdaRoot');
+  if(!tab||!root||$('pdCfgPanel'))return;
+  var p=document.createElement('div');p.id='pdCfgPanel';p.className='form-panel';p.style.margin='1.1rem 1.2rem';
+  p.innerHTML='<div class="fp-title">// PODÍL FRAKCE Z PRODEJE DROG</div>'+
+    '<div class="form-grid"><div class="field-group"><label class="fl">PODÍL FRAKCE (%)</label>'+
+    '<div class="iw"><span class="ip">%</span><input type="number" id="pdc-fac" min="0" max="100" step="1"/></div></div></div>'+
+    '<div id="pdc-info" class="att-hint" style="margin-bottom:.6rem"></div>'+
+    '<div class="fp-ftr"><button class="btn-acc small" id="pdc-save">ULOŽIT PODÍL</button><span id="pdc-st" class="smsg"></span></div>'+
+    '<div id="pdShareA" style="margin-top:1rem"></div>';
+  root.parentNode.insertBefore(p,root);
+  $('pdc-save').onclick=function(){
+    var me=getMember(),st=$('pdc-st');
+    if(!isBoss()){toast('Podíl frakce smí nastavit jen Mastermind','error');return;}
+    var v=Math.min(100,Math.max(0,parseFloat($('pdc-fac').value)||0));
+    DB.set('drugcfg',{fac:v,by:me.displayName,date:nowStr()});
+    addLog('drugsale','Mastermind '+me.displayName+' nastavil podíl frakce z prodeje drog na '+v+' %.',{noDiscord:true});
+    $('pdc-fac').value=v;
+    st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);
+    toast('Podíl frakce nastaven na '+v+' %','success');render2();
+  };
+}
+function paintAdmin(){
+  var tab=$('at-drugsales');if(!tab||!getMember()||!isAdmin())return;
+  buildPanel();
+  var inp=$('pdc-fac');if(!inp)return;
+  var c=cfg(),boss=isBoss();
+  inp.disabled=!boss;$('pdc-save').style.display=boss?'':'none';
+  if(document.activeElement!==inp)inp.value=c.fac;
+  $('pdc-info').textContent=boss
+    ?'Jako Mastermind určuješ, kolik % z každého prodeje připadne frakci. Zbytek zůstává prodávajícímu členovi. Změna platí jen pro nové prodeje.'
+    :'Podíl frakce nastavuje Mastermind — nyní '+c.fac+' %'+(c.by?' (nastavil '+c.by+')':'')+'. Zbytek zůstává prodávajícímu.';
+  var A=all(),mem={};
+  A.forEach(function(x){
+    var k=x.memberId,s=split(x);
+    mem[k]=mem[k]||{name:x.memberName,t:0,f:0,m:0};
+    mem[k].name=x.memberName;mem[k].t+=totalOf(x);mem[k].f+=s.fac;mem[k].m+=s.mine;
+  });
+  (DB.get('members')||[]).forEach(function(x){if(mem[x.id])mem[x.id].name=x.displayName;});
+  var ids=Object.keys(mem).sort(function(a,b){return mem[b].t-mem[a].t;}),S=sumSplit(A);
+  var out='<div class="pd-stats" style="margin:0 0 .8rem">'+card('ZÍSKÁNO CELKEM',money(S.total))+card('FRAKCI PŘIPADLO',money(S.fac),'green')+card('ČLENŮM ZBYLO',money(S.mine),'')+'</div>'+
+    '<div class="pda-box" style="margin:0"><table class="mx"><thead><tr><th>ČLEN</th><th>ZÍSKAL</th><th>FRAKCI</th><th>ZBYDE ČLENOVI</th></tr></thead><tbody>'+
+    (ids.length?ids.map(function(id){var r=mem[id];
+      return '<tr><td>'+esc(r.name)+'</td><td>'+money(r2(r.t))+'</td><td class="ok">'+money(r2(r.f))+'</td><td class="pda-t">'+money(r2(r.m))+'</td></tr>';}).join(''):'<tr><td colspan="4" class="na">—</td></tr>')+
+    '</tbody></table></div>';
+  var h=$('pdShareA');if(h&&h.dataset.h!==out){h.dataset.h=out;h.innerHTML=out;}
+}
+
+var _at=window.aTab;
+window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='drugsales')setTimeout(paintAdmin,0);return r;};
+var _mt=window.mTab;
+window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='prodej')setTimeout(render2,0);return r;};
+setInterval(function(){if(!document.hidden&&getMember())render2();},1000);
+})();
