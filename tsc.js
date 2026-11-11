@@ -5973,10 +5973,10 @@ var NG={
     ['FINANCE & PAPÍRY',['finance','excuse','report']],
     ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
   admin:{sel:'#adminScreen .sb-nav',g:[
-    ['PŘEHLED',['board','tasks','templates','messages','calendar','rules']],
+    ['PŘEHLED',['board','ooc','tasks','messages','calendar','rules']],
     ['INTERNÍ INFORMACE',['warehouse','boosting','heist','escape','clothing','vyroba','business']],
-    ['FINANCE',['finance','incomes','excuses','reports']],
-    ['LIDÉ',['members','roster','radio']],
+    ['FINANCE & PAPÍRY',['finance','excuse','report']],
+    ['LIDÉ',['radio','roster','pochvaly','contacts']]
     ['SYSTÉM',['stats','log','settings']]]}
 };
   var NG_KEY='tsc_nav_grp',hdrs={},lastActive={};
