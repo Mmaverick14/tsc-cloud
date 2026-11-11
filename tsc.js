@@ -8329,3 +8329,51 @@ var _mt=window.mTab;
 window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='prodej')setTimeout(render2,0);return r;};
 setInterval(function(){if(!document.hidden&&getMember())render2();},1000);
 })();
+
+/* ===== PRODEJ DROG: bez ceny za kus, povinné „Celkem získáno“ ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+
+/* skryje pole „Cena za kus“ a upraví popisek „Celkem získáno“ */
+function tidy(){
+  var p=$('pd-price');
+  if(p){var fg=p.closest('.field-group');if(fg)fg.style.display='none';}
+  var t=$('pd-total');
+  if(t&&!t.dataset.req){
+    t.dataset.req='1';
+    t.placeholder='kolik jsi za prodej celkem dostal';
+    var l=t.closest('.field-group').querySelector('.fl');
+    if(l)l.textContent='CELKEM ZÍSKÁNO ($) *';
+  }
+  /* v seznamu prodejů už nezobrazovat „ks × cena“, jen množství */
+  document.querySelectorAll('.pd-row .pd-m').forEach(function(m){
+    var n=m.firstChild;
+    if(n&&n.nodeType===3&&/ × \$/.test(n.nodeValue))
+      n.nodeValue=n.nodeValue.replace(/^(\S+) × \$[\d\s\u00a0.,]+/,'$1 ks');
+  });
+}
+
+var _add=window.pdAdd;
+if(typeof _add==='function')window.pdAdd=function(){
+  var T=$('pd-total'),st=$('pdSt');
+  if(T&&!num(T.value)){
+    if(st){st.style.color='var(--red)';st.textContent='// ZADEJ, KOLIK JSI CELKEM ZÍSKAL';}
+    T.focus();return;
+  }
+  var orig=window.addLog,r;
+  window.addLog=function(type,text,opts){
+    if(type==='drugsale'){
+      text=String(text).replace(/ po \$[^(]+\(celkem /,' (celkem ');
+      if(opts&&opts.embed&&opts.embed.fields)
+        opts.embed.fields=opts.embed.fields.filter(function(f){return f.name!=='💲 Za kus';});
+    }
+    return orig.call(this,type,text,opts);
+  };
+  try{r=_add.apply(this,arguments);}finally{window.addLog=orig;}
+  return r;
+};
+
+setInterval(function(){if(!document.hidden)try{tidy();}catch(e){}},500);
+})();
