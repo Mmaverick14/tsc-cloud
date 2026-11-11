@@ -1979,3 +1979,26 @@ html body .esc-cust{display:flex;align-items:center;justify-content:space-betwee
 html body .esc-cust input{width:44px;height:28px;padding:0;border:1px solid var(--brite);background:transparent;cursor:pointer}
 html body .esc-none{background:transparent!important;border:1px solid var(--brite)!important;border-radius:0!important;color:var(--text)!important;font-size:.7rem;letter-spacing:.1em;padding:.4rem!important;cursor:pointer}
 html body .esc-none:hover{border-color:var(--acc)!important;color:var(--acc)!important}
+
+
+/* ===== oprava.css: mobilní logo, PANIC, zarovnání skladu, hlavička menu ===== */
+
+/* 1) Mobil: logo TSC se zobrazovalo ve spodní liště a zabíralo místo */
+@media(max-width:700px){
+  html body .sidebar .sb-logo{display:none!important}
+}
+
+/* 2) PANIC tlačítko: menší, průhlednější, nepřekrývá obsah (hlavně štítky u příspěvků) */
+html body .panic-btn{opacity:.75;font-size:.55rem;padding:.3rem .6rem;transition:opacity .2s}
+html body .panic-btn:hover{opacity:1}
+@media(min-width:701px){html body .main{padding-bottom:3.5rem}}
+
+/* 3) Sklad → Vložit do skladu: popisky polí byly zarovnané dolů kvůli hledání nad ITEM */
+html body .wh-deposit-form{align-items:start}
+html body .wh-deposit-form #depFind+*{margin:0}
+html body .wh-deposit-form .ip:has(+#depFind){display:none} /* druhá lupa navíc */
+
+/* 4) Logo + nástroje v hlavičce menu: nemačkat se do jednoho řádku */
+@media(min-width:701px){
+  html body .sidebar .sb-logo{flex-wrap:wrap;gap:.5rem}
+}
