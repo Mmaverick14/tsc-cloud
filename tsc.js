@@ -5961,11 +5961,17 @@ var WEEKS=16;
   if(typeof _rs==='function')window.renderSettings=function(){var r=_rs.apply(this,arguments);try{renderGoalPanel();}catch(e){console.error(e);}return r;};
 })();
 
+;
+
+
+;
+
 /* ===== Kompaktní boční panel (skupiny jdou sbalit) ===== */
 (function(){
   /* ══════════════════════════════════════════════
      4) KOMPAKTNÍ BOČNÍ PANEL (skupiny, které jdou sbalit)
      ══════════════════════════════════════════════ */
+<<<<<<< HEAD
 var NG={
   member:{sel:'#memberScreen .sb-nav',g:[
     ['PŘEHLED',['board','ooc','tasks','messages','calendar','rules']],
@@ -5979,6 +5985,21 @@ var NG={
     ['LIDÉ',['radio','roster','pochvaly','contacts']]
     ['SYSTÉM',['stats','log','settings']]]}
 };
+=======
+  var NG={
+    member:{sel:'#memberScreen .sb-nav',g:[
+      ['PŘEHLED',['board','ooc','tasks','messages','calendar','rules']],
+      ['OPERACE',['warehouse','boosting','heist','escape','clothing','business']],
+      ['FINANCE & PAPÍRY',['finance','excuse','report']],
+      ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
+    admin:{sel:'#adminScreen .sb-nav',g:[
+      ['PŘEHLED',['board','tasks','templates','messages','calendar','rules']],
+      ['OPERACE',['warehouse','boosting','heists','clothing']],
+      ['FINANCE',['finance','incomes','excuses','reports']],
+      ['LIDÉ',['members','roster','radio']],
+      ['SYSTÉM',['stats','log','settings']]]}
+  };
+>>>>>>> parent of 6e9f20b (Reorganize sidebar navigation groups)
   var NG_KEY='tsc_nav_grp',hdrs={},lastActive={};
   function ngState(){try{return JSON.parse(lsGet(NG_KEY)||'{}')||{};}catch(e){return {};}}
   function ngSave(s){lsSet(NG_KEY,JSON.stringify(s));}
