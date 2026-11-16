@@ -7737,12 +7737,12 @@ function build(){
   '<div id="vyStats" class="vy-stats" style="margin:1.1rem 1.2rem 0"></div>'+
 
   '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// NÁKLADY NA VÁRKU</div>'+
-    '<div class="rx-hint" style="margin:0 0 .6rem">Můžou psát všichni. Název, cenu i počet kusů jde přepsat, nové itemy přidáš tlačítkem dole.</div>'+
-    '<div class="vy-scroll"><table class="vy-tbl"><thead><tr><th>ITEM</th><th>MĚNA</th><th>CENA</th><th>KS</th><th>CELKOVÁ CENA</th><th></th></tr></thead>'+
+    '<div class="rx-hint" style="margin:0 0 .6rem">Můžou psát všichni. <b>Cena je za 1 kus</b> (ne celková cena z košíku — ta se dopočítá sama). Název, cenu i počet kusů jde přepsat.</div>'+
+    '<div class="vy-scroll"><table class="vy-tbl"><thead><tr><th>ITEM</th><th>MĚNA</th><th>CENA ZA KS</th><th>KS</th><th>CELKOVÁ CENA</th><th></th></tr></thead>'+
     '<tbody id="vyTbody"></tbody><tfoot><tr class="vy-sum"><td colspan="4" style="text-align:right">SPOLU</td><td id="vySum" class="vy-tot">0</td><td></td></tr></tfoot></table></div>'+
     '<div class="fp-ftr" style="margin-top:.8rem"><span class="fl" style="margin:0">KURZ: 1 $ =</span><input type="number" id="vyRate" class="vy-in" min="0" step="any" style="max-width:90px" placeholder="? ₱"/><span class="att-hint" style="margin:0">prázdné = pessos se do $ nepřepočítají</span></div>'+
     '<div class="fp-ftr" style="margin-top:.8rem"><input type="text" id="vyNewName" class="vy-in t" maxlength="40" placeholder="Název nového itemu…" style="max-width:260px"/>'+
-    '<button class="btn-acc small" onclick="vyAddItem()">+ PŘIDAT ITEM</button></div></div>'+
+    '<button class="btn-acc small" onclick="vyAddItem()">+ PŘIDAT ITEM</button><button class="btn-ghost small" onclick="vyResetItems()">↺ OBNOVIT VÝCHOZÍ ITEMY A CENY</button></div></div>'+
 
   '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// ZAPSAT VÝROBU (kolik se z várky udělalo)</div><div class="form-grid">'+
     '<div class="field-group"><label class="fl">DÁVKY</label><div class="iw"><span class="ip">#</span><input type="number" id="vyDoses" min="0" step="1" placeholder="0"/></div></div>'+
@@ -7816,6 +7816,16 @@ window.vyAddItem=function(){
   arr.push({id:uid(),name:name,price:0,qty:0,cur:'P'});DB.set('vy_items',arr);
   addLog('vyroba',m.displayName+' přidal item do tabulky výroby: '+name+'.',{noDiscord:true});
   inp.value='';toast('Item přidán','success');renderTbl();
+};
+window.vyResetItems=function(){
+  var m=getMember();if(!m)return;
+  function go(){
+    DB.set('vy_items',DEF.map(function(d,i){return {id:'d'+i,name:d[0],price:d[1],qty:d[2],cur:d[3]};}));
+    addLog('vyroba',m.displayName+' obnovil výchozí itemy a ceny v tabulce výroby.',{noDiscord:true});
+    toast('Výchozí itemy obnoveny','success');renderTbl();
+  }
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ OBNOVIT VÝCHOZÍ?',text:'Tabulka se vrátí na výchozí itemy a ceny za kus. Vlastní úpravy a přidané itemy se smažou.',ok:'OBNOVIT',danger:true,cancel:'ZRUŠIT'},go);
+  else go();
 };
 window.vyDelItem=function(id){
   var m=getMember(),arr=items(),it=arr.filter(function(x){return x.id===id;})[0];if(!m||!it)return;
