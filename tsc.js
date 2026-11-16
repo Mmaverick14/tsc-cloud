@@ -5974,7 +5974,7 @@ var NG={
     ['PŘEHLED',['board','tasks','templates','messages','calendar','rules']],
     ['INTERNÍ INFORMACE',['warehouse','boosting','drugsales','heists','vyroba','clothing']],
     ['FINANCE',['finance','incomes','excuses','reports']],
-    ['LIDÉ',['members','roster','radio']],
+    ['LIDÉ',['members','roster','nabor','radio']],
     ['SYSTÉM',['stats','log','settings']]]}
 };
   var NG_KEY='tsc_nav_grp',hdrs={},lastActive={};
@@ -8374,4 +8374,94 @@ if(typeof _add==='function')window.pdAdd=function(){
 };
 
 setInterval(function(){if(!document.hidden)try{tidy();}catch(e){}},500);
+})();
+
+/* ===== NÁBOR: jen pro členy s ADMIN přístupem ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function safeUrl(u){u=String(u||'').trim();return /^https?:\/\/[^\s"'<>]+$/i.test(u)?u:'';}
+function cfg(){
+  var c=DB.get('recruit')||{};
+  return {url:safeUrl(c.url),title:String(c.title||'Nábor do frakce'),text:String(c.text||''),by:c.by||'',date:c.date||''};
+}
+function copyTxt(txt,msg){
+  function ok(){toast(msg,'success');}
+  function fb(){var t=document.createElement('textarea');t.value=txt;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();try{document.execCommand('copy');ok();}catch(e){}t.remove();}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
+}
+
+if(!$('recCss')){
+  var st=document.createElement('style');st.id='recCss';
+  st.textContent=
+    '.rec-hero{margin:1.2rem;padding:1.8rem 1.5rem;text-align:center;background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 7%,var(--card)),var(--card));border:1px solid var(--acc-dim);border-top:2px solid var(--acc)}'+
+    '.rec-ic{font-size:2.6rem;line-height:1}'+
+    '.rec-t{margin:.5rem 0;font:700 1.8rem var(--lux-serif,"Cormorant Garamond",serif);color:var(--textb)}'+
+    '.rec-d{max-width:560px;margin:.6rem auto 1rem;font-size:1rem;line-height:1.6;color:var(--textb);white-space:pre-wrap}'+
+    '.rec-url{font:.65rem "Share Tech Mono",monospace;color:var(--text);letter-spacing:.06em;word-break:break-all;margin:.6rem 0}'+
+    '.rec-btns{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}'+
+    '.rec-btns a{text-decoration:none}'+
+    '@media(max-width:700px){.rec-hero{margin:.7rem}}';
+  document.head.appendChild(st);
+}
+
+/* záložka v Administraci */
+(function inject(){
+  var an=document.querySelector('#adminScreen .sb-nav'),am=document.querySelector('#adminScreen .main');
+  if(!an||!am||$('at-nabor'))return;
+  var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"aTab('nabor',this)");
+  b.innerHTML='<span class="ni">🤝</span><span class="nl">NÁBOR</span>';
+  var af=an.querySelector('.nb[onclick*="\'roster\'"]')||an.querySelector('.nb[onclick*="\'members\'"]');
+  if(af)af.insertAdjacentElement('afterend',b);else an.appendChild(b);
+  am.insertAdjacentHTML('beforeend','<div id="at-nabor" class="at"><div class="ph"><div class="pt">🤝 // NÁBOR</div></div><div id="recRoot"></div></div>');
+})();
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.nabor='E';
+
+function build(){
+  var root=$('recRoot');root.dataset.built='1';
+  root.innerHTML=
+    '<div id="recView"></div>'+
+    '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// NASTAVENÍ NÁBORU</div><div class="form-grid">'+
+      '<div class="field-group fg-full"><label class="fl">ODKAZ NA NÁBOR (https://…)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rec-url" placeholder="https://…"/></div></div>'+
+      '<div class="field-group fg-full"><label class="fl">NÁZEV</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="rec-title" maxlength="60" placeholder="Nábor do frakce"/></div></div>'+
+      '<div class="field-group fg-full"><label class="fl">POPIS / POKYNY PRO VEDENÍ</label><textarea id="rec-text" class="adm-ta" maxlength="1500" style="min-height:100px" placeholder="Co se hledá, podmínky, na co si dát pozor…"></textarea></div>'+
+    '</div><div class="fp-ftr"><button class="btn-acc small" id="recSave">ULOŽIT</button><span id="recSt" class="smsg"></span></div></div>';
+  $('recSave').onclick=save;
+  $('recView').addEventListener('click',function(e){
+    var b=e.target.closest('[data-rec]');if(!b)return;
+    if(b.getAttribute('data-rec')==='copy'){var u=cfg().url;if(u)copyTxt(u,'Odkaz zkopírován ✓');}
+  });
+}
+
+function save(){
+  var m=getMember(),st=$('recSt');
+  if(!m||!isAdmin()){toast('Nábor smí upravovat jen člen s admin přístupem','error');return;}
+  var raw=$('rec-url').value.trim(),url=safeUrl(raw);
+  if(raw&&!url){st.style.color='var(--red)';st.textContent='// ODKAZ MUSÍ ZAČÍNAT https://';return;}
+  DB.set('recruit',{url:url,title:($('rec-title').value.trim()||'Nábor do frakce').slice(0,60),text:$('rec-text').value.trim().slice(0,1500),by:m.displayName,date:nowStr()});
+  addLog('sys',m.displayName+' upravil nastavení náboru.',{noDiscord:true});
+  st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);
+  toast('Nábor uložen','success');render();
+}
+
+function render(){
+  var m=getMember(),root=$('recRoot');if(!m||!root)return;
+  if(!isAdmin()){root.innerHTML='';root.dataset.built='';return;}   /* jistota: bez admina nic */
+  if(!root.dataset.built)build();
+  var c=cfg();
+  var h='<div class="rec-hero"><div class="rec-ic">🤝</div><div class="rec-t">'+esc(c.title)+'</div>'+
+    (c.text?'<div class="rec-d">'+esc(c.text).replace(/<br>/g,'\n')+'</div>':'')+
+    (c.url?'<div class="rec-btns"><a class="btn-acc" href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">OTEVŘÍT NÁBOR ↗</a>'+
+           '<button class="btn-ghost" data-rec="copy">📋 KOPÍROVAT ODKAZ</button></div><div class="rec-url">'+esc(c.url)+'</div>'
+          :'<div class="rec-url">// Odkaz zatím není nastaven — vlož ho v nastavení níže.</div>')+
+    (c.by?'<div class="rec-url" style="opacity:.7">// naposledy upravil '+esc(c.by)+(c.date?' — '+esc(c.date):'')+'</div>':'')+'</div>';
+  var v=$('recView');if(v.dataset.h!==h){v.dataset.h=h;v.innerHTML=h;}
+  if(!$('recRoot').contains(document.activeElement)){
+    $('rec-url').value=c.url;$('rec-title').value=c.title;$('rec-text').value=c.text;
+  }
+}
+
+if(typeof A_RENDER!=='undefined')A_RENDER.nabor=render;
+var _at=window.aTab;
+window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='nabor')render();return r;};
 })();
