@@ -1,4 +1,3 @@
-
 /* ===== app.js ===== */
 var SUPABASE_URL='https://cufbeahjechwpyvldztr.supabase.co';
 var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmJlYWhqZWNod3B5dmxkenRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NjYwNjAsImV4cCI6MjEwNzI0MjA2MH0.CdFElIVzjhz6SRF__vypI8v9m3jghjtciWx62YkYCn4';
@@ -7669,15 +7668,34 @@ LOG_ICONS.vyroba='🧪';LOG_LABELS.vyroba='VÝROBA';
 if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.vyroba='B';
 
 /* ── data ── */
-var DEF=[['',0,0],['',0,0],['',0,0],['',0,0],['',0,0],
-         ['',0,0],['',0,0],['',0,0],['',0,0]];
+var DEF=[
+ ['Peroxid vodíku',40,12,'P'],['Kyselina fosforečná',75,6,'P'],['Propylenglykol',40,12,'P'],
+ ['Technický benzín',80,6,'P'],['Genkadon',1300,1,'P'],
+ ['Aceton',60,0,'P'],['Bismut',55,0,'P'],['Potravinářský kofein',80,0,'P'],['Toluen',55,0,'P'],
+ ['Kerosen',120,0,'P'],['Amanita Genkia',50,0,'P'],
+ ['Kapátko',1,0,'D'],['Forma',50,0,'D'],['Pekáč',16,0,'D'],['Lithiová baterie',200,0,'D'],
+ ['Semínko (co)',5,0,'D'],['Cukr',50,0,'D'],['Nadrcené listy',1,0,'D']];
 function items(){
-  var a=DB.get('vy_items');if(Array.isArray(a))return a;
-  return DEF.map(function(d,i){return {id:'d'+i,name:d[0],price:d[1],qty:d[2]};});
+  var a=DB.get('vy_items');
+  if(Array.isArray(a)&&a.some(function(x){return x.name;}))return a.map(function(x){if(!x.cur)x.cur='D';return x;});
+  return DEF.map(function(d,i){return {id:'d'+i,name:d[0],price:d[1],qty:d[2],cur:d[3]};});
+}
+function rate(){return num(DB.get('vy_rate'));}
+function fmtP(n){return Number(n||0).toLocaleString('cs-CZ')+' ₱';}
+function totals(arr){
+  var p=0,d=0;
+  arr.forEach(function(i){var t=num(i.price)*num(i.qty);if(i.cur==='P')p+=t;else d+=t;});
+  return {p:r2(p),d:r2(d)};
+}
+function costUsd(t){return r2(t.d+(rate()>0?t.p/rate():0));}
+function sumText(t){
+  var x=[];
+  if(t.p)x.push(fmtP(t.p));
+  if(t.d||!t.p)x.push(money(t.d));
+  return x.join(' + ')+(t.p&&rate()>0?' = '+money(costUsd(t)):'');
 }
 function batches(){var a=DB.get('vy_batches');return Array.isArray(a)?a:[];}
 function sales(){var a=DB.get('vy_sales');return Array.isArray(a)?a:[];}
-function total(arr){return arr.reduce(function(s,i){return s+num(i.price)*num(i.qty);},0);}
 function canDel(x){var m=getMember();return !!m&&(isAdmin()||x.byId===m.id);}
 
 /* ── styl ── */
@@ -7720,8 +7738,9 @@ function build(){
 
   '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// NÁKLADY NA VÁRKU</div>'+
     '<div class="rx-hint" style="margin:0 0 .6rem">Můžou psát všichni. Název, cenu i počet kusů jde přepsat, nové itemy přidáš tlačítkem dole.</div>'+
-    '<div class="vy-scroll"><table class="vy-tbl"><thead><tr><th>ITEM</th><th>CENA</th><th>KS</th><th>CELKOVÁ CENA</th><th></th></tr></thead>'+
-    '<tbody id="vyTbody"></tbody><tfoot><tr class="vy-sum"><td colspan="3" style="text-align:right">SPOLU</td><td id="vySum" class="vy-tot">$0</td><td></td></tr></tfoot></table></div>'+
+    '<div class="vy-scroll"><table class="vy-tbl"><thead><tr><th>ITEM</th><th>MĚNA</th><th>CENA</th><th>KS</th><th>CELKOVÁ CENA</th><th></th></tr></thead>'+
+    '<tbody id="vyTbody"></tbody><tfoot><tr class="vy-sum"><td colspan="4" style="text-align:right">SPOLU</td><td id="vySum" class="vy-tot">0</td><td></td></tr></tfoot></table></div>'+
+    '<div class="fp-ftr" style="margin-top:.8rem"><span class="fl" style="margin:0">KURZ: 1 $ =</span><input type="number" id="vyRate" class="vy-in" min="0" step="any" style="max-width:90px" placeholder="? ₱"/><span class="att-hint" style="margin:0">prázdné = pessos se do $ nepřepočítají</span></div>'+
     '<div class="fp-ftr" style="margin-top:.8rem"><input type="text" id="vyNewName" class="vy-in t" maxlength="40" placeholder="Název nového itemu…" style="max-width:260px"/>'+
     '<button class="btn-acc small" onclick="vyAddItem()">+ PŘIDAT ITEM</button></div></div>'+
 
@@ -7743,12 +7762,13 @@ function build(){
     '<div id="vySales" class="vy-scroll" style="margin-top:.8rem"></div></div>';
 
   var rt=root;
-  rt.addEventListener('input',function(e){if(e.target.dataset&&e.target.dataset.vi)recalc();});
+  rt.addEventListener('input',function(e){if(e.target.id==='vyRate'){DB.set('vy_rate',num(e.target.value));recalc();}else if(e.target.dataset&&e.target.dataset.vi)recalc();});
   rt.addEventListener('change',function(e){
     var t=e.target,d=t.dataset||{};
+    if(t.id==='vyRate'){DB.set('vy_rate',num(t.value));recalc();renderLists();return;}
     if(d.vi){
       var arr=items(),it=arr.filter(function(x){return x.id===d.vi;})[0];if(!it)return;
-      it[d.f]=d.f==='name'?(t.value.trim().slice(0,40)||it.name):num(t.value);
+      it[d.f]=d.f==='name'?(t.value.trim().slice(0,40)||it.name):d.f==='cur'?(t.value==='P'?'P':'D'):num(t.value);
       DB.set('vy_items',arr);recalc();
     }else if(d.vs){
       var s=sales(),x=s.filter(function(y){return y.id===d.vs;})[0];if(!x)return;
@@ -7765,22 +7785,27 @@ function build(){
 function renderTbl(){
   var arr=items();
   $('vyTbody').innerHTML=arr.map(function(it){
+    var t=r2(num(it.price)*num(it.qty));
     return '<tr data-r="'+esc(it.id)+'">'+
       '<td><input class="vy-in t" data-vi="'+esc(it.id)+'" data-f="name" maxlength="40" value="'+esc(it.name)+'"/></td>'+
+      '<td><select class="vy-in" data-vi="'+esc(it.id)+'" data-f="cur"><option value="P"'+(it.cur==='P'?' selected':'')+'>₱</option><option value="D"'+(it.cur!=='P'?' selected':'')+'>$</option></select></td>'+
       '<td><input class="vy-in" type="number" min="0" step="any" data-vi="'+esc(it.id)+'" data-f="price" value="'+(num(it.price)||'')+'"/></td>'+
       '<td><input class="vy-in" type="number" min="0" step="1" data-vi="'+esc(it.id)+'" data-f="qty" value="'+(num(it.qty)||'')+'"/></td>'+
-      '<td class="vy-tot">'+money(r2(num(it.price)*num(it.qty)))+'</td>'+
+      '<td class="vy-tot">'+(it.cur==='P'?fmtP(t):money(t))+'</td>'+
       '<td><button class="btn-micro del" title="Smazat item" onclick="vyDelItem(\''+esc(it.id)+'\')">✕</button></td></tr>';
   }).join('');
+  var rt=$('vyRate');if(rt&&document.activeElement!==rt)rt.value=rate()||'';
   recalc();
 }
 function recalc(){
-  var sum=0;
+  var p=0,d=0;
   Array.prototype.forEach.call($('vyTbody').querySelectorAll('tr'),function(tr){
-    var p=num(tr.querySelector('[data-f=price]').value),q=num(tr.querySelector('[data-f=qty]').value),t=r2(p*q);
-    sum+=t;tr.querySelector('.vy-tot').textContent=money(t);
+    var pr=num(tr.querySelector('[data-f=price]').value),q=num(tr.querySelector('[data-f=qty]').value),
+        c=tr.querySelector('[data-f=cur]').value,t=r2(pr*q);
+    if(c==='P')p+=t;else d+=t;
+    tr.querySelector('.vy-tot').textContent=c==='P'?fmtP(t):money(t);
   });
-  $('vySum').textContent=money(r2(sum))+' ';
+  $('vySum').textContent=sumText({p:r2(p),d:r2(d)})+' ';
 }
 window.vyAddItem=function(){
   var m=getMember();if(!m)return;
@@ -7788,7 +7813,7 @@ window.vyAddItem=function(){
   if(!name){toast('Zadej název itemu','error');inp.focus();return;}
   var arr=items();
   if(arr.some(function(x){return x.name.toLowerCase()===name.toLowerCase();})){toast('Takový item už v tabulce je','error');return;}
-  arr.push({id:uid(),name:name,price:0,qty:0});DB.set('vy_items',arr);
+  arr.push({id:uid(),name:name,price:0,qty:0,cur:'P'});DB.set('vy_items',arr);
   addLog('vyroba',m.displayName+' přidal item do tabulky výroby: '+name+'.',{noDiscord:true});
   inp.value='';toast('Item přidán','success');renderTbl();
 };
@@ -7808,11 +7833,12 @@ window.vyAddBatch=function(){
   var m=getMember();if(!m)return;
   var st=$('vyBSt'),grams=num($('vyGrams').value),doses=Math.floor(num($('vyDoses').value)),note=$('vyBNote').value.trim();
   if(!grams){st.style.color='var(--red)';st.textContent='// ZADEJ GRAMY';return;}
-  var cost=r2(total(items())),arr=batches();
-  var b={id:uid(),date:nowStr(),by:m.displayName,byId:m.id,doses:doses,grams:grams,cost:cost,note:note};
+  var T=totals(items()),cost=costUsd(T),arr=batches();
+  if(T.p&&!rate())toast('Kurz není zadaný — pessos se do nákladů v $ nepočítají','info',4500);
+  var b={id:uid(),date:nowStr(),by:m.displayName,byId:m.id,doses:doses,grams:grams,cost:cost,costP:T.p,costD:T.d,note:note};
   arr.push(b);DB.set('vy_batches',arr);
-  addLog('vyroba',m.displayName+' zapsal výrobu: '+grams+' g'+(doses?' ('+doses+' dávek)':'')+', náklady '+money(cost)+'.',{
-    embed:rich(C_PINK,'🧪 NOVÁ VÁRKA',note||null,[['⚖️ Vyrobeno',grams+' g'],['📦 Dávky',String(doses||'—')],['💸 Náklady',money(cost)],['📊 Cena za gram',money(r2(cost/grams))]],{by:m.displayName})});
+  addLog('vyroba',m.displayName+' zapsal výrobu: '+grams+' g'+(doses?' ('+doses+' dávek)':'')+', náklady '+sumText(T)+'.',{
+    embed:rich(C_PINK,'🧪 NOVÁ VÁRKA',note||null,[['⚖️ Vyrobeno',grams+' g'],['📦 Dávky',String(doses||'—')],['💸 Náklady',sumText(T)],['📊 Cena za gram',money(r2(cost/grams))]],{by:m.displayName})});
   ['vyGrams','vyDoses','vyBNote'].forEach(function(i){$(i).value='';});
   st.style.color='';st.textContent='// ZAPSÁNO';setTimeout(function(){st.textContent='';},2000);
   toast('Várka zapsána ✓','success');renderLists();
@@ -7851,18 +7877,18 @@ window.vyDelSale=function(id){
 function card(t,v,cls){return '<div class="inc-sum-card"><div class="inc-sum-title">'+t+'</div><div class="inc-sum-val '+(cls||'acc')+'">'+v+'</div></div>';}
 function renderLists(){
   var B=batches(),S=sales();
-  var made=B.reduce(function(s,x){return s+num(x.grams);},0),cost=B.reduce(function(s,x){return s+num(x.cost);},0);
+  var made=B.reduce(function(s,x){return s+num(x.grams);},0),cost=B.reduce(function(s,x){return s+num(x.cost);},0),costP=B.reduce(function(s,x){return s+num(x.costP);},0),costD=B.reduce(function(s,x){return s+(x.costD!=null?num(x.costD):num(x.cost));},0);
   var given=S.reduce(function(s,x){return s+num(x.grams);},0),exp=S.reduce(function(s,x){return s+num(x.expected);},0),paid=S.reduce(function(s,x){return s+num(x.paid);},0);
   var stock=made-given,left=Math.max(0,exp-paid);
   $('vyStats').innerHTML=
-    card('VYROBENO CELKEM',made+' g')+card('NÁKLADY CELKEM',money(r2(cost)),'')+
+    card('VYROBENO CELKEM',made+' g')+card('NÁKLADY CELKEM',costP?fmtP(costP)+' + '+money(r2(costD)):money(r2(cost)),'')+
     card('PRŮMĚR / GRAM',made?money(r2(cost/made)):'—')+
     card('PŘEDÁNO',given+' g')+card('SKLADEM (g)',stock+' g',stock<0?'':'green')+
     card('OČEKÁVÁNO',money(r2(exp)))+card('PŘIJATO',money(r2(paid)),'green')+card('CHYBÍ',money(r2(left)),left?'':'green')+
     card('ZISK (PŘIJATO − NÁKLADY)',money(r2(paid-cost)),paid-cost>=0?'green':'');
   var bh=B.length?'<table class="vy-tbl"><thead><tr><th>DATUM</th><th>KDO</th><th>DÁVKY</th><th>GRAMY</th><th>NÁKLADY</th><th>/ GRAM</th><th></th></tr></thead><tbody>'+
     B.slice().reverse().map(function(b){
-      return '<tr><td>'+esc(b.date)+(b.note?'<div class="att-hint">'+esc(b.note)+'</div>':'')+'</td><td>'+esc(b.by)+'</td><td>'+(b.doses||'—')+'</td><td class="vy-tot">'+b.grams+' g</td><td>'+money(b.cost)+'</td><td>'+(b.grams?money(r2(b.cost/b.grams)):'—')+'</td>'+
+      return '<tr><td>'+esc(b.date)+(b.note?'<div class="att-hint">'+esc(b.note)+'</div>':'')+'</td><td>'+esc(b.by)+'</td><td>'+(b.doses||'—')+'</td><td class="vy-tot">'+b.grams+' g</td><td>'+money(b.cost)+(b.costP?'<div class="att-hint">'+fmtP(b.costP)+'</div>':'')+'</td><td>'+(b.grams?money(r2(b.cost/b.grams)):'—')+'</td>'+
         '<td>'+(canDel(b)?'<button class="btn-micro del" onclick="vyDelBatch(\''+esc(b.id)+'\')">✕</button>':'')+'</td></tr>';
     }).join('')+'</tbody></table>':'<div class="empty-s">// Zatím žádná zapsaná výroba</div>';
   $('vyBatches').innerHTML=bh;
