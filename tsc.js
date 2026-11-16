@@ -7680,7 +7680,7 @@ function items(){
   if(Array.isArray(a)&&a.some(function(x){return x.name;}))return a.map(function(x){if(!x.cur)x.cur='D';return x;});
   return DEF.map(function(d,i){return {id:'d'+i,name:d[0],price:d[1],qty:d[2],cur:d[3]};});
 }
-function rate(){return num(DB.get('vy_rate'));}
+function rate(){return num(DB.get('vy_rate'))||1;}
 function fmtP(n){return Number(n||0).toLocaleString('cs-CZ')+' ₱';}
 function totals(arr){
   var p=0,d=0;
@@ -7692,7 +7692,7 @@ function sumText(t){
   var x=[];
   if(t.p)x.push(fmtP(t.p));
   if(t.d||!t.p)x.push(money(t.d));
-  return x.join(' + ')+(t.p&&rate()>0?' = '+money(costUsd(t)):'');
+  return money(costUsd(t))+((t.p&&rate()!==1)?' ('+x.join(' + ')+')':'');
 }
 function batches(){var a=DB.get('vy_batches');return Array.isArray(a)?a:[];}
 function sales(){var a=DB.get('vy_sales');return Array.isArray(a)?a:[];}
@@ -7740,7 +7740,7 @@ function build(){
     '<div class="rx-hint" style="margin:0 0 .6rem">Můžou psát všichni. <b>Cena je za 1 kus</b> (ne celková cena z košíku — ta se dopočítá sama). Název, cenu i počet kusů jde přepsat.</div>'+
     '<div class="vy-scroll"><table class="vy-tbl"><thead><tr><th>ITEM</th><th>MĚNA</th><th>CENA ZA KS</th><th>KS</th><th>CELKOVÁ CENA</th><th></th></tr></thead>'+
     '<tbody id="vyTbody"></tbody><tfoot><tr class="vy-sum"><td colspan="4" style="text-align:right">SPOLU</td><td id="vySum" class="vy-tot">0</td><td></td></tr></tfoot></table></div>'+
-    '<div class="fp-ftr" style="margin-top:.8rem"><span class="fl" style="margin:0">KURZ: 1 $ =</span><input type="number" id="vyRate" class="vy-in" min="0" step="any" style="max-width:90px" placeholder="? ₱"/><span class="att-hint" style="margin:0">prázdné = pessos se do $ nepřepočítají</span></div>'+
+    '<div class="fp-ftr" style="margin-top:.8rem"><span class="fl" style="margin:0">KURZ: 1 $ =</span><input type="number" id="vyRate" class="vy-in" min="0" step="any" style="max-width:90px" placeholder="1"/><span class="att-hint" style="margin:0">kolik ₱ je 1 $ — prázdné = 1:1 (75 ₱ za kus × 6 ks = 450 $)</span></div>'+
     '<div class="fp-ftr" style="margin-top:.8rem"><input type="text" id="vyNewName" class="vy-in t" maxlength="40" placeholder="Název nového itemu…" style="max-width:260px"/>'+
     '<button class="btn-acc small" onclick="vyAddItem()">+ PŘIDAT ITEM</button><button class="btn-ghost small" onclick="vyResetItems()">↺ OBNOVIT VÝCHOZÍ ITEMY A CENY</button></div></div>'+
 
@@ -7791,7 +7791,7 @@ function renderTbl(){
       '<td><select class="vy-in" data-vi="'+esc(it.id)+'" data-f="cur"><option value="P"'+(it.cur==='P'?' selected':'')+'>₱</option><option value="D"'+(it.cur!=='P'?' selected':'')+'>$</option></select></td>'+
       '<td><input class="vy-in" type="number" min="0" step="any" data-vi="'+esc(it.id)+'" data-f="price" value="'+(num(it.price)||'')+'"/></td>'+
       '<td><input class="vy-in" type="number" min="0" step="1" data-vi="'+esc(it.id)+'" data-f="qty" value="'+(num(it.qty)||'')+'"/></td>'+
-      '<td class="vy-tot">'+(it.cur==='P'?fmtP(t):money(t))+'</td>'+
+      '<td class="vy-tot">'+money(it.cur==='P'?r2(t/rate()):t)+'</td>'+
       '<td><button class="btn-micro del" title="Smazat item" onclick="vyDelItem(\''+esc(it.id)+'\')">✕</button></td></tr>';
   }).join('');
   var rt=$('vyRate');if(rt&&document.activeElement!==rt)rt.value=rate()||'';
@@ -7803,7 +7803,7 @@ function recalc(){
     var pr=num(tr.querySelector('[data-f=price]').value),q=num(tr.querySelector('[data-f=qty]').value),
         c=tr.querySelector('[data-f=cur]').value,t=r2(pr*q);
     if(c==='P')p+=t;else d+=t;
-    tr.querySelector('.vy-tot').textContent=c==='P'?fmtP(t):money(t);
+    tr.querySelector('.vy-tot').textContent=money(c==='P'?r2(t/rate()):t);
   });
   $('vySum').textContent=sumText({p:r2(p),d:r2(d)})+' ';
 }
@@ -7844,7 +7844,6 @@ window.vyAddBatch=function(){
   var st=$('vyBSt'),grams=num($('vyGrams').value),doses=Math.floor(num($('vyDoses').value)),note=$('vyBNote').value.trim();
   if(!grams){st.style.color='var(--red)';st.textContent='// ZADEJ GRAMY';return;}
   var T=totals(items()),cost=costUsd(T),arr=batches();
-  if(T.p&&!rate())toast('Kurz není zadaný — pessos se do nákladů v $ nepočítají','info',4500);
   var b={id:uid(),date:nowStr(),by:m.displayName,byId:m.id,doses:doses,grams:grams,cost:cost,costP:T.p,costD:T.d,note:note};
   arr.push(b);DB.set('vy_batches',arr);
   addLog('vyroba',m.displayName+' zapsal výrobu: '+grams+' g'+(doses?' ('+doses+' dávek)':'')+', náklady '+sumText(T)+'.',{
@@ -7891,7 +7890,7 @@ function renderLists(){
   var given=S.reduce(function(s,x){return s+num(x.grams);},0),exp=S.reduce(function(s,x){return s+num(x.expected);},0),paid=S.reduce(function(s,x){return s+num(x.paid);},0);
   var stock=made-given,left=Math.max(0,exp-paid);
   $('vyStats').innerHTML=
-    card('VYROBENO CELKEM',made+' g')+card('NÁKLADY CELKEM',costP?fmtP(costP)+' + '+money(r2(costD)):money(r2(cost)),'')+
+    card('VYROBENO CELKEM',made+' g')+card('NÁKLADY CELKEM',money(r2(cost)),'')+
     card('PRŮMĚR / GRAM',made?money(r2(cost/made)):'—')+
     card('PŘEDÁNO',given+' g')+card('SKLADEM (g)',stock+' g',stock<0?'':'green')+
     card('OČEKÁVÁNO',money(r2(exp)))+card('PŘIJATO',money(r2(paid)),'green')+card('CHYBÍ',money(r2(left)),left?'':'green')+
