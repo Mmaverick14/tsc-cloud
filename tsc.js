@@ -7749,10 +7749,10 @@ function build(){
     '<button class="btn-acc small" onclick="vyAddItem()">+ PŘIDAT ITEM</button><button class="btn-ghost small" onclick="vyResetItems()">↺ OBNOVIT VÝCHOZÍ ITEMY A CENY</button></div></div>'+
 
   '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// ZAPSAT VÝROBU (kolik tabletek se udělalo)</div><div class="form-grid">'+
-    '<div class="field-group"><label class="fl">POČET VÁREK (z jedné se udělá '+PER+' tabletek)</label><div class="iw"><span class="ip">#</span><input type="number" id="vyDoses" min="1" step="1" value="1"/></div></div>'+
+    '<div class="field-group"><label class="fl">VÁREK (spočítá se z tabletek, 1 várka = '+PER+' tbl)</label><div class="iw"><span class="ip">#</span><input type="number" id="vyDoses" value="1" readonly tabindex="-1"/></div></div>'+
     '<div class="field-group"><label class="fl">TABLETEK CELKEM *</label><div class="iw"><span class="ip">ks</span><input type="number" id="vyGrams" min="0" step="1" value="'+PER+'"/></div></div>'+
     '<div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="vyBNote" maxlength="120" placeholder="Volitelné…"/></div></div>'+
-    '</div><div class="rx-hint" style="margin:0 0 .6rem">Tabulka výše = náklady na JEDNU várku. Náklady se vynásobí počtem várek a spočítá se cena za tabletu. Posílá automaticky na aplikaci potvrzením.</div>'+
+    '</div><div class="rx-hint" style="margin:0 0 .6rem">Tabulka výše = náklady na JEDNU várku. Zadej počet tabletek — náklady se úměrně přepočítají a spočítá se cena za tabletu i za sáček. Posílá automaticky na aplikaci potvrzením.</div>'+
     '<div id="vyBagPrev" class="att-hint" style="margin-bottom:.6rem"></div>'+
     '<div class="fp-ftr"><button class="btn-acc small" onclick="vyAddBatch()">🧪 ZAPSAT VÁRKU</button><span id="vyBSt" class="smsg"></span></div>'+
     '<div id="vyBatches" class="vy-scroll" style="margin-top:.8rem"></div></div>'+
@@ -7768,12 +7768,12 @@ function build(){
 
   var rt=root;
   var G=$('vyGrams'),D=$('vyDoses');
-  D.addEventListener('input',function(){if(!G.dataset.man)G.value=Math.max(1,Math.floor(num(D.value))||1)*PER;});
+  
   G.addEventListener('input',function(){G.dataset.man='1';});
   function bagPrev(){
     var el=$('vyBagPrev');if(!el)return;
-    var g=num(G.value),n=bags(g),rest=g-n*BAG,k=Math.max(1,Math.floor(num(D.value))||1),T0=totals(items()),T={p:r2(T0.p*k),d:r2(T0.d*k)};
-    el.innerHTML=g?'🛍 Vyjde <b>'+n+' sáčků</b> po '+BAG+' tabletách'+(rest?' (zbyde '+rest+' tbl)':'')+(n?' · cena za sáček: <b>'+unitText(T,n)+'</b>':''):'';
+    var g=num(G.value),n=bags(g),rest=g-n*BAG,k=g/PER,T0=totals(items()),T={p:r2(T0.p*k),d:r2(T0.d*k)};D.value=g?r2(k):'';
+    el.innerHTML=g?'🛍 <b>'+g+' tabletek = '+n+' sáčků</b> (po '+BAG+' tbl)'+(rest?' · zbyde '+rest+' tbl':'')+'<br>💸 Náklady celkem: <b>'+sumText(T)+'</b><br>📦 Cena za sáček: <b>'+(n?unitText(T,n):'—')+'</b> · za tabletu: <b>'+unitText(T,g)+'</b>':'';
   }
   rt.addEventListener('input',bagPrev);window.vyBagPrev=bagPrev;bagPrev();
     rt.addEventListener('input',function(e){if(e.target.id==='vyRate'){DB.set('vy_rate',num(e.target.value));recalc();}else if(e.target.dataset&&e.target.dataset.vi)recalc();});
@@ -7857,12 +7857,12 @@ window.vyAddBatch=function(){
   var m=getMember();if(!m)return;
   var st=$('vyBSt'),grams=num($('vyGrams').value),doses=Math.floor(num($('vyDoses').value)),note=$('vyBNote').value.trim();
   if(!grams){st.style.color='var(--red)';st.textContent='// ZADEJ POČET TABLETEK';return;}
-  var T0=totals(items()),n=Math.max(1,doses),T={p:r2(T0.p*n),d:r2(T0.d*n)},cost=costUsd(T),arr=batches();
+  var T0=totals(items()),n=r2(grams/PER),T={p:r2(T0.p*n),d:r2(T0.d*n)},cost=costUsd(T),arr=batches();
   var b={id:uid(),date:nowStr(),by:m.displayName,byId:m.id,doses:n,grams:grams,cost:cost,costP:T.p,costD:T.d,note:note};
   arr.push(b);DB.set('vy_batches',arr);
   addLog('vyroba',m.displayName+' zapsal výrobu: '+grams+' tabletek'+(n>1?' ('+n+' várky)':'')+', náklady '+sumText(T)+'.',{
     embed:rich(C_PINK,'🧪 NOVÁ VÁRKA',note||null,[['💊 Vyrobeno',grams+' tabletek'],['🧪 Várek',String(n)],['💸 Náklady',sumText(T)],['📊 Cena za tabletu',unitText(T,grams)],['🛍 Sáčků',bags(grams)+' (po '+BAG+' tbl)'],['📦 Cena za sáček',bags(grams)?unitText(T,bags(grams)):'—']],{by:m.displayName})});
-  $('vyBNote').value='';$('vyDoses').value='1';$('vyGrams').value=PER;delete $('vyGrams').dataset.man;
+  $('vyBNote').value='';$('vyDoses').value='1';$('vyGrams').value=PER;delete $('vyGrams').dataset.man;if(window.vyBagPrev)window.vyBagPrev();
   st.style.color='';st.textContent='// ZAPSÁNO';setTimeout(function(){st.textContent='';},2000);
   toast('Várka zapsána ✓','success');renderLists();
 };
