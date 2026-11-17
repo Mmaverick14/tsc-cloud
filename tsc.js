@@ -7821,7 +7821,10 @@ function recalc(){
     if(c==='P')p+=t;else d+=t;
     tr.querySelector('.vy-tot').textContent=c==='P'?fmtP(t):money(t);
   });
-  $('vySum').textContent=sumText({p:r2(p),d:r2(d)})+' ';
+  p=r2(p);d=r2(d);
+  var h='<div>'+fmtP(p)+'</div><div>'+money(d)+'</div>';
+  if(p&&rate()>0)h+='<div style="margin-top:.3rem;padding-top:.3rem;border-top:1px solid var(--acc-dim)">= '+money(costUsd({p:p,d:d}))+' celkem v $</div>';
+  $('vySum').innerHTML=h;
 }
 window.vyAddItem=function(){
   var m=getMember();if(!m)return;
