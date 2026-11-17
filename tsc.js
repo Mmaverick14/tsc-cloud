@@ -7864,7 +7864,7 @@ window.vyAddBatch=function(){
   var b={id:uid(),date:nowStr(),by:m.displayName,byId:m.id,doses:n,grams:grams,cost:cost,costP:T.p,costD:T.d,note:note};
   arr.push(b);DB.set('vy_batches',arr);
   addLog('vyroba',m.displayName+' zapsal výrobu: '+grams+' tabletek'+(n>1?' ('+n+' várky)':'')+', náklady '+sumText(T)+'.',{
-    embed:rich(C_PINK,'🧪 NOVÁ VÁRKA',note||null,[['💊 Vyrobeno',grams+' tabletek'],['🧪 Várek',String(n)],['💸 Náklady',sumText(T)],['📊 Cena za tabletu',unitText(T,grams)],['🛍 Sáčků',bags(grams)+' (po '+BAG+' tbl)'],['📦 Cena za sáček',bags(grams)?unitText(T,bags(grams)):'—']],{by:m.displayName})});
+    embed:rich(C_PINK,'🧪 NOVÁ VÁRKA',note||null,[['💊 Vyrobeno',grams+' tabletek'],['🧪 Várek',String(n)],['💸 Náklady',sumText(T)],['📊 Cena za tabletu',unitText(T,grams)],['🛍 Sáčků',bags(grams)+' (po '+BAG+' tbl)'],['📦 Cena za sáček',bags(grams)?unitText(T,bags(grams)):'—'],['💰 Prodej za sáčky',money(bags(grams)*BAGPRICE)+' ('+bags(grams)+' × '+money(BAGPRICE)+')'],['📈 Zisk',money(r2(bags(grams)*BAGPRICE-cost))]],{by:m.displayName})});
   $('vyBNote').value='';$('vyDoses').value='1';$('vyGrams').value=PER;delete $('vyGrams').dataset.man;if(window.vyBagPrev)window.vyBagPrev();
   st.style.color='';st.textContent='// ZAPSÁNO';setTimeout(function(){st.textContent='';},2000);
   toast('Várka zapsána ✓','success');renderLists();
@@ -7912,9 +7912,10 @@ function renderLists(){
     card('PŘEDÁNO',given+' tbl')+card('SKLADEM (tbl)',stock+' tbl',stock<0?'':'green')+card('SKLADEM (sáčků)',bags(stock)+' sáč.',stock<0?'':'green')+
     card('OČEKÁVÁNO',money(r2(exp)))+card('PŘIJATO',money(r2(paid)),'green')+card('CHYBÍ',money(r2(left)),left?'':'green')+
     card('ZISK (PŘIJATO − NÁKLADY)',money(r2(paid-cost)),paid-cost>=0?'green':'');
-  var bh=B.length?'<table class="vy-tbl"><thead><tr><th>DATUM</th><th>KDO</th><th>VÁREK</th><th>TABLETY</th><th>SÁČKY</th><th>NÁKLADY</th><th>/ TABLETA</th><th>/ SÁČEK</th><th></th></tr></thead><tbody>'+
+  var bh=B.length?'<table class="vy-tbl"><thead><tr><th>DATUM</th><th>KDO</th><th>VÁREK</th><th>TABLETY</th><th>SÁČKY</th><th>NÁKLADY</th><th>/ TABLETA</th><th>/ SÁČEK</th><th>PRODEJ ZA SÁČKY</th><th></th></tr></thead><tbody>'+
     B.slice().reverse().map(function(b){
       return '<tr><td>'+esc(b.date)+(b.note?'<div class="att-hint">'+esc(b.note)+'</div>':'')+'</td><td>'+esc(b.by)+'</td><td>'+(b.doses||'—')+'</td><td class="vy-tot">'+b.grams+' tbl</td><td class="vy-tot">'+bags(b.grams)+' 🛍</td><td>'+money(r2(rate()>0&&b.costP!=null?num(b.costD)+num(b.costP)/rate():b.cost))+''+'</td><td>'+(b.costP?unitText({p:b.costP,d:b.costD||0},b.grams):(b.grams?money(r2(b.cost/b.grams)):'—'))+'</td><td>'+(bags(b.grams)?(b.costP?unitText({p:b.costP,d:b.costD||0},bags(b.grams)):money(r2(b.cost/bags(b.grams)))):'—')+'</td>'+
+        '<td class="vy-tot vy-ok">'+money(bags(b.grams)*BAGPRICE)+'<div class="att-hint">'+bags(b.grams)+' × '+money(BAGPRICE)+'</div></td>'+
         '<td>'+(canDel(b)?'<button class="btn-micro del" onclick="vyDelBatch(\''+esc(b.id)+'\')">✕</button>':'')+'</td></tr>';
     }).join('')+'</tbody></table>':'<div class="empty-s">// Zatím žádná zapsaná výroba</div>';
   $('vyBatches').innerHTML=bh;
