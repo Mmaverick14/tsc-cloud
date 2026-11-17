@@ -7685,7 +7685,7 @@ var BAG=5;
 var BAGPRICE=900;                            // prodejní cena 1 sáčku ($)
 function bags(g){return Math.floor(num(g)/BAG);}
 function rate(){return num(DB.get('vy_rate'));}
-function unitText(t,g){if(!g)return '—';return money(r2(costUsd(t)/g));var x=[];if(!g)return '—';if(t.p)x.push(fmtP(r2(t.p/g)));if(t.d||!t.p)x.push(money(r2(t.d/g)));return x.join(' + ');}
+function unitText(t,g){if(!g)return '—';if(rate()>0)return money(r2(costUsd(t)/g));var x=[];if(t.p)x.push(fmtP(r2(t.p/g)));if(t.d||!t.p)x.push(money(r2(t.d/g)));return x.join(' + ');}
 function fmtP(n){return Number(n||0).toLocaleString('cs-CZ')+' ₱';}
 function totals(arr){
   var p=0,d=0;
@@ -7694,7 +7694,6 @@ function totals(arr){
 }
 function costUsd(t){return r2(t.d+(rate()>0?t.p/rate():0));}
 function sumText(t){
-  return money(costUsd(t));
   var x=[];
   if(t.p)x.push(fmtP(t.p));
   if(t.d||!t.p)x.push(money(t.d));
