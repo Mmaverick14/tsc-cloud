@@ -8695,3 +8695,108 @@ var _rmf=window.renderMyFinance;
 if(typeof _rmf==='function')window.renderMyFinance=function(){var r=_rmf.apply(this,arguments);try{paintMember();}catch(e){}return r;};
 setInterval(function(){if(!document.hidden&&getMember()&&$('mt-finance')&&$('mt-finance').classList.contains('active'))try{paintMember();}catch(e){}},1500);
 })();
+
+/* ===== Označení MEMBER: zapínání/vypínání (jen člen s Discord ID 726173849678512151) ===== */
+(function(){
+'use strict';
+var OWNER_DC='726173849678512151';
+function $(id){return document.getElementById(id);}
+
+/* místa, kde se označení Member nabízí: [klíč, popisek, [id checkboxů], [prefixy id]] */
+var PLACES=[
+  ['board','Oznámení (nástěnka)',['boardPingMember'],[]],
+  ['ooc','OOC oznámení',['ooc-ping'],[]],
+  ['task','Úkoly (zadání úkolu)',['ping-task'],[]],
+  ['tpl','Šablony úkolů',['tp-ping'],[]],
+  ['msg','Zprávy',['ping-msg'],[]],
+  ['report','Hlášení',['ping-rep'],[]],
+  ['excuse','Omluvenky',['ping-exc'],[]],
+  ['heist','Heisty',['ping-heist'],[]],
+  ['income','Finance — vložit do kasy',['ping-inc'],[]],
+  ['expense','Finance — nová položka',['ping-exp'],[]],
+  ['acct','Finance — vklad/výběr z účtu',['ac-ping'],[]],
+  ['wh','Sklad — vložení / nová položka',['ping-dep','ping-additem'],[]],
+  ['whpick','Sklad — vyzvednutí',[],['pk-']],
+  ['boost','Boosting',['ping-boost','mping-boost'],[]],
+  ['cloth','Oblečení',['ping-cloth'],[]],
+  ['escape','Únikovky',['esc-ping'],[]]
+];
+
+function isOwner(){var m=getMember();return !!m&&String(m.discordId||'')===OWNER_DC;}
+function cfg(){var c=DB.get('memberPingCfg')||{};return {all:c.all!==false,off:c.off||{}};}
+function placeOf(id){
+  for(var i=0;i<PLACES.length;i++){
+    var p=PLACES[i];
+    if(p[2].indexOf(id)!==-1)return p;
+    for(var j=0;j<p[3].length;j++)if(String(id).indexOf(p[3][j])===0)return p;
+  }
+  return null;
+}
+function isOff(id){
+  var c=cfg();if(!c.all)return true;
+  var p=placeOf(id);return !!p&&!!c.off[p[0]];
+}
+
+/* pojistka: když je místo vypnuté, pingBox nic nevrátí */
+var _pb=window.pingBox;
+if(typeof _pb==='function')window.pingBox=function(id){
+  if(isOff(id)){var b=$(id);if(b)b.checked=false;return '';}
+  return _pb.apply(this,arguments);
+};
+
+/* schování checkboxů ve formulářích */
+function hideBox(el,off){
+  var lab=el.closest('label');
+  if(lab)lab.style.display=off?'none':'';
+  if(off)el.checked=false;
+}
+function applyHide(){
+  if(!getMember())return;
+  PLACES.forEach(function(p){
+    p[2].forEach(function(id){var el=$(id);if(el)hideBox(el,isOff(id));});
+    p[3].forEach(function(pre){
+      document.querySelectorAll('input[id^="'+pre+'"]').forEach(function(el){hideBox(el,isOff(el.id));});
+    });
+  });
+}
+setInterval(function(){if(!document.hidden)try{applyHide();}catch(e){}},700);
+
+/* panel v Administraci → Nastavení (jen pro vlastníka) */
+function renderPanel(){
+  var host=$('at-settings'),p=$('mpPanel');
+  if(!host)return;
+  if(!isOwner()){if(p)p.remove();return;}
+  if(!p){
+    p=document.createElement('div');p.id='mpPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+    host.appendChild(p);
+    p.addEventListener('change',function(e){
+      if(!isOwner()){toast('Tohle smí měnit jen určený člen','error');return;}
+      var t=e.target,c=cfg();
+      if(t.id==='mpAll')c.all=t.checked;
+      else if(t.dataset&&t.dataset.mp){if(t.checked)delete c.off[t.dataset.mp];else c.off[t.dataset.mp]=true;}
+      else return;
+      DB.set('memberPingCfg',c);
+      var m=getMember();
+      addLog('sys',m.displayName+' upravil nastavení označení Member.',{noDiscord:true});
+      toast('Nastavení uloženo','success');
+      renderPanel();applyHide();
+    });
+  }
+  if(p.contains(document.activeElement))return;
+  var c=cfg();
+  p.innerHTML='<div class="fp-title">// OZNAČENÍ MEMBER — ZAPNOUT / VYPNOUT</div>'+
+    '<div class="iw" style="padding:.4rem .8rem;margin-bottom:.8rem"><label class="ping-chk"><input type="checkbox" id="mpAll"'+(c.all?' checked':'')+'/><span><b>Označení Member celkově zapnuto</b> (vypnuto = nikde se nenabízí)</span></label></div>'+
+    '<div class="fl" style="margin-bottom:.4rem">PO MÍSTECH (zaškrtnuto = možnost „Označit Member“ tam je)</div>'+
+    '<div class="pick-list" style="max-height:none;opacity:'+(c.all?1:.45)+'">'+
+    PLACES.map(function(x){
+      return '<label class="pick-item"><input type="checkbox" data-mp="'+x[0]+'"'+(c.off[x[0]]?'':' checked')+(c.all?'':' disabled')+'/><span>'+x[1]+'</span></label>';
+    }).join('')+'</div>'+
+    '<div class="rx-hint" style="margin:.6rem 0 0">Tento panel vidí jen člen s Discord ID '+OWNER_DC+'.</div>';
+}
+var _rs=window.renderSettings;
+if(typeof _rs==='function')window.renderSettings=function(){
+  var r=_rs.apply(this,arguments);
+  try{renderPanel();}catch(e){console.error(e);}
+  return r;
+};
+})();
