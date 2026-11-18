@@ -8524,3 +8524,145 @@ if(typeof A_RENDER!=='undefined')A_RENDER.nabor=render;
 var _at=window.aTab;
 window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='nabor')render();return r;};
 })();
+
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+function r2(n){return Math.round(n*100)/100;}
+function fmt(cur,n){return cur==='P'?Number(r2(n)).toLocaleString('cs-CZ')+' ₱':money(r2(n));}
+function logs(){var a=DB.get('acctlog');return Array.isArray(a)?a:[];}
+function sums(){
+  var s={D:{i:0,o:0},P:{i:0,o:0}};
+  logs().forEach(function(x){var c=x.cur==='P'?'P':'D';s[c][x.type==='out'?'o':'i']+=num(x.amount);});
+  return s;
+}
+function canDel(x){var m=getMember();return !!m&&(isAdmin()||x.memberId===m.id);}
+
+if(!SECTIONS.some(function(x){return x.key==='acct';}))SECTIONS.push({key:'acct',label:'Vklady a výběry z účtu'});
+LOG_ICONS.acct='🏦';LOG_LABELS.acct='ÚČET';
+
+if(!$('acctCss')){
+  var st=document.createElement('style');st.id='acctCss';
+  st.textContent=
+    '.ac-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;margin:0 1.2rem .9rem}'+
+    '.ac-row{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.6rem .9rem;margin-bottom:1px;background:var(--card);border-left:3px solid var(--gdim)}'+
+    '.ac-row.out{border-left-color:var(--red-dim)}'+
+    '.ac-t{font-weight:700;min-width:80px;color:var(--green)}.ac-row.out .ac-t{color:var(--red)}'+
+    '.ac-m{flex:1;min-width:140px;font-size:.85rem;color:var(--textb)}.ac-m small{display:block;color:var(--muted)}'+
+    '.ac-amt{font-weight:700;white-space:nowrap;color:var(--textb)}'+
+    '.ac-list{margin:0 1.2rem 1rem}'+
+    '@media(max-width:700px){.ac-stats,.ac-list{margin-left:.7rem;margin-right:.7rem}}';
+  document.head.appendChild(st);
+}
+
+function card(t,v,c){return '<div class="inc-sum-card"><div class="inc-sum-title">'+t+'</div><div class="inc-sum-val '+(c||'acc')+'">'+v+'</div></div>';}
+function rowsHtml(arr,n){
+  if(!arr.length)return '<div class="empty-s">// Zatím žádné záznamy</div>';
+  return arr.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,n||80).map(function(x){
+    var out=x.type==='out';
+    return '<div class="ac-row'+(out?' out':'')+'"><span class="ac-t">'+(out?'⬆ VÝBĚR':'⬇ VKLAD')+'</span>'+
+      '<span class="ac-m">'+esc(x.memberName||'?')+' · '+(x.cur==='P'?'Pesos':'Dolary')+'<small>'+esc(x.date||'')+(x.note?' · '+esc(x.note):'')+'</small></span>'+
+      '<span class="ac-amt">'+(out?'−':'+')+fmt(x.cur,x.amount)+'</span>'+
+      (canDel(x)?'<button class="btn-micro del" title="Smazat záznam" onclick="acctDel(\''+esc(x.id)+'\')">✕</button>':'')+'</div>';
+  }).join('');
+}
+function statsHtml(){
+  var s=sums(),bp=s.P.i-s.P.o,bd=s.D.i-s.D.o;
+  return '<div class="ac-stats">'+
+    card('🇵 PESOS NA ÚČTU',fmt('P',bp),bp<0?'':'green')+
+    card('PESOS VLOŽENO / VYBRÁNO',fmt('P',s.P.i)+' / '+fmt('P',s.P.o),'')+
+    card('$ VLOŽENO / VYBRÁNO',money(r2(s.D.i))+' / '+money(r2(s.D.o)),'')+'</div>';
+}
+
+/* ── panel ve Financích (členové) ── */
+function build(){
+  var host=$('mt-finance');if(!host||$('acctRoot'))return;
+  var d=document.createElement('div');d.id='acctRoot';
+  d.innerHTML=
+    '<div class="ph" style="margin-top:.5rem"><div class="pt">🏦 // VKLADY A VÝBĚRY Z ÚČTU</div></div>'+
+    '<div id="acStats"></div>'+
+    '<div class="form-panel" style="margin:0 1.2rem 1rem"><div class="fp-title">// ZAPSAT VKLAD / VÝBĚR</div><div class="form-grid">'+
+      '<div class="field-group"><label class="fl">CO SE STALO *</label><div class="iw"><span class="ip">&gt;_</span><select id="ac-type"><option value="in">VKLAD na účet</option><option value="out">VÝBĚR z účtu</option></select></div></div>'+
+      '<div class="field-group"><label class="fl">MĚNA *</label><div class="iw"><span class="ip">&gt;_</span><select id="ac-cur"><option value="P">Pesos (₱)</option><option value="D">Dolary ($)</option></select></div></div>'+
+      '<div class="field-group"><label class="fl">ČÁSTKA *</label><div class="iw"><span class="ip">#</span><input type="number" id="ac-amt" min="0" step="any" placeholder="0"/></div></div>'+
+      '<div class="field-group"><label class="fl">POZNÁMKA / ZA CO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="ac-note" maxlength="120" placeholder="např. nákup surovin, výplata…"/></div></div>'+
+    '</div><div class="rx-hint" style="margin:0 0 .6rem">Výběr v dolarech se automaticky odečte z kasy a z bilance ve Financích (Administrace). Vklad v $ do kasy dál nahlašuj přes „Vložit do kasy“, aby se nepočítal dvakrát.</div>'+
+    '<div class="fp-ftr"><button class="btn-acc small" onclick="acctAdd()">🏦 ZAPSAT</button><label class="ping-chk"><input type="checkbox" id="ac-ping"/><span>🔔 Označit Member</span></label><span id="acSt" class="smsg"></span></div></div>'+
+    '<div class="sh">// HISTORIE ÚČTU</div><div id="acList" class="ac-list"></div>';
+  host.appendChild(d);
+}
+function paintMember(){
+  if(!getMember())return;
+  build();
+  var s=$('acStats'),l=$('acList');if(!s||!l)return;
+  var a=statsHtml(),b=rowsHtml(logs());
+  if(s.dataset.h!==a){s.dataset.h=a;s.innerHTML=a;}
+  if(l.dataset.h!==b){l.dataset.h=b;l.innerHTML=b;}
+}
+
+window.acctAdd=function(){
+  var m=getMember();if(!m)return;
+  var st=$('acSt');
+  function err(t){st.style.color='var(--red)';st.textContent=t;}
+  var type=$('ac-type').value==='out'?'out':'in',cur=$('ac-cur').value==='P'?'P':'D',amount=num($('ac-amt').value),note=$('ac-note').value.trim();
+  if(!amount){err('// ZADEJ ČÁSTKU');return;}
+  var rec={id:uid(),type:type,cur:cur,amount:amount,note:note,memberId:m.id,memberName:m.displayName,date:nowStr(),ts:Date.now()};
+  var arr=logs();arr.push(rec);if(arr.length>3000)arr=arr.slice(-3000);
+  DB.set('acctlog',arr);
+  var out=type==='out',s=sums(),bal=cur==='P'?s.P.i-s.P.o:null;
+  addLog('acct',m.displayName+(out?' vybral z účtu ':' vložil na účet ')+fmt(cur,amount)+(note?' ('+note+')':'')+'.',{
+    extraPing:pingBox('ac-ping'),
+    embed:rich(out?C_ORANGE:C_GREEN,out?'⬆ VÝBĚR Z ÚČTU':'⬇ VKLAD NA ÚČET',note||null,
+      [['👤 Člen',m.displayName],['💱 Měna',cur==='P'?'Pesos (₱)':'Dolary ($)'],['💰 Částka',fmt(cur,amount)],
+       ['🏦 Zůstatek pesos',bal!=null?fmt('P',bal):'—']].concat(out&&cur==='D'?[['📉 Odečteno z kasy',money(r2(amount)),false]]:[]),{by:m.displayName})});
+  $('ac-amt').value='';$('ac-note').value='';
+  st.style.color='';st.textContent='// ZAPSÁNO';setTimeout(function(){st.textContent='';},2000);
+  toast((out?'Výběr':'Vklad')+' zapsán ✓','success');
+  paintMember();try{renderAdminFinance();}catch(e){}
+};
+window.acctDel=function(id){
+  var m=getMember(),x=logs().filter(function(y){return y.id===id;})[0];
+  if(!m||!x||!canDel(x))return;
+  function go(){
+    DB.set('acctlog',logs().filter(function(y){return y.id!==id;}));
+    addLog('acct',m.displayName+' smazal záznam účtu ('+(x.type==='out'?'výběr ':'vklad ')+fmt(x.cur,x.amount)+', '+x.memberName+').',{noDiscord:true});
+    toast('Záznam smazán','info');paintMember();try{renderAdminFinance();}catch(e){}
+  }
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT ZÁZNAM?',text:esc((x.type==='out'?'Výběr ':'Vklad ')+fmt(x.cur,x.amount)+' — '+x.date),ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);
+  else go();
+};
+
+/* ── Administrace → Finance: výběry v $ se odečtou z bilance ── */
+var _raf=window.renderAdminFinance;
+if(typeof _raf==='function')window.renderAdminFinance=function(){
+  var r=_raf.apply(this,arguments);
+  try{
+    var panel=$('financeAdminPanel');if(!panel)return r;
+    var old=$('acctAdm');if(old)old.remove();
+    var fin=DB.get('finance')||{payments:[],expenses:[]};
+    var inc=(DB.get('incomes')||[]).filter(function(i){return i.status==='confirmed';});
+    var total=(fin.payments||[]).reduce(function(s,p){return s+num(p.amount);},0)+inc.reduce(function(s,i){return s+num(i.amount);},0);
+    var exp=(fin.expenses||[]).reduce(function(s,e){return s+num(e.amount);},0);
+    var s=sums(),outD=s.D.o,bil=r2(total-exp-outD);
+    var cards=panel.querySelectorAll('.fa-summary .fa-card');
+    if(cards.length>=3){
+      var v=cards[2].querySelector('.fa-card-val');
+      if(v){v.textContent='$'+bil;v.className='fa-card-val '+(bil>=0?'green':'red');}
+      var t=cards[2].querySelector('.fa-card-title');if(t)t.textContent='BILANCE (po odečtu výběrů)';
+      var sm=panel.querySelector('.fa-summary');
+      sm.insertAdjacentHTML('beforeend',
+        '<div class="fa-card"><div class="fa-card-title">VÝBĚRY Z ÚČTU ($)</div><div class="fa-card-val red">$'+r2(outD)+'</div></div>'+
+        '<div class="fa-card"><div class="fa-card-title">PESOS NA ÚČTU</div><div class="fa-card-val '+(s.P.i-s.P.o>=0?'green':'red')+'" style="font-size:1.1rem">'+fmt('P',s.P.i-s.P.o)+'</div></div>');
+    }
+    var box=document.createElement('div');box.id='acctAdm';box.className='fa-member-payments';
+    box.innerHTML='<div class="fa-exp-title">// VKLADY A VÝBĚRY Z ÚČTU (lze smazat)</div><div style="margin-top:.4rem">'+rowsHtml(logs(),100)+'</div>';
+    panel.appendChild(box);
+  }catch(e){console.error('acct',e);}
+  return r;
+};
+
+var _rmf=window.renderMyFinance;
+if(typeof _rmf==='function')window.renderMyFinance=function(){var r=_rmf.apply(this,arguments);try{paintMember();}catch(e){}return r;};
+setInterval(function(){if(!document.hidden&&getMember()&&$('mt-finance')&&$('mt-finance').classList.contains('active'))try{paintMember();}catch(e){}},1500);
+})();
