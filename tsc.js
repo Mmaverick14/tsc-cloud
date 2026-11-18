@@ -8532,9 +8532,12 @@ function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(
 function r2(n){return Math.round(n*100)/100;}
 function fmt(cur,n){return cur==='P'?Number(r2(n)).toLocaleString('cs-CZ')+' ₱':money(r2(n));}
 function logs(){var a=DB.get('acctlog');return Array.isArray(a)?a:[];}
+function baseP(){var b=DB.get('acctbase');return (b&&typeof b.P==='number')?b.P:0;}
 function sums(){
   var s={D:{i:0,o:0},P:{i:0,o:0}};
   logs().forEach(function(x){var c=x.cur==='P'?'P':'D';s[c][x.type==='out'?'o':'i']+=num(x.amount);});
+  var b=baseP();                       // počáteční stav pesos
+  if(b>=0)s.P.i+=b;else s.P.o+=-b;
   return s;
 }
 function canDel(x){var m=getMember();return !!m&&(isAdmin()||x.memberId===m.id);}
@@ -8589,6 +8592,10 @@ function build(){
       '<div class="field-group"><label class="fl">POZNÁMKA / ZA CO</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="ac-note" maxlength="120" placeholder="např. nákup surovin, výplata…"/></div></div>'+
     '</div><div class="rx-hint" style="margin:0 0 .6rem">Výběr v dolarech se automaticky odečte z kasy a z bilance ve Financích (Administrace). Vklad v $ do kasy dál nahlašuj přes „Vložit do kasy“, aby se nepočítal dvakrát.</div>'+
     '<div class="fp-ftr"><button class="btn-acc small" onclick="acctAdd()">🏦 ZAPSAT</button><label class="ping-chk"><input type="checkbox" id="ac-ping"/><span>🔔 Označit Member</span></label><span id="acSt" class="smsg"></span></div></div>'+
+    '<div id="acBaseBox" class="form-panel" style="margin:0 1.2rem 1rem;display:none"><div class="fp-title">// NASTAVIT AKTUÁLNÍ ZŮSTATEK PESOS</div>'+
+    '<div class="form-grid"><div class="field-group"><label class="fl">KOLIK PESOS MÁŠ TEĎ NA ÚČTU</label><div class="iw"><span class="ip">₱</span><input type="number" id="ac-base" min="0" step="any" placeholder="0"/></div></div></div>'+
+    '<div id="acBaseInfo" class="att-hint" style="margin-bottom:.6rem"></div>'+
+    '<div class="fp-ftr"><button class="btn-acc small" onclick="acctSetBase()">💾 NASTAVIT ZŮSTATEK</button><span id="acBaseSt" class="smsg"></span></div></div>'+
     '<div class="sh">// HISTORIE ÚČTU</div><div id="acList" class="ac-list"></div>';
   host.appendChild(d);
 }
@@ -8599,6 +8606,12 @@ function paintMember(){
   var a=statsHtml(),b=rowsHtml(logs());
   if(s.dataset.h!==a){s.dataset.h=a;s.innerHTML=a;}
   if(l.dataset.h!==b){l.dataset.h=b;l.innerHTML=b;}
+    var bx=$('acBaseBox');
+  if(bx){
+    bx.style.display=isAdmin()?'':'none';
+    var s2=sums(),bal=s2.P.i-s2.P.o,inf=$('acBaseInfo');
+    if(inf)inf.textContent='Aktuálně v aplikaci: '+fmt('P',bal)+(DB.get('acctbase')&&DB.get('acctbase').by?' · naposledy nastavil '+DB.get('acctbase').by+' ('+DB.get('acctbase').date+')':'');
+  }
 }
 
 window.acctAdd=function(){
@@ -8621,6 +8634,22 @@ window.acctAdd=function(){
   toast((out?'Výběr':'Vklad')+' zapsán ✓','success');
   paintMember();try{renderAdminFinance();}catch(e){}
 };
+window.acctSetBase=function(){
+  var m=getMember(),st=$('acBaseSt');
+  if(!m||!isAdmin()){toast('Zůstatek smí nastavit jen vedení','error');return;}
+  var v=parseFloat(String($('ac-base').value).replace(/\s/g,'').replace(',','.'));
+  if(isNaN(v)||v<0){st.style.color='var(--red)';st.textContent='// ZADEJ ČÁSTKU (0 nebo víc)';return;}
+  var s=sums(),flow=(s.P.i-s.P.o)-baseP();   // jen pohyby ze záznamů
+  var nb=r2(v-flow),old=s.P.i-s.P.o;
+  DB.set('acctbase',{P:nb,by:m.displayName,date:nowStr()});
+  addLog('acct',m.displayName+' nastavil zůstatek pesos na '+fmt('P',v)+' (dříve '+fmt('P',old)+').',{
+    embed:rich(C_YELLOW,'🏦 ZŮSTATEK PESOS NASTAVEN',null,[['👤 Nastavil',m.displayName],['🏦 Nový zůstatek',fmt('P',v)],['↩ Původní',fmt('P',old)]],{by:m.displayName})});
+  $('ac-base').value='';
+  st.style.color='';st.textContent='// ULOŽENO';setTimeout(function(){st.textContent='';},2000);
+  toast('Zůstatek pesos nastaven ✓','success');
+  paintMember();try{renderAdminFinance();}catch(e){}
+};
+
 window.acctDel=function(id){
   var m=getMember(),x=logs().filter(function(y){return y.id===id;})[0];
   if(!m||!x||!canDel(x))return;
