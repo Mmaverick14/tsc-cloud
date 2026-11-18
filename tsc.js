@@ -8800,3 +8800,86 @@ if(typeof _rs==='function')window.renderSettings=function(){
   return r;
 };
 })();
+
+/* ===== Finance: přehlednější stránka (stavový pruh + vysvětlivky) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+
+if(!$('finHelpCss')){
+  var st=document.createElement('style');st.id='finHelpCss';
+  st.textContent=
+    '.fin-sum{margin:1rem 1.2rem;padding:1rem 1.2rem;display:flex;gap:.9rem;align-items:center;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--acc)}'+
+    '.fin-sum.ok{border-left-color:var(--green);background:color-mix(in srgb,var(--green) 6%,var(--card))}'+
+    '.fin-sum.due{border-left-color:var(--red);background:color-mix(in srgb,var(--red) 7%,var(--card))}'+
+    '.fin-sum .fs-ic{font-size:1.8rem;line-height:1}'+
+    '.fin-sum .fs-t{font-size:1.15rem;font-weight:700;color:var(--textb)}'+
+    '.fin-sum .fs-s{font-size:.88rem;color:var(--text);margin-top:.2rem;line-height:1.45}'+
+    '.fin-sum .fs-s b{color:var(--acc)}'+
+    '.fin-hint{margin:.2rem 1.2rem .9rem;padding:.55rem .8rem;font-size:.88rem;line-height:1.5;color:var(--text);border-left:2px solid var(--acc-dim);background:color-mix(in srgb,var(--acc) 4%,transparent)}'+
+    '.fin-hint b{color:var(--textb)}'+
+    '@media(max-width:700px){.fin-sum,.fin-hint{margin-left:.7rem;margin-right:.7rem}}';
+  document.head.appendChild(st);
+}
+
+/* nadpis (hledá se podle textu) → [nový nadpis, vysvětlivka] */
+var MEMBER=[
+  ['// FINANCE',null,'Tady vidíš, <b>co máš zaplatit frakci</b>. Zaplať na bankovní účet níže (včetně poznámky k platbě) a potom klikni na <b>ZAPLATIL JSEM</b>.'],
+  ['// VLOŽIT DO KASY','💰 // NAHLÁSIT PŘÍJEM DO KASY','Použij, když jsi <b>vydělal peníze pro frakci</b> (zakázka, loupež, prodej…). Vedení příjem potvrdí a částka se přičte do kasy. <b>Není to týdenní příspěvek.</b>'],
+  ['// MÉ PŘÍJMY','📊 // MÉ NAHLÁŠENÉ PŘÍJMY','Co jsi už nahlásil: <b>⏳ čeká</b> na vedení, <b>✓ potvrzeno</b> (počítá se do kasy), <b>✗ zamítnuto</b>.'],
+  ['// VKLADY A VÝBĚRY','🏦 // POHYBY NA BANKOVNÍM ÚČTU','Jen <b>záznam vkladů a výběrů</b> na účtu frakce (pesos / dolary). Nenahrazuje příspěvek ani nahlášení příjmu.']
+];
+var ADMIN=[
+  ['// FINANCE',null,'<b>Bilance</b> = přijaté příspěvky + potvrzené příjmy − výdajové položky − výběry v $. Nezaplacené příspěvky a neplatiče najdeš v přehledu níže.']
+];
+
+function addHints(rootSel,list){
+  var root=document.querySelector(rootSel);if(!root)return;
+  root.querySelectorAll('.ph .pt').forEach(function(pt){
+    var txt=pt.textContent;
+    for(var i=0;i<list.length;i++){
+      var d=list[i];
+      if(txt.indexOf(d[0])===-1)continue;
+      if(d[1]&&txt!==d[1])pt.textContent=d[1];
+      var ph=pt.closest('.ph');
+      if(ph&&!ph.nextElementSibling?.classList.contains('fin-hint')){
+        var h=document.createElement('div');h.className='fin-hint';h.innerHTML=d[2];
+        ph.after(h);
+      }
+      break;
+    }
+  });
+}
+
+/* stavový pruh: co mám teď udělat */
+function summary(){
+  var m=getMember();if(!m)return '';
+  var fs=DB.get('finsettings')||{weeklyFee:0},fin=DB.get('finance')||{payments:[],expenses:[]};
+  var wk=getWeekKey(),fee=Number(fs.weeklyFee)||0;
+  var cls,ic,t,s='';
+  if(m.hidden||fee<=0){cls='ok';ic='ℹ️';t='Týdenní příspěvek se tě netýká';}
+  else if(window.onVacation&&window.onVacation(m.id,wk)){cls='ok';ic='🌴';t='Máš dovolenou — tento týden neplatíš';}
+  else{
+    var paid=(fin.payments||[]).some(function(p){return p.memberId===m.id&&p.weekKey===wk&&(p.expenseId==='weekly'||!p.expenseId);});
+    if(paid){cls='ok';ic='✅';t='Tento týden máš zaplaceno';s='Nic dalšího dělat nemusíš.';}
+    else{cls='due';ic='⏰';t='Zbývá zaplatit '+money(fee);s='Pošli platbu na <b>bankovní účet</b> níže s poznámkou k platbě a pak klikni na <b>ZAPLATIL JSEM</b>.';}
+  }
+  var opt=(fin.expenses||[]).filter(function(e){return (e.optional===true||e.optional===1)&&!(fin.payments||[]).some(function(p){return p.memberId===m.id&&p.expenseId===e.id;});}).length;
+  if(opt)s+=(s?' ':'')+'K dispozici je ještě <b>'+opt+' nepovinný příspěvek</b> (dobrovolný).';
+  return '<div class="fin-sum '+cls+'"><span class="fs-ic">'+ic+'</span><div><div class="fs-t">'+t+'</div>'+(s?'<div class="fs-s">'+s+'</div>':'')+'</div></div>';
+}
+function paint(){
+  if(!getMember())return;
+  var tab=$('mt-finance');if(!tab)return;
+  addHints('#mt-finance',MEMBER);addHints('#at-finance',ADMIN);
+  var box=$('finSum');
+  if(!box){
+    box=document.createElement('div');box.id='finSum';
+    var first=tab.querySelector('.ph');
+    var hint=first&&first.nextElementSibling&&first.nextElementSibling.classList.contains('fin-hint')?first.nextElementSibling:first;
+    if(hint)hint.after(box);
+  }
+  var h=summary();if(box.dataset.h!==h){box.dataset.h=h;box.innerHTML=h;}
+}
+setInterval(function(){if(!document.hidden)try{paint();}catch(e){console.error('finhelp',e);}},1000);
+})();
