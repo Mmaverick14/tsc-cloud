@@ -2002,3 +2002,15 @@ html body .wh-deposit-form .ip:has(+#depFind){display:none} /* druhá lupa naví
 @media(min-width:701px){
   html body .sidebar .sb-logo{flex-wrap:wrap;gap:.5rem}
 }
+
+/* ── Sklad: vyhledávací výběr položky ── */
+.wm-list{max-height:220px;overflow-y:auto;margin-top:.4rem;border:1px solid var(--border);background:var(--surf)}
+.wm-it{display:flex;align-items:center;gap:.6rem;width:100%;padding:.4rem .6rem;background:transparent;border:0;border-bottom:1px solid var(--border);color:var(--textb);text-align:left;cursor:pointer;font-size:.95rem;transition:background .12s}
+.wm-it:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.wm-it.on{background:color-mix(in srgb,var(--acc) 18%,transparent);box-shadow:inset 3px 0 0 var(--acc);color:var(--acc)}
+.wm-it img{width:34px;height:28px;object-fit:contain;flex:none}
+.wm-it .wm-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wm-it .wm-q{flex:none;font-size:.75rem;color:var(--muted);letter-spacing:.06em}
+.wm-it.zero .wm-q{color:var(--red)}
+.wm-it.wm-new{color:var(--acc);font-weight:600;border-bottom:0}
+@media(max-width:700px){.wm-list{max-height:200px}.wm-it{padding:.6rem}}

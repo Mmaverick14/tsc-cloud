@@ -9258,9 +9258,9 @@ function whoSel(){return fld('VAŠE JMÉNO','<select id="wm-who" class="fw">'+wh
 function openMove(mode,id,scope){
   var m=getMember();if(!m)return;
   var take=mode==='take',cur=id||'';
-  var sel=id?'':fld('POLOŽKA','<select id="wm-item" class="fw"><option value="">— vyber položku —</option>'+
-    items().map(function(i){return '<option value="'+esc(i.id)+'">'+esc(i.name)+' ('+(+i.qty||0)+' ks)</option>';}).join('')+
-    '<option value="__new__">➕ NOVÁ POLOŽKA (není v seznamu)…</option></select>');
+var sel=id?'':'<div class="field-group"><label class="fl">POLOŽKA</label>'+
+    '<div class="iw"><span class="ip">🔍</span><input type="text" id="wm-find" placeholder="Začni psát název…" autocomplete="off"/></div>'+
+    '<div id="wm-list" class="wm-list"></div></div>';
   var chips=take?[1,5,10,'VŠE']:[1,5,10,25];
   var o=ov('<div class="modal-title">'+(take?'⬇ VZÍT ZE SKLADU':'⬆ VLOŽIT DO SKLADU')+'</div><div id="wm-info" class="wh2-info"></div>'+sel+
     '<div class="field-group"><label class="fl">MNOŽSTVÍ</label><div class="wh2-amt"><button type="button" class="btn-micro" data-d="-1">−</button><input type="number" id="wm-amt" value="1" min="1" step="1"/><button type="button" class="btn-micro" data-d="1">+</button></div>'+
@@ -9268,17 +9268,44 @@ function openMove(mode,id,scope){
     whoSel()+chk(take?'pk-modal':'ping-dep','🔔 Označit Member')+
     '<div id="wm-err" class="smsg" style="color:var(--red);margin-top:.5rem;min-height:1em"></div>'+
     '<div class="modal-ftr"><button class="btn-acc small" id="wm-ok">'+(take?'⬇ VZÍT':'⬆ VLOŽIT')+'</button><button class="btn-ghost small" id="wm-no">ZRUŠIT</button></div>');
-  var amt=o.q('#wm-amt'),info=o.q('#wm-info'),err=o.q('#wm-err'),isel=o.q('#wm-item');
+  var amt=o.q('#wm-amt'),info=o.q('#wm-info'),err=o.q('#wm-err'),find=o.q('#wm-find'),listEl=o.q('#wm-list');
   function item(){return cur?get(cur):null;}
   function paintInfo(){
     var it=item();
     info.innerHTML=it?'<img src="'+esc(imgSrc(it.img))+'" alt="" onerror="this.style.display=\'none\'"/><div><b>'+esc(it.name)+'</b><small>Na skladu: '+(+it.qty||0)+' ks</small></div>':'<div><small>Vyber položku ze seznamu.</small></div>';
   }
   paintInfo();
-  if(isel)isel.onchange=function(){
-    if(isel.value==='__new__'){o.close();openNew(scope);return;}
-    cur=isel.value;paintInfo();
-  };
+   function paintList(){
+    if(!listEl)return;
+    var q=normS(find.value.trim());
+    var arr=items().filter(function(i){return !q||normS(i.name).indexOf(q)!==-1;});
+    if(take)arr=arr.filter(function(i){return (+i.qty||0)>0||i.id===cur;});
+    listEl.innerHTML=arr.slice(0,60).map(function(i){
+      var n=+i.qty||0;
+      return '<button type="button" class="wm-it'+(i.id===cur?' on':'')+(n===0?' zero':'')+'" data-id="'+esc(i.id)+'">'+
+        '<img src="'+esc(imgSrc(i.img))+'" alt="" onerror="this.style.visibility=\'hidden\'"/>'+
+        '<span class="wm-n">'+esc(i.name)+'</span><span class="wm-q">'+n+' ks</span></button>';
+    }).join('')+
+    '<button type="button" class="wm-it wm-new" data-id="__new__"><span class="wm-n">➕ NOVÁ POLOŽKA (není v seznamu)…</span></button>';
+  }
+  if(find){
+    paintList();
+    find.addEventListener('input',paintList);
+    find.addEventListener('keydown',function(e){
+      if(e.key==='Enter'){
+        e.preventDefault();
+        var first=listEl.querySelector('.wm-it:not(.wm-new)');
+        if(first)first.click();
+      }
+    });
+    listEl.addEventListener('click',function(e){
+      var b=e.target.closest('.wm-it');if(!b)return;
+      var v=b.getAttribute('data-id');
+      if(v==='__new__'){o.close();openNew(scope);return;}
+      cur=v;paintInfo();paintList();
+      amt.focus();amt.select();
+    });
+  }
   o.q('.wh2-amt').addEventListener('click',function(e){
     var b=e.target.closest('[data-d]');if(!b)return;
     amt.value=Math.max(1,(parseInt(amt.value)||1)+parseInt(b.getAttribute('data-d')));
@@ -9301,7 +9328,7 @@ function openMove(mode,id,scope){
   }
   o.q('#wm-ok').onclick=submit;o.q('#wm-no').onclick=o.close;
   amt.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submit();}});
-  amt.focus();amt.select();
+  if(find&&!cur)find.focus();else{amt.focus();amt.select();}
 }
 async function move(id,delta,jmeno,ping,n){
   var m=getMember();if(!m)return;
