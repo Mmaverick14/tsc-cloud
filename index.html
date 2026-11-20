@@ -10,7 +10,7 @@
   <link rel="shortcut icon" href="images/favicon.ico"/>
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
   <script>try{var u=parseInt(localStorage.getItem("tsc_ui_scale"),10);if(u>=80&&u<=150)document.documentElement.style.setProperty("--ui",u+"%");}catch(e){}</script>
-  <link rel="stylesheet" href="tsc.css?v=20261111a"/>
+  <link rel="stylesheet" href="tsc.css?v=20261120a"/>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
 </head>
 <body>
@@ -112,6 +112,7 @@
       <!-- SKLAD -->
       <div id="mt-warehouse" class="mt">
         <div class="ph"><div class="pt">📦 // SKLAD</div></div>
+        <div class="wh-rule" role="alert">⚠ VE SKLADU MUSÍ VŽDY ZŮSTAT MINIMÁLNĚ 1 KUS KAŽDÉ POLOŽKY — poslední kus nikdy nebrat!</div>
         <div class="wh-filters">
           <button class="wf active" onclick="mWhFilter('all',this)">VŠE</button>
           <button class="wf" onclick="mWhFilter('weapons',this)">ZBRANĚ</button>
@@ -495,12 +496,13 @@
       <!-- WAREHOUSE ADMIN -->
       <div id="at-warehouse" class="at">
         <div class="ph"><div class="pt">📦 // SKLAD</div><button class="btn-acc small" onclick="toggleAddItem()">+ PŘIDAT</button></div>
+        <div class="wh-rule" role="alert">⚠ VE SKLADU MUSÍ VŽDY ZŮSTAT MINIMÁLNĚ 1 KUS KAŽDÉ POLOŽKY — poslední kus nikdy nebrat!</div>
         <div id="addItemPanel" class="form-panel hidden" style="margin:0 1.2rem 1rem;">
           <div class="form-grid">
             <div class="field-group"><label class="fl">NÁZEV</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-name"/></div></div>
             <div class="field-group"><label class="fl">KATEGORIE</label><div class="iw"><span class="ip">&gt;_</span><select id="wi-cat"><option value="weapons">Zbraně</option><option value="ammo">Munice</option><option value="drugs">Drogy</option><option value="vehicles">Vozidla</option><option value="equipment">Vybavení</option><option value="other">Ostatní</option></select></div></div>
             <div class="field-group"><label class="fl">MNOŽSTVÍ</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="wi-qty" value="1" min="0"/></div></div>
-            <div class="field-group"><label class="fl">MIN. ZÁSOBA</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="wi-min" value="0" min="0"/></div></div>
+            <div class="field-group"><label class="fl">MIN. ZÁSOBA (vždy alespoň 1)</label><div class="iw"><span class="ip">&gt;_</span><input type="number" id="wi-min" value="1" min="1"/></div></div>
             <div class="field-group"><label class="fl">FOTO — URL (Fivemanage) nebo název souboru</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-img" placeholder="https://r2.fivemanage.com/... nebo pistole.png" oninput="previewImg(this.value)"/></div></div>
             <div class="field-group"><label class="fl">NÁHLED</label><div id="wi-preview" class="img-prev">—</div></div>
             <div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="wi-note"/></div></div>

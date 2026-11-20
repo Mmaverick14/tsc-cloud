@@ -2014,3 +2014,7 @@ html body .wh-deposit-form .ip:has(+#depFind){display:none} /* druhá lupa naví
 .wm-it.zero .wm-q{color:var(--red)}
 .wm-it.wm-new{color:var(--acc);font-weight:600;border-bottom:0}
 @media(max-width:700px){.wm-list{max-height:200px}.wm-it{padding:.6rem}}
+
+/* ===== Sklad: stále viditelné červené pravidlo minima ===== */
+.wh-rule{position:sticky;top:0;z-index:20;margin:0 1.1rem .6rem;padding:.65rem 1rem;background:rgba(192,57,43,.16);border:1px solid var(--red);border-left:5px solid var(--red);color:#ff6b5b;font-size:.9rem;font-weight:700;letter-spacing:.08em;text-align:center;backdrop-filter:blur(6px)}
+@media(max-width:700px){.wh-rule{margin:0 .7rem .6rem;font-size:.78rem}}
