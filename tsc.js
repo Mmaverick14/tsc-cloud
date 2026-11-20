@@ -8911,12 +8911,12 @@ function setC(key,val){force=true;try{DB.cache[key]=val;}finally{force=false;}}
 /* ───────── 2) data ───────── */
 function raw(){var c=DB.cache,out=[];Object.keys(c).forEach(function(k){if(k.indexOf(K)===0&&c[k])out.push(c[k]);});return out;}
 function items(){
-  return raw().filter(function(x){return !x.del;}).map(function(x){return (+x.min>=1)?x:Object.assign({},x,{min:1});}).sort(function(a,b){
+  return raw().filter(function(x){return !x.del;}).map(function(x){return x.min===1?x:Object.assign({},x,{min:1});}).sort(function(a,b){
     return (a.ord||0)-(b.ord||0)||String(a.name).localeCompare(String(b.name),'cs');});
 }
 function deleted(){return raw().filter(function(x){return x.del;}).sort(function(a,b){return (b.delTs||0)-(a.delTs||0);});}
-function get(id){var x=DB.cache[K+id];if(!x||x.del)return null;return (+x.min>=1)?x:Object.assign({},x,{min:1});}
-function isLow(i){var q=+i.qty||0,mn=Math.max(1,+i.min||0);return q===0||q<=mn;}
+function get(id){var x=DB.cache[K+id];if(!x||x.del)return null;return x.min===1?x:Object.assign({},x,{min:1});}
+function isLow(i){var q=+i.qty||0,mn=1;return q===0||q<=mn;}
 function isPh(v){return String(v||'').split('/').pop()===PH;}
 function maxOrd(){return raw().reduce(function(m,x){return Math.max(m,x.ord||0);},0);}
 
@@ -8981,7 +8981,7 @@ async function pullAll(){
 /* změna množství o delta; vrací {ok,before,after,item} nebo {ok:false,err} */
 async function adjust(id,delta){
   var before=0,after=0,err='';
-  opt(id,function(o){if(delta<0&&(+o.qty||0)+delta<1)return;o.qty=Math.max(0,(+o.qty||0)+delta);o.min=Math.max(1,+o.min||1);});
+  opt(id,function(o){if(delta<0&&(+o.qty||0)+delta<1)return;o.qty=Math.max(0,(+o.qty||0)+delta);it.min=Math.max(1,+it.min||1);});
   var r;
   try{
     r=await write(id,function(it){
@@ -9156,7 +9156,7 @@ function view(scope){
   return out;
 }
 function card(i,adm){
-  var q=+i.qty||0,mn=Math.max(1,+i.min||0),cls=q===0?' empty':(q<=mn?' low':'');
+  var q=+i.qty||0,mn=1,cls=q===0?' empty':(q<=mn?' low':'');
   var img=i.img?'<img data-ph="1" src="'+esc(imgSrc(i.img))+'" alt="" loading="lazy"/>':'<span class="wh-icon">?</span>';
   var wait=isPh(i.img)?'<div class="wh2-wait">📷 Čeká na foto'+(i.photoByName?' — doplní '+esc(i.photoByName):'')+'</div>':'';
   var id=esc(i.id);
@@ -9358,8 +9358,7 @@ function openNew(scope){
       chk('wn-hookp','🔔 Označit člena vedení, který nastaví Discord hook kategorie')+
       '<div id="wn-hookw" class="iw hidden" style="margin-top:.4rem"><span class="ip">&gt;_</span><select id="wn-hooks" class="fw">'+leaderOpts()+'</select></div></div>'+
     fld('POČÁTEČNÍ MNOŽSTVÍ','<input type="number" id="wn-qty" min="1" value="1"/>')+
-    (adm?fld('MINIMUM VE SKLADU (vždy alespoň 1)','<input type="number" id="wn-min" min="1" value="1"/>')+fld('POZNÁMKA','<input type="text" id="wn-note" maxlength="120"/>'):'')+
-    fld('FOTO — URL (prázdné = '+PH+', foto doplní vedení)','<input type="text" id="wn-img" placeholder="https://r2.fivemanage.com/..."/>')+
+    (adm?fld('POZNÁMKA','<input type="text" id="wn-note" maxlength="120"/>'):'')+    fld('FOTO — URL (prázdné = '+PH+', foto doplní vedení)','<input type="text" id="wn-img" placeholder="https://r2.fivemanage.com/..."/>')+
     '<div id="wn-pbox" class="wh2-sub">'+chk('wn-photop','🔔 Označit člena vedení, který foto doplní')+
       '<div id="wn-photow" class="iw hidden" style="margin-top:.4rem"><span class="ip">&gt;_</span><select id="wn-photos" class="fw">'+leaderOpts()+'</select></div></div>'+
     whoSel()+chk('ping-dep','🔔 Označit Member')+
@@ -9376,7 +9375,7 @@ function openNew(scope){
     err.textContent='';
     var name=o.q('#wn-name').value.trim().replace(/\s+/g,' '),cat=o.q('#wn-cat').value;
     var qty=Math.max(1,Math.floor(+o.q('#wn-qty').value)||1);
-    var min=adm?Math.max(1,Math.floor(+o.q('#wn-min').value)||1):1,note=adm?o.q('#wn-note').value.trim():'';
+    var min=1,note=adm?o.q('#wn-note').value.trim():'';
     var img=o.q('#wn-img').value.trim(),later=!img;
     if(!name){err.textContent='// ZADEJ NÁZEV';return;}
     if(items().some(function(i){return String(i.name).toLowerCase()===name.toLowerCase();})){err.textContent='// TAKOVÁ POLOŽKA UŽ EXISTUJE — VYBER JI V SEZNAMU';return;}
@@ -9415,7 +9414,6 @@ function openEdit(id){
     fld('NÁZEV *','<input type="text" id="we-name" maxlength="60" value="'+esc(it.name)+'"/>')+
     fld('KATEGORIE','<select id="we-cat" class="fw">'+catOpts(it.cat)+'</select>')+
     fld('MNOŽSTVÍ (přepíše aktuální stav)','<input type="number" id="we-qty" min="0" value="'+(+it.qty||0)+'"/>')+
-    fld('MINIMUM VE SKLADU (vždy alespoň 1)','<input type="number" id="we-min" min="1" value="'+Math.max(1,+it.min||1)+'"/>')+
     fld('POZNÁMKA','<input type="text" id="we-note" maxlength="120" value="'+esc(it.note||'')+'"/>')+
     fld('FOTO — URL nebo název souboru','<input type="text" id="we-img" value="'+esc(it.img||'')+'"/>')+
     '<div id="we-err" class="smsg" style="color:var(--red);margin-top:.5rem;min-height:1em"></div>'+
@@ -9424,7 +9422,7 @@ function openEdit(id){
   o.q('#we-no').onclick=o.close;
   o.q('#we-ok').onclick=async function(){
     var name=o.q('#we-name').value.trim().replace(/\s+/g,' '),cat=o.q('#we-cat').value;
-    var qty=Math.max(0,Math.floor(+o.q('#we-qty').value)||0),min=Math.max(1,Math.floor(+o.q('#we-min').value)||1);
+    var qty=Math.max(0,Math.floor(+o.q('#we-qty').value)||0),min=1;
     var note=o.q('#we-note').value.trim(),img=o.q('#we-img').value.trim();
     if(!name){err.textContent='// ZADEJ NÁZEV';return;}
     if(items().some(function(i){return i.id!==id&&String(i.name).toLowerCase()===name.toLowerCase();})){err.textContent='// POLOŽKA S TÍMTO NÁZVEM UŽ EXISTUJE';return;}
