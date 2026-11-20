@@ -8981,7 +8981,7 @@ async function pullAll(){
 /* změna množství o delta; vrací {ok,before,after,item} nebo {ok:false,err} */
 async function adjust(id,delta){
   var before=0,after=0,err='';
-  opt(id,function(o){if(delta<0&&(+o.qty||0)+delta<1)return;o.qty=Math.max(0,(+o.qty||0)+delta);it.min=Math.max(1,+it.min||1);});
+  opt(id,function(o){if(delta<0&&(+o.qty||0)+delta<1)return;o.qty=Math.max(0,(+o.qty||0)+delta);o.min=Math.max(1,+o.min||1);});
   var r;
   try{
     r=await write(id,function(it){
