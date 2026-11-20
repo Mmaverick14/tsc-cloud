@@ -9103,7 +9103,7 @@ function ensure(scope){
   if(!t.dataset.v2){
     var ph=t.querySelector('.ph');t.innerHTML='';
     if(ph){ph.innerHTML='<div class="pt">📦 // SKLAD</div>';t.appendChild(ph);}
-    t.insertAdjacentHTML('beforeend','<div class="wh-rule" role="alert">⚠ VE SKLADU MUSÍ VŽDY ZŮSTAT MINIMÁLNĚ 1 KUS KAŽDÉ POLOŽKY — poslední kus nikdy nebrat!</div>');
+    t.insertAdjacentHTML('beforeend','<div class="wh-rule" role="alert">⚠️ VE SKLADU MUSÍ VŽDY ZŮSTAT MINIMÁLNĚ 1 KUS KAŽDÉ POLOŽKY poslední kus nikdy nebrat ! ⚠️</div>');
     var adm=scope==='a';
     t.insertAdjacentHTML('beforeend','<div class="wh2" id="whRoot'+(adm?'A':'M')+'">'+
       '<div class="wh2-stats"></div>'+
