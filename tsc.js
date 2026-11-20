@@ -336,27 +336,27 @@ function initData(){
 
 function defaultWarehouse(){
   return [
-    {id:uid(),name:'Náboje dlouhe',cat:'ammo',qty:0,min:0,note:'Dlouhé náboje',img:'nabojdlouhy.png'},
-    {id:uid(),name:'Náboje krátké',cat:'ammo',qty:0,min:0,note:'Pistolové náboje',img:'nabojpistol.png'},
-    {id:uid(),name:'Baterka',cat:'equipment',qty:0,min:0,note:'Taktická svítilna',img:'baterka.png'},
-    {id:uid(),name:'Tlumič',cat:'weapons',qty:0,min:0,note:'Pro pistoli i SMG',img:'tlumic.png'},
-    {id:uid(),name:'Zaměřovač',cat:'weapons',qty:0,min:0,note:'Optický zaměřovač',img:'zamerovac.png'},
-    {id:uid(),name:'Velký zásobník',cat:'weapons',qty:0,min:0,note:'Extended mag',img:'velkyzasobnik.png'},
-    {id:uid(),name:'Žlutá Tráva',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'zlutatrava.png'},
-    {id:uid(),name:'Červena Tráva',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'cervenatrava.png'},
-    {id:uid(),name:'Modrá Tráva',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'modratrava.png'},
-    {id:uid(),name:'Fialová Tráva',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'fialovatrava.png'},
-    {id:uid(),name:'Extáze',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'extaze.png'},
-    {id:uid(),name:'Sáček s Extází',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'balicekextaze.png'},
-    {id:uid(),name:'Metamfetamin',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'metak.png'},
-    {id:uid(),name:'Sáček s Metamfetaminem',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'sacekmetak.png'},
-    {id:uid(),name:'Modrý Kanabis',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'modrykanabis.png'},
-    {id:uid(),name:'Žlutý Kanabis',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'zlutykanabis.png'},
-    {id:uid(),name:'Červený Kanabis',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'cervenykanabis.png'},
-    {id:uid(),name:'Fialový Kanabis',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'fialovykanabis.png'},
-    {id:uid(),name:'Joy',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'joy.png'},
-    {id:uid(),name:'Prášky na bolest',cat:'drugs',qty:0,min:0,note:'Speciální item',img:'praskynabolest.png'},
-    {id:uid(),name:'Prazdný sáček',cat:'other',qty:0,min:0,note:'Speciální item',img:'prazdnysacek.png'}
+    {id:uid(),name:'Náboje dlouhe',cat:'ammo',qty:0,min:1,note:'Dlouhé náboje',img:'nabojdlouhy.png'},
+    {id:uid(),name:'Náboje krátké',cat:'ammo',qty:0,min:1,note:'Pistolové náboje',img:'nabojpistol.png'},
+    {id:uid(),name:'Baterka',cat:'equipment',qty:0,min:1,note:'Taktická svítilna',img:'baterka.png'},
+    {id:uid(),name:'Tlumič',cat:'weapons',qty:0,min:1,note:'Pro pistoli i SMG',img:'tlumic.png'},
+    {id:uid(),name:'Zaměřovač',cat:'weapons',qty:0,min:1,note:'Optický zaměřovač',img:'zamerovac.png'},
+    {id:uid(),name:'Velký zásobník',cat:'weapons',qty:0,min:1,note:'Extended mag',img:'velkyzasobnik.png'},
+    {id:uid(),name:'Žlutá Tráva',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'zlutatrava.png'},
+    {id:uid(),name:'Červena Tráva',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'cervenatrava.png'},
+    {id:uid(),name:'Modrá Tráva',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'modratrava.png'},
+    {id:uid(),name:'Fialová Tráva',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'fialovatrava.png'},
+    {id:uid(),name:'Extáze',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'extaze.png'},
+    {id:uid(),name:'Sáček s Extází',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'balicekextaze.png'},
+    {id:uid(),name:'Metamfetamin',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'metak.png'},
+    {id:uid(),name:'Sáček s Metamfetaminem',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'sacekmetak.png'},
+    {id:uid(),name:'Modrý Kanabis',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'modrykanabis.png'},
+    {id:uid(),name:'Žlutý Kanabis',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'zlutykanabis.png'},
+    {id:uid(),name:'Červený Kanabis',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'cervenykanabis.png'},
+    {id:uid(),name:'Fialový Kanabis',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'fialovykanabis.png'},
+    {id:uid(),name:'Joy',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'joy.png'},
+    {id:uid(),name:'Prášky na bolest',cat:'drugs',qty:0,min:1,note:'Speciální item',img:'praskynabolest.png'},
+    {id:uid(),name:'Prazdný sáček',cat:'other',qty:0,min:1,note:'Speciální item',img:'prazdnysacek.png'}
   ];
 }
 
@@ -1024,7 +1024,7 @@ function renderMemberWarehouse(){
 function stockAlert(item,before){
   if(!item||item.qty>=before)return;
   if(item.cat==='drugs')return; // drogy se do Discordu nehlásí
-  var min=item.min||0;
+  var min=Math.max(1,item.min||0);
   if(item.qty===0&&before>0){
     addLog('wh','Došla zásoba: '+item.name+' (0 ks) — je potřeba doplnit.',{img:item.img,pingCat:item.cat,plain:true,icon:'🚨'});
   }else if(min>0&&item.qty<=min&&before>min){
@@ -1035,7 +1035,7 @@ function setItemMin(id){
   var items=DB.get('warehouse')||[];var item=items.find(function(i){return i.id===id;});if(!item)return;
   var v=prompt('Limit nízké zásoby pro "'+item.name+'" (0 = bez upozornění):',item.min||0);
   if(v===null)return;
-  item.min=Math.max(0,parseInt(v)||0);DB.set('warehouse',items);
+  item.min=Math.max(1,parseInt(v)||1);DB.set('warehouse',items);
   toast('Limit nastaven na '+item.min,'success');renderAdminWarehouse();renderMemberWarehouse();
 }
 function pickupItem(itemId){
@@ -8911,12 +8911,12 @@ function setC(key,val){force=true;try{DB.cache[key]=val;}finally{force=false;}}
 /* ───────── 2) data ───────── */
 function raw(){var c=DB.cache,out=[];Object.keys(c).forEach(function(k){if(k.indexOf(K)===0&&c[k])out.push(c[k]);});return out;}
 function items(){
-  return raw().filter(function(x){return !x.del;}).sort(function(a,b){
+  return raw().filter(function(x){return !x.del;}).map(function(x){return (+x.min>=1)?x:Object.assign({},x,{min:1});}).sort(function(a,b){
     return (a.ord||0)-(b.ord||0)||String(a.name).localeCompare(String(b.name),'cs');});
 }
 function deleted(){return raw().filter(function(x){return x.del;}).sort(function(a,b){return (b.delTs||0)-(a.delTs||0);});}
-function get(id){var x=DB.cache[K+id];return x&&!x.del?x:null;}
-function isLow(i){var q=+i.qty||0,mn=+i.min||0;return q===0||(mn>0&&q<=mn);}
+function get(id){var x=DB.cache[K+id];if(!x||x.del)return null;return (+x.min>=1)?x:Object.assign({},x,{min:1});}
+function isLow(i){var q=+i.qty||0,mn=Math.max(1,+i.min||0);return q===0||q<=mn;}
 function isPh(v){return String(v||'').split('/').pop()===PH;}
 function maxOrd(){return raw().reduce(function(m,x){return Math.max(m,x.ord||0);},0);}
 
@@ -8981,13 +8981,13 @@ async function pullAll(){
 /* změna množství o delta; vrací {ok,before,after,item} nebo {ok:false,err} */
 async function adjust(id,delta){
   var before=0,after=0,err='';
-  opt(id,function(o){o.qty=Math.max(0,(+o.qty||0)+delta);});
+  opt(id,function(o){if(delta<0&&(+o.qty||0)+delta<1)return;o.qty=Math.max(0,(+o.qty||0)+delta);o.min=Math.max(1,+o.min||1);});
   var r;
   try{
     r=await write(id,function(it){
       if(!it||it.del){err='gone';return false;}
       before=+it.qty||0;
-      if(before+delta<0){err='low';return false;}
+      if(delta<0&&before+delta<1){err='low';return false;}it.min=Math.max(1,+it.min||1);
       it.qty=before+delta;after=it.qty;return it;});
   }catch(e){console.error('sklad adjust',e);return {ok:false,err:'net'};}
   if(r.aborted)return {ok:false,err:err};
@@ -9103,6 +9103,7 @@ function ensure(scope){
   if(!t.dataset.v2){
     var ph=t.querySelector('.ph');t.innerHTML='';
     if(ph){ph.innerHTML='<div class="pt">📦 // SKLAD</div>';t.appendChild(ph);}
+    t.insertAdjacentHTML('beforeend','<div class="wh-rule" role="alert">⚠ VE SKLADU MUSÍ VŽDY ZŮSTAT MINIMÁLNĚ 1 KUS KAŽDÉ POLOŽKY — poslední kus nikdy nebrat!</div>');
     var adm=scope==='a';
     t.insertAdjacentHTML('beforeend','<div class="wh2" id="whRoot'+(adm?'A':'M')+'">'+
       '<div class="wh2-stats"></div>'+
@@ -9155,7 +9156,7 @@ function view(scope){
   return out;
 }
 function card(i,adm){
-  var q=+i.qty||0,mn=+i.min||0,cls=q===0?' empty':(mn>0&&q<=mn?' low':'');
+  var q=+i.qty||0,mn=Math.max(1,+i.min||0),cls=q===0?' empty':(q<=mn?' low':'');
   var img=i.img?'<img data-ph="1" src="'+esc(imgSrc(i.img))+'" alt="" loading="lazy"/>':'<span class="wh-icon">?</span>';
   var wait=isPh(i.img)?'<div class="wh2-wait">📷 Čeká na foto'+(i.photoByName?' — doplní '+esc(i.photoByName):'')+'</div>':'';
   var id=esc(i.id);
@@ -9165,7 +9166,7 @@ function card(i,adm){
     '<div class="wh2-qty"><span class="wh2-n">'+q+'</span><span class="wh2-u">KS</span>'+(mn>0?'<span class="wh2-m">limit '+mn+'</span>':'')+'</div>'+
     (mn>0?'<div class="wh2-lvl"><i style="width:'+Math.min(100,Math.round(q/(mn*2)*100))+'%"></i></div>':'')+
     (q===0?'<div class="wh2-flag bad">DOŠLO</div>':(cls?'<div class="wh2-flag">NÍZKÁ ZÁSOBA</div>':''))+
-    '<div class="wh2-act"><button class="btn-acc small" data-a="take" data-id="'+id+'"'+(q===0?' disabled':'')+'>⬇ VZÍT</button>'+
+    '<div class="wh2-act"><button class="btn-acc small" data-a="take" data-id="'+id+'"'+(q<=1?' disabled title="Poslední kus musí ve skladu zůstat"':'')+'>⬇ VZÍT</button>'+
     '<button class="btn-acc small" data-a="put" data-id="'+id+'">⬆ VLOŽIT</button>'+
     (adm?'<button class="btn-micro" data-a="edit" data-id="'+id+'" title="Upravit">✎</button>':'')+'</div></div>';
 }
@@ -9272,14 +9273,14 @@ var sel=id?'':'<div class="field-group"><label class="fl">POLOŽKA</label>'+
   function item(){return cur?get(cur):null;}
   function paintInfo(){
     var it=item();
-    info.innerHTML=it?'<img src="'+esc(imgSrc(it.img))+'" alt="" onerror="this.style.display=\'none\'"/><div><b>'+esc(it.name)+'</b><small>Na skladu: '+(+it.qty||0)+' ks</small></div>':'<div><small>Vyber položku ze seznamu.</small></div>';
+    info.innerHTML=it?'<img src="'+esc(imgSrc(it.img))+'" alt="" onerror="this.style.display=\'none\'"/><div><b>'+esc(it.name)+'</b><small>Na skladu: '+(+it.qty||0)+' ks'+(take?' · lze vzít max. '+Math.max(0,(+it.qty||0)-1):'')+'</small></div>':'<div><small>Vyber položku ze seznamu.</small></div>';
   }
   paintInfo();
    function paintList(){
     if(!listEl)return;
     var q=normS(find.value.trim());
     var arr=items().filter(function(i){return !q||normS(i.name).indexOf(q)!==-1;});
-    if(take)arr=arr.filter(function(i){return (+i.qty||0)>0||i.id===cur;});
+    if(take)arr=arr.filter(function(i){return (+i.qty||0)>1||i.id===cur;});
     listEl.innerHTML=arr.slice(0,60).map(function(i){
       var n=+i.qty||0;
       return '<button type="button" class="wm-it'+(i.id===cur?' on':'')+(n===0?' zero':'')+'" data-id="'+esc(i.id)+'">'+
@@ -9313,7 +9314,7 @@ var sel=id?'':'<div class="field-group"><label class="fl">POLOŽKA</label>'+
   o.q('.wh2-chips').addEventListener('click',function(e){
     var b=e.target.closest('[data-c]');if(!b)return;
     var c=b.getAttribute('data-c'),it=item();
-    if(c==='VŠE')amt.value=it?Math.max(1,+it.qty||0):1;else amt.value=(parseInt(amt.value)||0)+parseInt(c);
+    if(c==='VŠE')amt.value=it?Math.max(1,(+it.qty||0)-1):1;else amt.value=(parseInt(amt.value)||0)+parseInt(c);
   });
   function submit(){
     err.textContent='';
@@ -9321,7 +9322,7 @@ var sel=id?'':'<div class="field-group"><label class="fl">POLOŽKA</label>'+
     var it=item();if(!it){err.textContent='// POLOŽKA UŽ NEEXISTUJE';return;}
     var n=Math.floor(+amt.value);
     if(!(n>=1)){err.textContent='// ZADEJ MNOŽSTVÍ (min. 1)';return;}
-    if(take&&n>(+it.qty||0)){err.textContent='// NA SKLADU JE JEN '+(+it.qty||0)+' KS';return;}
+    if(take&&n>(+it.qty||0)-1){err.textContent='// LZE VZÍT MAX. '+Math.max(0,(+it.qty||0)-1)+' KS — 1 KS MUSÍ VE SKLADU ZŮSTAT';return;}
     var jmeno=(o.q('#wm-who').value||'').trim()||m.displayName;
     var ping=pingBox(take?'pk-modal':'ping-dep');
     o.close();move(cur,take?-n:n,jmeno,ping,n);
@@ -9335,7 +9336,7 @@ async function move(id,delta,jmeno,ping,n){
   var p=adjust(id,delta);renderBoth();              // změna je vidět OKAMŽITĚ
   var r=await p;renderBoth();
   if(!r.ok){
-    toast(r.err==='low'?'Nedostatek zásoby — mezitím to někdo vzal':(r.err==='gone'?'Položka už neexistuje':'Uložení se nepovedlo, zkus to znovu'),'error',4500);
+    toast(r.err==='low'?'Nejde vzít — ve skladu musí zůstat minimálně 1 kus':(r.err==='gone'?'Položka už neexistuje':'Uložení se nepovedlo, zkus to znovu'),'error',4500);
     return;
   }
   var it=r.item,out=delta<0;
@@ -9356,8 +9357,8 @@ function openNew(scope){
     '<div id="wn-ncbox" class="wh2-sub hidden">'+fld('NÁZEV NOVÉ KATEGORIE * (max. 24 znaků)','<input type="text" id="wn-ncname" maxlength="24"/>')+
       chk('wn-hookp','🔔 Označit člena vedení, který nastaví Discord hook kategorie')+
       '<div id="wn-hookw" class="iw hidden" style="margin-top:.4rem"><span class="ip">&gt;_</span><select id="wn-hooks" class="fw">'+leaderOpts()+'</select></div></div>'+
-    fld('POČÁTEČNÍ MNOŽSTVÍ','<input type="number" id="wn-qty" min="'+(adm?0:1)+'" value="1"/>')+
-    (adm?fld('LIMIT NÍZKÉ ZÁSOBY (0 = bez upozornění)','<input type="number" id="wn-min" min="0" value="0"/>')+fld('POZNÁMKA','<input type="text" id="wn-note" maxlength="120"/>'):'')+
+    fld('POČÁTEČNÍ MNOŽSTVÍ','<input type="number" id="wn-qty" min="1" value="1"/>')+
+    (adm?fld('MINIMUM VE SKLADU (vždy alespoň 1)','<input type="number" id="wn-min" min="1" value="1"/>')+fld('POZNÁMKA','<input type="text" id="wn-note" maxlength="120"/>'):'')+
     fld('FOTO — URL (prázdné = '+PH+', foto doplní vedení)','<input type="text" id="wn-img" placeholder="https://r2.fivemanage.com/..."/>')+
     '<div id="wn-pbox" class="wh2-sub">'+chk('wn-photop','🔔 Označit člena vedení, který foto doplní')+
       '<div id="wn-photow" class="iw hidden" style="margin-top:.4rem"><span class="ip">&gt;_</span><select id="wn-photos" class="fw">'+leaderOpts()+'</select></div></div>'+
@@ -9374,8 +9375,8 @@ function openNew(scope){
   o.q('#wn-ok').onclick=async function(){
     err.textContent='';
     var name=o.q('#wn-name').value.trim().replace(/\s+/g,' '),cat=o.q('#wn-cat').value;
-    var qty=Math.max(adm?0:1,Math.floor(+o.q('#wn-qty').value)||0);
-    var min=adm?Math.max(0,Math.floor(+o.q('#wn-min').value)||0):0,note=adm?o.q('#wn-note').value.trim():'';
+    var qty=Math.max(1,Math.floor(+o.q('#wn-qty').value)||1);
+    var min=adm?Math.max(1,Math.floor(+o.q('#wn-min').value)||1):1,note=adm?o.q('#wn-note').value.trim():'';
     var img=o.q('#wn-img').value.trim(),later=!img;
     if(!name){err.textContent='// ZADEJ NÁZEV';return;}
     if(items().some(function(i){return String(i.name).toLowerCase()===name.toLowerCase();})){err.textContent='// TAKOVÁ POLOŽKA UŽ EXISTUJE — VYBER JI V SEZNAMU';return;}
@@ -9414,7 +9415,7 @@ function openEdit(id){
     fld('NÁZEV *','<input type="text" id="we-name" maxlength="60" value="'+esc(it.name)+'"/>')+
     fld('KATEGORIE','<select id="we-cat" class="fw">'+catOpts(it.cat)+'</select>')+
     fld('MNOŽSTVÍ (přepíše aktuální stav)','<input type="number" id="we-qty" min="0" value="'+(+it.qty||0)+'"/>')+
-    fld('LIMIT NÍZKÉ ZÁSOBY (0 = bez upozornění)','<input type="number" id="we-min" min="0" value="'+(+it.min||0)+'"/>')+
+    fld('MINIMUM VE SKLADU (vždy alespoň 1)','<input type="number" id="we-min" min="1" value="'+Math.max(1,+it.min||1)+'"/>')+
     fld('POZNÁMKA','<input type="text" id="we-note" maxlength="120" value="'+esc(it.note||'')+'"/>')+
     fld('FOTO — URL nebo název souboru','<input type="text" id="we-img" value="'+esc(it.img||'')+'"/>')+
     '<div id="we-err" class="smsg" style="color:var(--red);margin-top:.5rem;min-height:1em"></div>'+
@@ -9423,7 +9424,7 @@ function openEdit(id){
   o.q('#we-no').onclick=o.close;
   o.q('#we-ok').onclick=async function(){
     var name=o.q('#we-name').value.trim().replace(/\s+/g,' '),cat=o.q('#we-cat').value;
-    var qty=Math.max(0,Math.floor(+o.q('#we-qty').value)||0),min=Math.max(0,Math.floor(+o.q('#we-min').value)||0);
+    var qty=Math.max(0,Math.floor(+o.q('#we-qty').value)||0),min=Math.max(1,Math.floor(+o.q('#we-min').value)||1);
     var note=o.q('#we-note').value.trim(),img=o.q('#we-img').value.trim();
     if(!name){err.textContent='// ZADEJ NÁZEV';return;}
     if(items().some(function(i){return i.id!==id&&String(i.name).toLowerCase()===name.toLowerCase();})){err.textContent='// POLOŽKA S TÍMTO NÁZVEM UŽ EXISTUJE';return;}
