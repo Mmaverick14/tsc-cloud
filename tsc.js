@@ -9474,7 +9474,7 @@ async function restore(id){
 }
 })();
 
-/* ===== FINANCE 2.0: přehled / příspěvek / pesos / dolary (vlož na ÚPLNÝ KONEC tsc.js) ===== */
+/* ===== FINANCE 3.0: bankovní vzhled (vlož na ÚPLNÝ KONEC tsc.js, starý blok FINANCE 2.0 smaž) ===== */
 (function(){
 'use strict';
 function $(id){return document.getElementById(id);}
@@ -9482,29 +9482,77 @@ function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(
 function r2(n){return Math.round(n*100)/100;}
 function fmtP(n){return Number(r2(n)).toLocaleString('cs-CZ')+' ₱';}
 function fmt(c,n){return c==='P'?fmtP(n):money(r2(n));}
-var tab='over',lastSig='';
-var PCATS=['Prodej','Zakázka','Nákup','Výplata','Převod','Jiné'];
+var tab='over',lastSig='',ptype='in',pcat='Prodej',usrc='';
+var PCATS=[['Prodej','🛒'],['Zakázka','📦'],['Nákup','🧾'],['Výplata','💼'],['Převod','🔁'],['Jiné','✨']];
+var KEEP=['f2-pa','f2-pn','f2-ua','f2-un','fin2-ping','fin2-ping-u'];
 
-if(!$('fin2Css')){
-  var st=document.createElement('style');st.id='fin2Css';
+if(!$('fin3Css')){
+  var st=document.createElement('style');st.id='fin3Css';
   st.textContent=
   '#mt-finance>*:not(.ph:first-child):not(#fin2Root):not(#bankCardM){display:none!important}'+
   '#mt-finance>#bankCardM{display:none}'+
-  '.f2{padding:0 0 2rem}.f2-tabs{display:flex;gap:2px;flex-wrap:wrap;margin:1rem 1.2rem}'+
-  '.f2-body{margin:0 1.2rem}.f2-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.6rem;margin-bottom:1rem}'+
-  '.f2-hero{display:flex;gap:.9rem;align-items:center;padding:1rem 1.2rem;margin-bottom:1rem;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--acc)}'+
-  '.f2-hero.ok{border-left-color:var(--green)}.f2-hero.due{border-left-color:var(--red)}'+
-  '.f2-hero .i{font-size:1.8rem}.f2-hero b{display:block;font-size:1.15rem;color:var(--textb)}.f2-hero span{font-size:.88rem;color:var(--text)}'+
-  '.f2-row{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.55rem .9rem;margin-bottom:1px;background:var(--card);border-left:3px solid var(--gdim)}'+
-  '.f2-row.out,.f2-row.bad{border-left-color:var(--red-dim)}.f2-row.na{border-left-color:var(--brite);opacity:.7}'+
-  '.f2-row .m{flex:1;min-width:140px;color:var(--textb);font-size:.9rem}.f2-row small{display:block;color:var(--muted)}'+
-  '.f2-row .a{font-weight:700;color:var(--textb);white-space:nowrap}.f2-row.out .a{color:var(--red)}'+
-  '.f2-quick{display:flex;gap:.5rem;flex-wrap:wrap;margin:.2rem 0 1rem}'+
-  '@media(max-width:700px){.f2-tabs,.f2-body{margin-left:.7rem;margin-right:.7rem}}';
+  '.f3{padding:0 0 2.5rem;max-width:760px;margin:0 auto}'+
+  '.f3-seg{display:flex;gap:.3rem;margin:1.2rem;padding:.3rem;background:var(--surf);border:1px solid var(--border);border-radius:999px}'+
+  '.f3-seg button{flex:1;padding:.6rem .4rem;border:0;border-radius:999px;background:transparent;color:var(--text);font-size:.85rem;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:all .2s;white-space:nowrap}'+
+  '.f3-seg button:hover{color:var(--acc)}'+
+  '.f3-seg button.on{background:var(--acc);color:#080808}'+
+  '.f3-body{margin:0 1.2rem;display:flex;flex-direction:column;gap:1rem}'+
+  '.f3-hero{position:relative;overflow:hidden;padding:1.5rem 1.6rem;border-radius:20px;border:1px solid var(--acc-dim);'+
+    'background:radial-gradient(420px 220px at 100% 0,color-mix(in srgb,var(--acc) 30%,transparent),transparent 70%),linear-gradient(160deg,#17150f,#0b0b0a)}'+
+  '.f3-hero small{display:block;font-size:.68rem;letter-spacing:.22em;color:var(--text)}'+
+  'html body .f3-big{display:block;margin:.35rem 0 .2rem;font-family:"Cormorant Garamond",Georgia,serif!important;font-size:3.2rem;font-weight:700;line-height:1;color:var(--acc)}'+
+  '.f3-big.neg{color:var(--red)}'+
+  '.f3-minis{display:flex;gap:1.6rem;margin-top:1rem;padding-top:.9rem;border-top:1px solid rgba(255,255,255,.08);flex-wrap:wrap}'+
+  '.f3-minis div span{display:block;font-size:.62rem;letter-spacing:.16em;color:var(--muted)}'+
+  '.f3-minis div b{font-size:1.1rem;color:var(--textb)}'+
+  '.f3-status{display:flex;gap:.9rem;align-items:center;padding:1rem 1.2rem;border-radius:16px;background:var(--card);border:1px solid var(--border)}'+
+  '.f3-status.ok{background:color-mix(in srgb,var(--green) 8%,var(--card));border-color:var(--gdim)}'+
+  '.f3-status.due{background:color-mix(in srgb,var(--red) 9%,var(--card));border-color:var(--red-dim)}'+
+  '.f3-status .i{font-size:1.7rem}.f3-status b{display:block;font-size:1.1rem;color:var(--textb)}.f3-status span{font-size:.85rem;color:var(--text)}'+
+  '.f3-status .go{margin-left:auto}'+
+  '.f3-btn{padding:.7rem 1.3rem;border:0;border-radius:999px;background:var(--acc);color:#080808;font-weight:700;font-size:.85rem;letter-spacing:.08em;cursor:pointer;transition:transform .15s,filter .15s;white-space:nowrap}'+
+  '.f3-btn:hover{filter:brightness(1.1)}.f3-btn:active{transform:scale(.96)}'+
+  '.f3-btn.ghost{background:transparent;border:1px solid var(--brite);color:var(--textb)}'+
+  '.f3-btn.wide{width:100%;padding:.95rem;font-size:.95rem}'+
+  '.f3-actions{display:flex;gap:.6rem;flex-wrap:wrap}.f3-actions .f3-btn{flex:1;min-width:140px}'+
+  '.f3-h{margin:.4rem 0 0;font-size:.72rem;font-weight:600;letter-spacing:.2em;color:var(--acc)}'+
+  '.f3-day{margin:.7rem 0 .2rem;font-size:.7rem;letter-spacing:.14em;color:var(--muted)}'+
+  '.f3-tx{display:flex;align-items:center;gap:.8rem;padding:.7rem .9rem;border-radius:14px;background:var(--card);border:1px solid var(--border);margin-bottom:.35rem}'+
+  '.f3-ic{flex:none;width:2.4rem;height:2.4rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;font-weight:700;background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}'+
+  '.f3-tx.out .f3-ic{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}'+
+  '.f3-tx.na .f3-ic{background:var(--surf);color:var(--muted)}'+
+  '.f3-tx .m{flex:1;min-width:0;color:var(--textb);font-size:.95rem;font-weight:600}'+
+  '.f3-tx .m small{display:block;font-weight:400;font-size:.75rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+  '.f3-tx .a{font-weight:700;color:var(--green);white-space:nowrap}.f3-tx.out .a{color:var(--red)}.f3-tx.na .a{color:var(--text)}'+
+  '.f3-x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:.9rem;padding:.3rem}.f3-x:hover{color:var(--red)}'+
+  '.f3-card{padding:1.2rem;border-radius:20px;background:var(--card);border:1px solid var(--border)}'+
+  '.f3-two{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}'+
+  '.f3-tg{padding:.9rem;border-radius:14px;border:1px solid var(--border);background:var(--surf);color:var(--text);font-weight:700;font-size:.95rem;cursor:pointer;transition:all .15s}'+
+  '.f3-tg.in.on{background:color-mix(in srgb,var(--green) 20%,var(--surf));border-color:var(--green);color:var(--green)}'+
+  '.f3-tg.out.on{background:color-mix(in srgb,var(--red) 20%,var(--surf));border-color:var(--red);color:var(--red)}'+
+  '.f3-amt{display:flex;align-items:center;justify-content:center;gap:.5rem;margin:1.1rem 0 .6rem}'+
+  '.f3-amt span{font-size:2.2rem;color:var(--acc);font-weight:700}'+
+  '.f3-amt input{width:100%;max-width:260px;text-align:center;font-size:3rem;font-weight:700;background:transparent;border:0;border-bottom:2px solid var(--brite);color:var(--textb);padding:.2rem;outline:0;border-radius:0}'+
+  '.f3-amt input:focus{border-bottom-color:var(--acc)}'+
+  '.f3-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5rem 0}'+
+  '.f3-chip{padding:.45rem .9rem;border-radius:999px;border:1px solid var(--border);background:var(--surf);color:var(--text);font-size:.85rem;cursor:pointer;transition:all .15s}'+
+  '.f3-chip:hover{border-color:var(--acc-dim);color:var(--acc)}.f3-chip.on{background:var(--acc);border-color:var(--acc);color:#080808;font-weight:700}'+
+  '.f3-note{width:100%;box-sizing:border-box;margin:.4rem 0 .8rem;padding:.8rem 1rem;border-radius:12px;background:var(--surf);border:1px solid var(--border);color:var(--textb);font-size:.95rem;outline:0}'+
+  '.f3-note:focus{border-color:var(--acc)}'+
+  '.f3-foot{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin-top:.7rem}'+
+  '.f3-weeks{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.5rem}'+
+  '.f3-wk{padding:.8rem .5rem;border-radius:14px;text-align:center;background:var(--card);border:1px solid var(--border)}'+
+  '.f3-wk.ok{border-color:var(--gdim);background:color-mix(in srgb,var(--green) 7%,var(--card))}'+
+  '.f3-wk.bad{border-color:var(--red-dim);background:color-mix(in srgb,var(--red) 8%,var(--card))}'+
+  '.f3-wk b{display:block;font-size:1.3rem}.f3-wk small{font-size:.7rem;letter-spacing:.1em;color:var(--text)}'+
+  '.f3-fee{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;padding:1rem 1.2rem;border-radius:16px;background:var(--card);border:1px solid var(--border)}'+
+  '.f3-fee .m{flex:1;min-width:150px;color:var(--textb);font-weight:600}.f3-fee .m small{display:block;font-weight:400;color:var(--muted);font-size:.78rem}'+
+  '.f3-fee .a{font-weight:700;font-size:1.15rem;color:var(--acc)}'+
+  '.f3-empty{padding:1.5rem;text-align:center;font-size:.85rem;color:var(--muted)}'+
+  '@media(max-width:700px){.f3-seg{margin:.8rem .7rem}.f3-body{margin:0 .7rem}.f3-big{font-size:2.6rem}.f3-seg button{font-size:.72rem;padding:.55rem .2rem}}';
   document.head.appendChild(st);
 }
 
-/* ── data ── */
 function L(k,d){var a=DB.get(k);return a==null?d:a;}
 function plog(){var a=DB.get('acctlog');return Array.isArray(a)?a:[];}
 function psum(){
@@ -9515,26 +9563,44 @@ function psum(){
 }
 function weeks(n){var o=[],seen={};for(var i=0;o.length<n&&i<n*2;i++){var d=new Date();d.setDate(d.getDate()-7*i);var k=getWeekKey(d);if(!seen[k]){seen[k]=1;o.push(k);}}return o;}
 function paid(fin,mid,k){return (fin.payments||[]).some(function(p){return p.memberId===mid&&p.weekKey===k&&(p.expenseId==='weekly'||!p.expenseId);});}
-function card(t,v,c){return '<div class="inc-sum-card"><div class="inc-sum-title">'+t+'</div><div class="inc-sum-val '+(c||'acc')+'">'+v+'</div></div>';}
 
-/* ── stavba ── */
 function build(){
   var host=$('mt-finance');if(!host||$('fin2Root'))return;
-  var d=document.createElement('div');d.id='fin2Root';d.className='f2';
-  d.innerHTML='<div class="f2-tabs">'+[['over','📊 PŘEHLED'],['fee','💵 PŘÍSPĚVEK'],['peso','₱ PESOS'],['usd','$ DOLARY']].map(function(t){
-    return '<button class="ttab" data-t="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div><div id="f2Body" class="f2-body"></div>';
+  var d=document.createElement('div');d.id='fin2Root';d.className='f3';
+  d.innerHTML='<div class="f3-seg">'+[['over','Přehled'],['fee','Příspěvek'],['peso','₱ Pesos'],['usd','$ Dolary']].map(function(t){
+    return '<button data-t="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div><div id="f2Body" class="f3-body"></div>';
   host.appendChild(d);
   d.addEventListener('click',function(e){
-    var t=e.target.closest('[data-t]');if(t){tab=t.getAttribute('data-t');lastSig='';render();return;}
+    var t=e.target.closest('[data-t]');if(t){tab=t.getAttribute('data-t');lastSig='';render(true);return;}
+    var k=e.target.closest('[data-k]');
+    if(k){var v=k.getAttribute('data-v'),w=k.getAttribute('data-k');
+      if(w==='pt')ptype=v;else if(w==='pc')pcat=v;else if(w==='us')usrc=v;
+      lastSig='';render(true);return;}
     var a=e.target.closest('[data-a]');if(!a)return;
-    var k=a.getAttribute('data-a'),id=a.getAttribute('data-id');
-    if(k==='pay'){memberPayWeekly();lastSig='';render();}
-    else if(k==='opt'){memberPayOptional(id);lastSig='';render();}
-    else if(k==='padd')addPeso();
-    else if(k==='uadd')addUsd();
-    else if(k==='pdel'&&typeof acctDel==='function')acctDel(id);
+    var act=a.getAttribute('data-a'),id=a.getAttribute('data-id');
+    if(act==='pay'){memberPayWeekly();lastSig='';render(true);}
+    else if(act==='opt'){memberPayOptional(id);lastSig='';render(true);}
+    else if(act==='padd')addPeso();
+    else if(act==='uadd')addUsd();
+    else if(act==='pdel'&&typeof acctDel==='function')acctDel(id);
   });
 }
+
+/* ── společné prvky ── */
+function dayOf(x){return String(x.date||'').split(',')[0]||'—';}
+function txList(arr,n,canDel){
+  if(!arr.length)return '<div class="f3-empty">Zatím žádné zápisy</div>';
+  var me=getMember(),last='',h='';
+  arr.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,n).forEach(function(x){
+    var d=dayOf(x);if(d!==last){last=d;h+='<div class="f3-day">'+esc(d)+'</div>';}
+    var out=x.type==='out',del=canDel&&me&&(isAdmin()||x.memberId===me.id);
+    h+='<div class="f3-tx'+(out?' out':'')+'"><span class="f3-ic">'+(out?'↑':'↓')+'</span><span class="m">'+esc(x.cat||(out?'Výdej':'Příjem'))+' · '+esc(x.memberName||'?')+
+      '<small>'+esc(String(x.date||'').split(',')[1]||'')+(x.note?' · '+esc(x.note):'')+'</small></span><span class="a">'+(out?'−':'+')+fmt(x.cur,x.amount)+'</span>'+
+      (del?'<button class="f3-x" title="Smazat" data-a="pdel" data-id="'+esc(x.id)+'">✕</button>':'')+'</div>';
+  });
+  return h;
+}
+function ping(id){return '<label class="ping-chk"><input type="checkbox" id="'+id+'"/><span>🔔 Označit Member</span></label>';}
 
 /* ── záložky ── */
 function vOver(m){
@@ -9545,85 +9611,87 @@ function vOver(m){
   var mi=mine.filter(function(x){return x.type!=='out';}).reduce(function(a,x){return a+num(x.amount);},0);
   var mo=mine.filter(function(x){return x.type==='out';}).reduce(function(a,x){return a+num(x.amount);},0);
   var usd=L('incomes',[]).filter(function(i){return i.memberId===m.id&&i.status==='confirmed';}).reduce(function(a,i){return a+num(i.amount);},0);
-  return '<div class="f2-hero '+(ok?'ok':'due')+'"><span class="i">'+(vac?'🌴':ok?'✅':'⏰')+'</span><div><b>'+
-    (vac?'Máš dovolenou — tento týden neplatíš':m.hidden||fee<=0?'Týdenní příspěvek se tě netýká':ok?'Tento týden máš zaplaceno':'Zbývá zaplatit '+money(fee))+'</b><span>'+
-    (ok?'Nic dalšího dělat nemusíš.':'Zaplať na bankovní účet a potom klikni na „Zaplatil jsem“ v záložce Příspěvek.')+'</span></div></div>'+
-    '<div class="f2-cards">'+card('₱ PESOS NA ÚČTU FRAKCE',fmtP(bal),bal<0?'':'green')+card('MOJE PESOS VLOŽENO',fmtP(mi),'green')+card('MOJE PESOS VYBRÁNO',fmtP(mo),'')+card('MŮJ PŘÍSPĚVEK DO KASY ($)',money(usd))+'</div>'+
-    '<div class="f2-quick"><button class="btn-acc small" data-t="peso">₱ ZAPSAT PESOS</button><button class="btn-acc small" data-t="usd">$ NAHLÁSIT PŘÍJEM</button>'+(ok?'':'<button class="btn-acc small" data-t="fee">💵 ZAPLATIT PŘÍSPĚVEK</button>')+'</div>'+
-    '<div class="sh" style="margin:0 0 .4rem;padding-left:0">// POSLEDNÍ POHYBY PESOS</div>'+pesoRows(plog().filter(function(x){return x.cur==='P';}),6,false);
+  return '<div class="f3-hero"><small>₱ PESOS NA ÚČTU FRAKCE</small><span class="f3-big'+(bal<0?' neg':'')+'">'+fmtP(bal)+'</span>'+
+    '<div class="f3-minis"><div><span>MOJE VKLADY</span><b>'+fmtP(mi)+'</b></div><div><span>MOJE VÝBĚRY</span><b>'+fmtP(mo)+'</b></div><div><span>MŮJ PŘÍNOS DO KASY</span><b>'+money(usd)+'</b></div></div></div>'+
+    '<div class="f3-status '+(ok?'ok':'due')+'"><span class="i">'+(vac?'🌴':ok?'✅':'⏰')+'</span><div><b>'+
+      (vac?'Dovolená — tento týden neplatíš':m.hidden||fee<=0?'Příspěvek se tě netýká':ok?'Tento týden máš zaplaceno':'Zbývá zaplatit '+money(fee))+'</b><span>'+
+      (ok?'Nic dalšího dělat nemusíš.':'Zaplať na účet a potvrď v záložce Příspěvek.')+'</span></div>'+
+      (ok?'':'<button class="f3-btn go" data-t="fee">ZAPLATIT</button>')+'</div>'+
+    '<div class="f3-actions"><button class="f3-btn" data-t="peso">₱ Zapsat pesos</button><button class="f3-btn ghost" data-t="usd">$ Nahlásit příjem</button></div>'+
+    '<div class="f3-h">POSLEDNÍ POHYBY</div>'+txList(plog().filter(function(x){return x.cur==='P';}),6,false);
 }
 function vFee(m){
   var fin=L('finance',{payments:[],expenses:[]}),fs=L('finsettings',{weeklyFee:0}),fee=Number(fs.weeklyFee)||0,cur=getWeekKey();
   var h='<div id="f2Bank"></div>';
   if(fee>0&&!m.hidden){
-    var ok=paid(fin,m.id,cur);
-    h+='<div class="sh" style="margin:0 0 .4rem;padding-left:0">// TÝDENNÍ PŘÍSPĚVEK — '+cur+'</div>'+
-      '<div class="f2-row '+(ok?'':'bad')+'"><span class="m">Povinný týdenní příspěvek<small>splatnost: '+['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'][parseInt(fs.feeDay)||0]+'</small></span><span class="a">'+money(fee)+'</span>'+
-      (ok?'<span class="smsg">✓ ZAPLACENO</span>':'<button class="btn-acc small" data-a="pay">ZAPLATIL JSEM</button>')+'</div>'+
-      '<div class="sh" style="margin:1rem 0 .4rem;padding-left:0">// POSLEDNÍCH 6 TÝDNŮ</div>'+
-      weeks(6).map(function(k,i){
-        var v=window.onVacation&&window.onVacation(m.id,k),p=paid(fin,m.id,k);
-        return '<div class="f2-row '+(v?'na':p?'':'bad')+'"><span class="m">'+k+(i===0?' (tento)':'')+'</span><span class="a">'+(v?'🌴 dovolená':p?'✓ zaplaceno':'✗ nezaplaceno')+'</span></div>';}).join('');
-  }else h+='<div class="empty-s">// Týdenní příspěvek se tě netýká</div>';
+    var ok=paid(fin,m.id,cur),D=['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'][parseInt(fs.feeDay)||0];
+    h+='<div class="f3-h">TÝDENNÍ PŘÍSPĚVEK</div>'+
+      '<div class="f3-fee"><span class="m">Povinný příspěvek · '+cur+'<small>splatnost: '+D+'</small></span><span class="a">'+money(fee)+'</span>'+
+      (ok?'<span class="smsg">✓ ZAPLACENO</span>':'<button class="f3-btn" data-a="pay">Zaplatil jsem</button>')+'</div>'+
+      '<div class="f3-h">POSLEDNÍCH 6 TÝDNŮ</div><div class="f3-weeks">'+weeks(6).map(function(k){
+        var v=window.onVacation&&window.onVacation(m.id,k),p=paid(fin,m.id,k),c=v||p?'ok':'bad';
+        return '<div class="f3-wk '+c+'"><b>'+(v?'🌴':p?'✓':'✗')+'</b><small>'+k.split('-')[1]+(k===cur?' · TEN':'')+'</small></div>';}).join('')+'</div>';
+  }else h+='<div class="f3-empty">Týdenní příspěvek se tě netýká</div>';
   var opt=(fin.expenses||[]).filter(function(e){return e.optional===true||e.optional===1;});
-  if(opt.length)h+='<div class="sh" style="margin:1rem 0 .4rem;padding-left:0">// NEPOVINNÉ PŘÍSPĚVKY</div>'+opt.map(function(e){
+  if(opt.length)h+='<div class="f3-h">NEPOVINNÉ PŘÍSPĚVKY</div>'+opt.map(function(e){
     var p=(fin.payments||[]).some(function(x){return x.memberId===m.id&&x.expenseId===e.id;});
-    return '<div class="f2-row '+(p?'':'bad')+'"><span class="m">'+esc(e.name)+(e.note?'<small>'+esc(e.note)+'</small>':'')+'</span><span class="a">'+money(e.amount)+'</span>'+
-      (p?'<span class="smsg">✓ ZAPLACENO</span>':'<button class="btn-acc small" data-a="opt" data-id="'+esc(e.id)+'">ZAPLATIL JSEM</button>')+'</div>';}).join('');
+    return '<div class="f3-fee"><span class="m">'+esc(e.name)+(e.note?'<small>'+esc(e.note)+'</small>':'')+'</span><span class="a">'+money(e.amount)+'</span>'+
+      (p?'<span class="smsg">✓ ZAPLACENO</span>':'<button class="f3-btn ghost" data-a="opt" data-id="'+esc(e.id)+'">Zaplatil jsem</button>')+'</div>';}).join('');
   return h;
-}
-function pesoRows(arr,n,mineOnly){
-  if(!arr.length)return '<div class="empty-s">// Zatím žádné zápisy</div>';
-  var me=getMember();
-  return arr.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,n).map(function(x){
-    var out=x.type==='out',del=me&&(isAdmin()||x.memberId===me.id);
-    return '<div class="f2-row'+(out?' out':'')+'"><span class="m">'+(out?'⬆ VÝDEJ':'⬇ PŘÍJEM')+' · '+esc(x.memberName||'?')+(x.cat?' · '+esc(x.cat):'')+'<small>'+esc(x.date||'')+(x.note?' · '+esc(x.note):'')+'</small></span>'+
-      '<span class="a">'+(out?'−':'+')+fmt(x.cur,x.amount)+'</span>'+(del?'<button class="btn-micro del" data-a="pdel" data-id="'+esc(x.id)+'">✕</button>':'')+'</div>';}).join('');
 }
 function vPeso(m){
   var s=psum(),bal=s.P.i-s.P.o,mine=plog().filter(function(x){return x.cur==='P'&&x.memberId===m.id;});
-  return '<div class="f2-cards">'+card('₱ ZŮSTATEK NA ÚČTU',fmtP(bal),bal<0?'':'green')+card('CELKEM VLOŽENO',fmtP(s.P.i),'green')+card('CELKEM VYBRÁNO',fmtP(s.P.o),'')+'</div>'+
-    '<div class="form-panel" style="margin:0 0 1rem"><div class="fp-title">// ZAPSAT PESOS</div><div class="form-grid">'+
-    '<div class="field-group"><label class="fl">CO SE STALO *</label><div class="iw"><span class="ip">&gt;_</span><select id="f2-pt"><option value="in">PŘÍJEM (vklad na účet)</option><option value="out">VÝDEJ (výběr z účtu)</option></select></div></div>'+
-    '<div class="field-group"><label class="fl">ČÁSTKA (₱) *</label><div class="iw"><span class="ip">₱</span><input type="number" id="f2-pa" min="0" step="any"/></div></div>'+
-    '<div class="field-group"><label class="fl">KATEGORIE</label><div class="iw"><span class="ip">&gt;_</span><select id="f2-pc">'+PCATS.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div></div>'+
-    '<div class="field-group"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="f2-pn" maxlength="120" placeholder="např. nákup surovin…"/></div></div></div>'+
-    '<div class="fp-ftr"><button class="btn-acc small" data-a="padd">₱ ZAPSAT</button><label class="ping-chk"><input type="checkbox" id="fin2-ping"/><span>🔔 Označit Member</span></label><span id="f2St" class="smsg"></span></div></div>'+
-    '<div class="sh" style="margin:0 0 .4rem;padding-left:0">// MOJE ZÁPISY</div>'+pesoRows(mine,30)+
-    '<div class="sh" style="margin:1rem 0 .4rem;padding-left:0">// POSLEDNÍ POHYBY CELÉ FRAKCE</div>'+pesoRows(plog().filter(function(x){return x.cur==='P';}),15);
+  return '<div class="f3-hero"><small>₱ ZŮSTATEK NA ÚČTU</small><span class="f3-big'+(bal<0?' neg':'')+'">'+fmtP(bal)+'</span>'+
+    '<div class="f3-minis"><div><span>CELKEM VLOŽENO</span><b>'+fmtP(s.P.i)+'</b></div><div><span>CELKEM VYBRÁNO</span><b>'+fmtP(s.P.o)+'</b></div></div></div>'+
+    '<div class="f3-card"><div class="f3-two"><button class="f3-tg in'+(ptype==='in'?' on':'')+'" data-k="pt" data-v="in">↓ Příjem</button><button class="f3-tg out'+(ptype==='out'?' on':'')+'" data-k="pt" data-v="out">↑ Výdej</button></div>'+
+    '<div class="f3-amt"><span>₱</span><input type="number" id="f2-pa" min="0" step="any" placeholder="0" inputmode="decimal"/></div>'+
+    '<div class="f3-chips">'+PCATS.map(function(c){return '<button class="f3-chip'+(pcat===c[0]?' on':'')+'" data-k="pc" data-v="'+c[0]+'">'+c[1]+' '+c[0]+'</button>';}).join('')+'</div>'+
+    '<input type="text" id="f2-pn" class="f3-note" maxlength="120" placeholder="Poznámka (nepovinné) — např. nákup surovin"/>'+
+    '<button class="f3-btn wide" data-a="padd">'+(ptype==='out'?'Zapsat výdej':'Zapsat příjem')+'</button>'+
+    '<div class="f3-foot">'+ping('fin2-ping')+'<span id="f2St" class="smsg"></span></div></div>'+
+    '<div class="f3-h">MOJE ZÁPISY</div>'+txList(mine,30,true)+
+    '<div class="f3-h">POHYBY CELÉ FRAKCE</div>'+txList(plog().filter(function(x){return x.cur==='P';}),15,true);
 }
 function vUsd(m){
-  var drugs=(DB.get('warehouse')||[]).filter(function(i){return i.cat==='drugs';}).map(function(i){return i.name;}).concat(['Zakázka','Loupež','Jiné']);
+  var srcs=(DB.get('warehouse')||[]).filter(function(i){return i.cat==='drugs';}).map(function(i){return i.name;}).concat(['Zakázka','Loupež','Jiné']);
+  if(!usrc||srcs.indexOf(usrc)===-1)usrc=srcs[0];
   var mine=L('incomes',[]).filter(function(i){return i.memberId===m.id;});
-  return '<div class="form-panel" style="margin:0 0 1rem"><div class="fp-title">// NAHLÁSIT PŘÍJEM DO KASY ($)</div><div class="form-grid">'+
-    '<div class="field-group"><label class="fl">ČÁSTKA ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="f2-ua" min="1"/></div></div>'+
-    '<div class="field-group"><label class="fl">ZDROJ *</label><div class="iw"><span class="ip">&gt;_</span><select id="f2-us">'+drugs.map(function(s){return '<option>'+esc(s)+'</option>';}).join('')+'</select></div></div>'+
-    '<div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="f2-un" maxlength="120"/></div></div></div>'+
-    '<div class="fp-ftr"><button class="btn-acc small" data-a="uadd">💰 NAHLÁSIT</button><label class="ping-chk"><input type="checkbox" id="fin2-ping-u"/><span>🔔 Označit Member</span></label><span id="f2SU" class="smsg"></span></div></div>'+
-    '<div class="sh" style="margin:0 0 .4rem;padding-left:0">// MÉ NAHLÁŠENÉ PŘÍJMY</div>'+(mine.length?mine.slice().reverse().slice(0,30).map(function(i){
-      var lb={confirmed:'✓ potvrzeno',rejected:'✗ zamítnuto',pending:'⏳ čeká'}[i.status];
-      return '<div class="f2-row '+(i.status==='rejected'?'bad':i.status==='pending'?'na':'')+'"><span class="m">'+esc(i.source)+(i.note?' — '+esc(i.note):'')+'<small>'+esc(i.date)+' · '+lb+'</small></span><span class="a">'+money(i.amount)+'</span></div>';}).join(''):'<div class="empty-s">// Žádné záznamy</div>');
+  var tot=mine.filter(function(i){return i.status==='confirmed';}).reduce(function(a,i){return a+num(i.amount);},0);
+  return '<div class="f3-hero"><small>MŮJ PŘÍSPĚVEK DO KASY</small><span class="f3-big">'+money(tot)+'</span></div>'+
+    '<div class="f3-card"><div class="f3-amt"><span>$</span><input type="number" id="f2-ua" min="1" placeholder="0" inputmode="numeric"/></div>'+
+    '<div class="f3-chips">'+srcs.map(function(s){return '<button class="f3-chip'+(usrc===s?' on':'')+'" data-k="us" data-v="'+esc(s)+'">'+esc(s)+'</button>';}).join('')+'</div>'+
+    '<input type="text" id="f2-un" class="f3-note" maxlength="120" placeholder="Poznámka (nepovinné)"/>'+
+    '<button class="f3-btn wide" data-a="uadd">Nahlásit příjem do kasy</button>'+
+    '<div class="f3-foot">'+ping('fin2-ping-u')+'<span id="f2SU" class="smsg"></span></div></div>'+
+    '<div class="f3-h">MÉ NAHLÁŠENÉ PŘÍJMY</div>'+(mine.length?mine.slice().reverse().slice(0,30).map(function(i){
+      var lb={confirmed:'potvrzeno',rejected:'zamítnuto',pending:'čeká na vedení'}[i.status],c=i.status==='rejected'?' out':i.status==='pending'?' na':'';
+      return '<div class="f3-tx'+c+'"><span class="f3-ic">'+(i.status==='rejected'?'✕':i.status==='pending'?'⏳':'✓')+'</span><span class="m">'+esc(i.source)+(i.note?' — '+esc(i.note):'')+'<small>'+esc(i.date)+' · '+lb+'</small></span><span class="a">'+money(i.amount)+'</span></div>';}).join(''):'<div class="f3-empty">Žádné záznamy</div>');
 }
 
 /* ── zápisy ── */
 function addPeso(){
   var m=getMember();if(!m)return;var st=$('f2St');
-  var type=$('f2-pt').value==='out'?'out':'in',amount=num($('f2-pa').value),cat=$('f2-pc').value,note=$('f2-pn').value.trim();
+  var amount=num($('f2-pa').value),note=$('f2-pn').value.trim();
   if(!amount){st.style.color='var(--red)';st.textContent='// ZADEJ ČÁSTKU';return;}
-  var arr=plog();arr.push({id:uid(),type:type,cur:'P',amount:amount,cat:cat,note:note,memberId:m.id,memberName:m.displayName,date:nowStr(),ts:Date.now()});
+  var type=ptype,cat=pcat,arr=plog();
+  arr.push({id:uid(),type:type,cur:'P',amount:amount,cat:cat,note:note,memberId:m.id,memberName:m.displayName,date:nowStr(),ts:Date.now()});
   if(arr.length>3000)arr=arr.slice(-3000);DB.set('acctlog',arr);
   var out=type==='out',bal=psum();bal=bal.P.i-bal.P.o;
   addLog('acct',m.displayName+(out?' vydal ':' přijal ')+fmtP(amount)+' ('+cat+(note?', '+note:'')+').',{extraPing:pingBox('fin2-ping'),
     embed:rich(out?C_ORANGE:C_GREEN,out?'₱ VÝDEJ PESOS':'₱ PŘÍJEM PESOS',note||null,[['👤 Člen',m.displayName],['🏷 Kategorie',cat],['💰 Částka',fmtP(amount)],['🏦 Zůstatek pesos',fmtP(bal)]],{by:m.displayName})});
-  toast('Zápis uložen ✓','success');lastSig='';render();try{renderAdminFinance();}catch(e){}
+  toast('Zápis uložen ✓','success');
+  ['f2-pa','f2-pn'].forEach(function(i){if($(i))$(i).value='';});
+  lastSig='';render(true);try{renderAdminFinance();}catch(e){}
 }
 function addUsd(){
   var m=getMember();if(!m)return;var st=$('f2SU'),amount=Math.floor(num($('f2-ua').value));
   if(!amount){st.style.color='var(--red)';st.textContent='// ZADEJ ČÁSTKU';return;}
-  var src=$('f2-us').value,note=$('f2-un').value.trim(),arr=L('incomes',[]);
+  var src=usrc,note=$('f2-un').value.trim(),arr=L('incomes',[]);
   arr.push({id:uid(),memberId:m.id,memberName:m.displayName,amount:amount,source:src,note:note,date:nowStr(),status:'pending'});DB.set('incomes',arr);
   addLog('fin','Člen "'+m.displayName+'" nahlásil příjem $'+amount+' ('+src+').',{extraPing:pingBox('fin2-ping-u'),embed:rich(C_YELLOW,'💵 NAHLÁŠEN PŘÍJEM',null,[['👤 Člen',m.displayName],['💵 Částka',money(amount)],['📦 Zdroj',src]],{by:m.displayName})});
-  toast('Příjem nahlášen ✓','success');lastSig='';render();
+  toast('Příjem nahlášen ✓','success');
+  ['f2-ua','f2-un'].forEach(function(i){if($(i))$(i).value='';});
+  lastSig='';render(true);
 }
 
 /* ── vykreslení ── */
@@ -9633,14 +9701,16 @@ function render(force){
   var bank=$('bankCardM');
   var sig=tab+'|'+['finance','finsettings','acctlog','acctbase','incomes','warehouse'].map(function(k){return JSON.stringify(DB.cache[k]||'');}).join('|');
   var a=document.activeElement;
-  if(sig===lastSig||(a&&body.contains(a)&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)&&!force))return;
+  if(!force&&(sig===lastSig||(a&&body.contains(a)&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))))return;
   lastSig=sig;
+  var keep={};KEEP.forEach(function(id){var e=$(id);if(e)keep[id]=e.type==='checkbox'?e.checked:e.value;});
   if(bank&&bank.parentNode!==host){host.appendChild(bank);bank.style.display='none';}
   body.innerHTML=tab==='fee'?vFee(m):tab==='peso'?vPeso(m):tab==='usd'?vUsd(m):vOver(m);
-  document.querySelectorAll('#fin2Root .ttab').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-t')===tab);});
+  KEEP.forEach(function(id){var e=$(id);if(e&&id in keep){if(e.type==='checkbox')e.checked=keep[id];else e.value=keep[id];}});
+  document.querySelectorAll('#fin2Root .f3-seg button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-t')===tab);});
   if(tab==='fee'&&bank){var slot=$('f2Bank');if(slot){slot.appendChild(bank);bank.style.display='';}}
 }
 var _prev=window.renderMyFinance;
-window.renderMyFinance=function(){var r=typeof _prev==='function'?_prev.apply(this,arguments):undefined;try{render(true);}catch(e){console.error('fin2',e);}return r;};
+window.renderMyFinance=function(){var r=typeof _prev==='function'?_prev.apply(this,arguments):undefined;try{render(true);}catch(e){console.error('fin3',e);}return r;};
 setInterval(function(){if(!document.hidden&&getMember()&&$('mt-finance')&&$('mt-finance').classList.contains('active'))try{render();}catch(e){console.error(e);}},1500);
 })();
