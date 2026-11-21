@@ -9601,7 +9601,8 @@ function build(){
 }
 
 /* ── společné prvky ── */
-function dayOf(x){return String(x.date||'').split(',')[0]||'—';}
+function dayOf(x){var m=/^\s*(\d{1,2}\.\s*\d{1,2}\.\s*\d{4})/.exec(String(x.date||''));return m?m[1]:(String(x.date||'').split(',')[0]||'—');}
+function tmOf(x){var m=/(\d{1,2}:\d{2})/.exec(String(x.date||''));return m?m[1]:'';}
 function txList(arr,n,canDel){
   if(!arr.length)return '<div class="f3-empty">Zatím žádné zápisy</div>';
   var me=getMember(),last='',h='';
@@ -9611,7 +9612,7 @@ function txList(arr,n,canDel){
     var d=dayOf(x);if(d!==last){last=d;h+='<div class="f3-day">'+esc(d)+'</div>';}
     var out=x.type==='out',del=canDel&&me&&(isAdmin()||x.memberId===me.id);
     h+='<div class="f3-tx'+(out?' out':'')+'"><span class="f3-ic">'+(out?'↑':'↓')+'</span><span class="m">'+esc(x.cat||(out?'Výdej':'Příjem'))+' · '+esc(x.memberName||'?')+
-      '<small>'+esc(String(x.date||'').split(',')[1]||'')+(x.note?' · '+esc(x.note):'')+(x.cur==='P'&&balMap[x.id]!=null?' · zůstatek '+fmtP(balMap[x.id]):'')+'</small></span><span class="a">'+(out?'−':'+')+fmt(x.cur,x.amount)+'</span>'+
+      '<small>'+esc([tmOf(x),x.note,(x.cur==='P'&&balMap[x.id]!=null?'zůstatek '+fmtP(balMap[x.id]):'')].filter(Boolean).join(' · '))+'</small></span><span class="a">'+(out?'−':'+')+fmt(x.cur,x.amount)+'</span>'+
       (del?'<button class="f3-x" title="Smazat" data-a="pdel" data-id="'+esc(x.id)+'">✕</button>':'')+'</div>';
   });
   return h;
