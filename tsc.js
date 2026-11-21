@@ -5371,6 +5371,19 @@ var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
   }
 
+  function balRow(admin){
+    function n(v){v=parseFloat(v);return isNaN(v)||v<0?0:v;}
+    var lg=DB.get('acctlog');lg=Array.isArray(lg)?lg:[];
+    var b=DB.get('acctbase'),p=(b&&typeof b.P==='number')?b.P:0,od=0;
+    lg.forEach(function(x){var a=n(x.amount),o=x.type==='out';if(x.cur==='P')p+=o?-a:a;else if(o)od+=a;});
+    var h='<div class="bank-meta"><span>ZŮSTATEK PESOS</span><b>'+Number(Math.round(p*100)/100).toLocaleString('cs-CZ')+' ₱</b></div>';
+    if(admin){
+      var fin=DB.get('finance')||{payments:[],expenses:[]},inc=(DB.get('incomes')||[]).filter(function(i){return i.status==='confirmed';});
+      var d=(fin.payments||[]).reduce(function(s,x){return s+n(x.amount);},0)+inc.reduce(function(s,x){return s+n(x.amount);},0)-(fin.expenses||[]).reduce(function(s,x){return s+n(x.amount);},0)-od;
+      h+='<div class="bank-meta"><span>BILANCE DOLARY</span><b>'+money(Math.round(d*100)/100)+'</b></div>';
+    }
+    return h;
+  }
   function cardHtml(admin){
     var a=acc(),num=String(a.number||'').trim(),me=getMember(),tpl=tplOf(a);
     var head='<div class="bank-head"><span class="bank-t">🏦 // BANKOVNÍ ÚČET FRAKCE</span>'+
@@ -5378,7 +5391,7 @@ var AT={came:'✓ PŘIŠEL',absent:'✕ NEPŘIŠEL',exc:'○ OMLUVEN'},openAtt={
     if(!num)return head+'<div class="bank-empty">'+(boss()?'Účet zatím není nastavený — klikni na „UPRAVIT“.':'Vedení zatím nenastavilo číslo účtu.')+'</div>';
     var h=head+
       '<div class="bank-row"><div class="bank-num">'+esc(num)+'</div><button class="btn-micro" data-bank="copy">📋 KOPÍROVAT</button></div>'+
-      (a.holder?'<div class="bank-meta"><span>MAJITEL</span><b>'+esc(a.holder)+'</b></div>':'')+feeRow();
+      (a.holder?'<div class="bank-meta"><span>MAJITEL</span><b>'+esc(a.holder)+'</b></div>':'')+balRow(admin)+feeRow();
     var mine=(me&&tpl)?fill(tpl,me):'';
     if(mine)h+='<div class="bank-ref"><span>POZNÁMKA PRO PLATBU — NAPIŠ PŘESNĚ TAKTO</span><div class="bank-refrow"><code>'+esc(mine)+'</code><button class="btn-micro" data-bank="copyref" data-ref="'+esc(mine)+'">📋 KOPÍROVAT</button></div></div>';
     if(a.note)h+='<div class="bank-note">'+esc(a.note)+'</div>';
@@ -9571,7 +9584,7 @@ function build(){
     return '<button data-t="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div><div id="f2Body" class="f3-body"></div>';
   host.appendChild(d);
   d.addEventListener('click',function(e){
-    var t=e.target.closest('[data-t]');if(t){tab=t.getAttribute('data-t');lastSig='';render(true);return;}
+    var t=e.target.closest('[data-t]');if(t){tab=t.getAttribute('data-t');lastSig='';window.renderMyFinance();return;}
     var k=e.target.closest('[data-k]');
     if(k){var v=k.getAttribute('data-v'),w=k.getAttribute('data-k');
       if(w==='pt')ptype=v;else if(w==='pc')pcat=v;else if(w==='us')usrc=v;
@@ -9583,6 +9596,7 @@ function build(){
     else if(act==='padd')addPeso();
     else if(act==='uadd')addUsd();
     else if(act==='pdel'&&typeof acctDel==='function')acctDel(id);
+    else if(act==='preset')resetPeso();
   });
 }
 
@@ -9591,11 +9605,13 @@ function dayOf(x){return String(x.date||'').split(',')[0]||'—';}
 function txList(arr,n,canDel){
   if(!arr.length)return '<div class="f3-empty">Zatím žádné zápisy</div>';
   var me=getMember(),last='',h='';
+  var balMap={},run=(function(){var b=DB.get('acctbase');return (b&&typeof b.P==='number')?b.P:0;})();
+  plog().filter(function(x){return x.cur==='P';}).sort(function(a,b){return (a.ts||0)-(b.ts||0);}).forEach(function(x){run+=(x.type==='out'?-1:1)*num(x.amount);balMap[x.id]=run;});
   arr.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,n).forEach(function(x){
     var d=dayOf(x);if(d!==last){last=d;h+='<div class="f3-day">'+esc(d)+'</div>';}
     var out=x.type==='out',del=canDel&&me&&(isAdmin()||x.memberId===me.id);
     h+='<div class="f3-tx'+(out?' out':'')+'"><span class="f3-ic">'+(out?'↑':'↓')+'</span><span class="m">'+esc(x.cat||(out?'Výdej':'Příjem'))+' · '+esc(x.memberName||'?')+
-      '<small>'+esc(String(x.date||'').split(',')[1]||'')+(x.note?' · '+esc(x.note):'')+'</small></span><span class="a">'+(out?'−':'+')+fmt(x.cur,x.amount)+'</span>'+
+      '<small>'+esc(String(x.date||'').split(',')[1]||'')+(x.note?' · '+esc(x.note):'')+(x.cur==='P'&&balMap[x.id]!=null?' · zůstatek '+fmtP(balMap[x.id]):'')+'</small></span><span class="a">'+(out?'−':'+')+fmt(x.cur,x.amount)+'</span>'+
       (del?'<button class="f3-x" title="Smazat" data-a="pdel" data-id="'+esc(x.id)+'">✕</button>':'')+'</div>';
   });
   return h;
@@ -9644,7 +9660,7 @@ function vPeso(m){
   var boss=m.position==='Mastermind',out=ptype==='out';
   return '<div class="f3-hero"><small>₱ ZŮSTATEK NA ÚČTU</small><span class="f3-big'+(bal<0?' neg':'')+'">'+fmtP(bal)+'</span>'+
     '<div class="f3-minis"><div><span>CELKEM VLOŽENO</span><b>'+fmtP(s.P.i)+'</b></div><div><span>CELKEM VYBRÁNO</span><b>'+fmtP(s.P.o)+'</b></div></div>'+
-    (boss?'<div style="margin-top:1rem"><button class="f3-btn ghost" data-a="preset">🔄 Vynulovat pesos (Mastermind)</button></div>':'')+'</div>'+
+    (boss?'<div style="margin-top:1rem"><button class="f3-btn ghost" data-a="preset">🔄 Vynulovat pesos (Boss)</button></div>':'')+'</div>'+
     '<div class="f3-card"><div class="f3-two"><button class="f3-tg in'+(ptype==='in'?' on':'')+'" data-k="pt" data-v="in">↓ Vklad</button><button class="f3-tg out'+(ptype==='out'?' on':'')+'" data-k="pt" data-v="out">↑ Výběr</button></div>'+
     '<div class="f3-amt"><span>₱</span><input type="number" id="f2-pa" min="0" step="any" placeholder="0" inputmode="decimal"/></div>'+
     '<div class="f3-chips">'+PCATS.map(function(c){return '<button class="f3-chip'+(pcat===c[0]?' on':'')+'" data-k="pc" data-v="'+c[0]+'">'+c[1]+' '+c[0]+'</button>';}).join('')+'</div>'+
@@ -9675,11 +9691,12 @@ function addPeso(){
   var m=getMember();if(!m)return;var st=$('f2St');
   var amount=num($('f2-pa').value),note=$('f2-pn').value.trim();
   if(!amount){st.style.color='var(--red)';st.textContent='// ZADEJ ČÁSTKU';return;}
+  if(ptype==='out'&&note.length<3){st.style.color='var(--red)';st.textContent='// U VÝBĚRU JE POVINNÝ DŮVOD';$('f2-pn').focus();return;}
   var type=ptype,cat=pcat,arr=plog();
   arr.push({id:uid(),type:type,cur:'P',amount:amount,cat:cat,note:note,memberId:m.id,memberName:m.displayName,date:nowStr(),ts:Date.now()});
   if(arr.length>3000)arr=arr.slice(-3000);DB.set('acctlog',arr);
   var out=type==='out',bal=psum();bal=bal.P.i-bal.P.o;
-  addLog('acct',m.displayName+(out?' vydal ':' přijal ')+fmtP(amount)+' ('+cat+(note?', '+note:'')+').',{extraPing:pingBox('fin2-ping'),
+  addLog('acct',m.displayName+(out?' vydal ':' přijal ')+fmtP(amount)+' ('+cat+(note?', '+note:'')+'). Zůstatek: '+fmtP(bal)+'.',{extraPing:pingBox('fin2-ping'),
     embed:rich(out?C_ORANGE:C_GREEN,out?'₱ VÝDEJ PESOS':'₱ PŘÍJEM PESOS',note||null,[['👤 Člen',m.displayName],['🏷 Kategorie',cat],['💰 Částka',fmtP(amount)],['🏦 Zůstatek pesos',fmtP(bal)]],{by:m.displayName})});
   toast('Zápis uložen ✓','success');
   ['f2-pa','f2-pn'].forEach(function(i){if($(i))$(i).value='';});
@@ -9697,6 +9714,28 @@ function addUsd(){
 }
 
 /* ── vykreslení ── */
+function resetPeso(){
+  var m=getMember();
+  if(!m||m.position!=='Mastermind'){toast('Pesos smí vynulovat jen Boss (Mastermind)','error');return;}
+  var s=psum(),bal=s.P.i-s.P.o;
+  function go(){
+    var me=getMember();
+    if(!me||me.position!=='Mastermind')return;
+    var all=plog(),pesos=all.filter(function(x){return x.cur==='P';});
+    var ar=L('acctarchive',[]);
+    ar.push({date:nowStr(),by:me.displayName,balance:bal,log:pesos});
+    DB.set('acctarchive',ar.slice(-10));
+    DB.set('acctlog',all.filter(function(x){return x.cur!=='P';}));
+    DB.set('acctbase',{P:0,by:me.displayName,date:nowStr()});
+    addLog('acct',me.displayName+' vynuloval pesos (původní zůstatek '+fmtP(bal)+').',{
+      embed:rich(C_RED,'🔄 PESOS VYNULOVÁNY',null,[['👤 Boss',me.displayName],['↩ Původní zůstatek',fmtP(bal)],['🏦 Nový zůstatek',fmtP(0)]],{by:me.displayName})});
+    toast('Pesos vynulovány ✓','success');
+    lastSig='';render(true);try{renderAdminFinance();}catch(e){}
+  }
+  if(typeof window.tscDialog==='function')
+    window.tscDialog({title:'⚠ VYNULOVAT PESOS?',text:'Zůstatek <b>'+fmtP(bal)+'</b> se nastaví na 0 a historie pesos se smaže.<div class="tsc-sub">Staré záznamy se uloží do zálohy (acctarchive).</div>',ok:'VYNULOVAT',danger:true,cancel:'ZRUŠIT'},go);
+  else if(window.confirm('Vynulovat pesos?'))go();
+}
 function render(force){
   var m=getMember(),host=$('mt-finance');if(!m||!host)return;
   build();var body=$('f2Body');if(!body)return;
