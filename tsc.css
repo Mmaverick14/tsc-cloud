@@ -2018,3 +2018,22 @@ html body .wh-deposit-form .ip:has(+#depFind){display:none} /* druhá lupa naví
 /* ===== Sklad: stále viditelné červené pravidlo minima ===== */
 .wh-rule{position:sticky;top:0;z-index:20;margin:0 1.1rem .6rem;padding:.65rem 1rem;background:rgba(192,57,43,.16);border:1px solid var(--red);border-left:5px solid var(--red);color:#ff6b5b;font-size:.9rem;font-weight:700;letter-spacing:.08em;text-align:center;backdrop-filter:blur(6px)}
 @media(max-width:700px){.wh-rule{margin:0 .7rem .6rem;font-size:.78rem}}
+
+/* ── OPRAVA KALENDÁŘE ── */
+html body .cal-grid{
+  grid-template-columns:repeat(7,minmax(0,1fr))!important;
+  gap:3px!important;
+}
+html body .cal-wd{min-width:0;text-align:center;padding:.2rem 0}
+html body .cal-d{
+  min-width:0!important;
+  aspect-ratio:auto!important;
+  height:46px!important;
+  min-height:0!important;
+  border-radius:8px!important;
+  overflow:hidden;
+}
+html body .cal-d.empty{background:transparent!important;border-color:transparent!important}
+html body .cal-d.today{border-radius:8px!important}
+html body .cal-grid-wrap{min-width:0;overflow:hidden}
+html body .cal-layout{grid-template-columns:minmax(280px,360px) minmax(0,1fr)}
