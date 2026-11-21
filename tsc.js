@@ -9473,3 +9473,174 @@ async function restore(id){
   renderBoth();
 }
 })();
+
+/* ===== FINANCE 2.0: přehled / příspěvek / pesos / dolary (vlož na ÚPLNÝ KONEC tsc.js) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+function r2(n){return Math.round(n*100)/100;}
+function fmtP(n){return Number(r2(n)).toLocaleString('cs-CZ')+' ₱';}
+function fmt(c,n){return c==='P'?fmtP(n):money(r2(n));}
+var tab='over',lastSig='';
+var PCATS=['Prodej','Zakázka','Nákup','Výplata','Převod','Jiné'];
+
+if(!$('fin2Css')){
+  var st=document.createElement('style');st.id='fin2Css';
+  st.textContent=
+  '#mt-finance>*:not(.ph:first-child):not(#fin2Root):not(#bankCardM){display:none!important}'+
+  '#mt-finance>#bankCardM{display:none}'+
+  '.f2{padding:0 0 2rem}.f2-tabs{display:flex;gap:2px;flex-wrap:wrap;margin:1rem 1.2rem}'+
+  '.f2-body{margin:0 1.2rem}.f2-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.6rem;margin-bottom:1rem}'+
+  '.f2-hero{display:flex;gap:.9rem;align-items:center;padding:1rem 1.2rem;margin-bottom:1rem;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--acc)}'+
+  '.f2-hero.ok{border-left-color:var(--green)}.f2-hero.due{border-left-color:var(--red)}'+
+  '.f2-hero .i{font-size:1.8rem}.f2-hero b{display:block;font-size:1.15rem;color:var(--textb)}.f2-hero span{font-size:.88rem;color:var(--text)}'+
+  '.f2-row{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.55rem .9rem;margin-bottom:1px;background:var(--card);border-left:3px solid var(--gdim)}'+
+  '.f2-row.out,.f2-row.bad{border-left-color:var(--red-dim)}.f2-row.na{border-left-color:var(--brite);opacity:.7}'+
+  '.f2-row .m{flex:1;min-width:140px;color:var(--textb);font-size:.9rem}.f2-row small{display:block;color:var(--muted)}'+
+  '.f2-row .a{font-weight:700;color:var(--textb);white-space:nowrap}.f2-row.out .a{color:var(--red)}'+
+  '.f2-quick{display:flex;gap:.5rem;flex-wrap:wrap;margin:.2rem 0 1rem}'+
+  '@media(max-width:700px){.f2-tabs,.f2-body{margin-left:.7rem;margin-right:.7rem}}';
+  document.head.appendChild(st);
+}
+
+/* ── data ── */
+function L(k,d){var a=DB.get(k);return a==null?d:a;}
+function plog(){var a=DB.get('acctlog');return Array.isArray(a)?a:[];}
+function psum(){
+  var s={P:{i:0,o:0},D:{i:0,o:0}},b=DB.get('acctbase');
+  plog().forEach(function(x){var c=x.cur==='P'?'P':'D';s[c][x.type==='out'?'o':'i']+=num(x.amount);});
+  var bp=(b&&typeof b.P==='number')?b.P:0;if(bp>=0)s.P.i+=bp;else s.P.o+=-bp;
+  return s;
+}
+function weeks(n){var o=[],seen={};for(var i=0;o.length<n&&i<n*2;i++){var d=new Date();d.setDate(d.getDate()-7*i);var k=getWeekKey(d);if(!seen[k]){seen[k]=1;o.push(k);}}return o;}
+function paid(fin,mid,k){return (fin.payments||[]).some(function(p){return p.memberId===mid&&p.weekKey===k&&(p.expenseId==='weekly'||!p.expenseId);});}
+function card(t,v,c){return '<div class="inc-sum-card"><div class="inc-sum-title">'+t+'</div><div class="inc-sum-val '+(c||'acc')+'">'+v+'</div></div>';}
+
+/* ── stavba ── */
+function build(){
+  var host=$('mt-finance');if(!host||$('fin2Root'))return;
+  var d=document.createElement('div');d.id='fin2Root';d.className='f2';
+  d.innerHTML='<div class="f2-tabs">'+[['over','📊 PŘEHLED'],['fee','💵 PŘÍSPĚVEK'],['peso','₱ PESOS'],['usd','$ DOLARY']].map(function(t){
+    return '<button class="ttab" data-t="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div><div id="f2Body" class="f2-body"></div>';
+  host.appendChild(d);
+  d.addEventListener('click',function(e){
+    var t=e.target.closest('[data-t]');if(t){tab=t.getAttribute('data-t');lastSig='';render();return;}
+    var a=e.target.closest('[data-a]');if(!a)return;
+    var k=a.getAttribute('data-a'),id=a.getAttribute('data-id');
+    if(k==='pay'){memberPayWeekly();lastSig='';render();}
+    else if(k==='opt'){memberPayOptional(id);lastSig='';render();}
+    else if(k==='padd')addPeso();
+    else if(k==='uadd')addUsd();
+    else if(k==='pdel'&&typeof acctDel==='function')acctDel(id);
+  });
+}
+
+/* ── záložky ── */
+function vOver(m){
+  var fin=L('finance',{payments:[],expenses:[]}),fs=L('finsettings',{weeklyFee:0}),k=getWeekKey(),fee=Number(fs.weeklyFee)||0;
+  var vac=window.onVacation&&window.onVacation(m.id,k),ok=m.hidden||fee<=0||vac||paid(fin,m.id,k);
+  var s=psum(),bal=s.P.i-s.P.o;
+  var mine=plog().filter(function(x){return x.memberId===m.id&&x.cur==='P';});
+  var mi=mine.filter(function(x){return x.type!=='out';}).reduce(function(a,x){return a+num(x.amount);},0);
+  var mo=mine.filter(function(x){return x.type==='out';}).reduce(function(a,x){return a+num(x.amount);},0);
+  var usd=L('incomes',[]).filter(function(i){return i.memberId===m.id&&i.status==='confirmed';}).reduce(function(a,i){return a+num(i.amount);},0);
+  return '<div class="f2-hero '+(ok?'ok':'due')+'"><span class="i">'+(vac?'🌴':ok?'✅':'⏰')+'</span><div><b>'+
+    (vac?'Máš dovolenou — tento týden neplatíš':m.hidden||fee<=0?'Týdenní příspěvek se tě netýká':ok?'Tento týden máš zaplaceno':'Zbývá zaplatit '+money(fee))+'</b><span>'+
+    (ok?'Nic dalšího dělat nemusíš.':'Zaplať na bankovní účet a potom klikni na „Zaplatil jsem“ v záložce Příspěvek.')+'</span></div></div>'+
+    '<div class="f2-cards">'+card('₱ PESOS NA ÚČTU FRAKCE',fmtP(bal),bal<0?'':'green')+card('MOJE PESOS VLOŽENO',fmtP(mi),'green')+card('MOJE PESOS VYBRÁNO',fmtP(mo),'')+card('MŮJ PŘÍSPĚVEK DO KASY ($)',money(usd))+'</div>'+
+    '<div class="f2-quick"><button class="btn-acc small" data-t="peso">₱ ZAPSAT PESOS</button><button class="btn-acc small" data-t="usd">$ NAHLÁSIT PŘÍJEM</button>'+(ok?'':'<button class="btn-acc small" data-t="fee">💵 ZAPLATIT PŘÍSPĚVEK</button>')+'</div>'+
+    '<div class="sh" style="margin:0 0 .4rem;padding-left:0">// POSLEDNÍ POHYBY PESOS</div>'+pesoRows(plog().filter(function(x){return x.cur==='P';}),6,false);
+}
+function vFee(m){
+  var fin=L('finance',{payments:[],expenses:[]}),fs=L('finsettings',{weeklyFee:0}),fee=Number(fs.weeklyFee)||0,cur=getWeekKey();
+  var h='<div id="f2Bank"></div>';
+  if(fee>0&&!m.hidden){
+    var ok=paid(fin,m.id,cur);
+    h+='<div class="sh" style="margin:0 0 .4rem;padding-left:0">// TÝDENNÍ PŘÍSPĚVEK — '+cur+'</div>'+
+      '<div class="f2-row '+(ok?'':'bad')+'"><span class="m">Povinný týdenní příspěvek<small>splatnost: '+['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'][parseInt(fs.feeDay)||0]+'</small></span><span class="a">'+money(fee)+'</span>'+
+      (ok?'<span class="smsg">✓ ZAPLACENO</span>':'<button class="btn-acc small" data-a="pay">ZAPLATIL JSEM</button>')+'</div>'+
+      '<div class="sh" style="margin:1rem 0 .4rem;padding-left:0">// POSLEDNÍCH 6 TÝDNŮ</div>'+
+      weeks(6).map(function(k,i){
+        var v=window.onVacation&&window.onVacation(m.id,k),p=paid(fin,m.id,k);
+        return '<div class="f2-row '+(v?'na':p?'':'bad')+'"><span class="m">'+k+(i===0?' (tento)':'')+'</span><span class="a">'+(v?'🌴 dovolená':p?'✓ zaplaceno':'✗ nezaplaceno')+'</span></div>';}).join('');
+  }else h+='<div class="empty-s">// Týdenní příspěvek se tě netýká</div>';
+  var opt=(fin.expenses||[]).filter(function(e){return e.optional===true||e.optional===1;});
+  if(opt.length)h+='<div class="sh" style="margin:1rem 0 .4rem;padding-left:0">// NEPOVINNÉ PŘÍSPĚVKY</div>'+opt.map(function(e){
+    var p=(fin.payments||[]).some(function(x){return x.memberId===m.id&&x.expenseId===e.id;});
+    return '<div class="f2-row '+(p?'':'bad')+'"><span class="m">'+esc(e.name)+(e.note?'<small>'+esc(e.note)+'</small>':'')+'</span><span class="a">'+money(e.amount)+'</span>'+
+      (p?'<span class="smsg">✓ ZAPLACENO</span>':'<button class="btn-acc small" data-a="opt" data-id="'+esc(e.id)+'">ZAPLATIL JSEM</button>')+'</div>';}).join('');
+  return h;
+}
+function pesoRows(arr,n,mineOnly){
+  if(!arr.length)return '<div class="empty-s">// Zatím žádné zápisy</div>';
+  var me=getMember();
+  return arr.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,n).map(function(x){
+    var out=x.type==='out',del=me&&(isAdmin()||x.memberId===me.id);
+    return '<div class="f2-row'+(out?' out':'')+'"><span class="m">'+(out?'⬆ VÝDEJ':'⬇ PŘÍJEM')+' · '+esc(x.memberName||'?')+(x.cat?' · '+esc(x.cat):'')+'<small>'+esc(x.date||'')+(x.note?' · '+esc(x.note):'')+'</small></span>'+
+      '<span class="a">'+(out?'−':'+')+fmt(x.cur,x.amount)+'</span>'+(del?'<button class="btn-micro del" data-a="pdel" data-id="'+esc(x.id)+'">✕</button>':'')+'</div>';}).join('');
+}
+function vPeso(m){
+  var s=psum(),bal=s.P.i-s.P.o,mine=plog().filter(function(x){return x.cur==='P'&&x.memberId===m.id;});
+  return '<div class="f2-cards">'+card('₱ ZŮSTATEK NA ÚČTU',fmtP(bal),bal<0?'':'green')+card('CELKEM VLOŽENO',fmtP(s.P.i),'green')+card('CELKEM VYBRÁNO',fmtP(s.P.o),'')+'</div>'+
+    '<div class="form-panel" style="margin:0 0 1rem"><div class="fp-title">// ZAPSAT PESOS</div><div class="form-grid">'+
+    '<div class="field-group"><label class="fl">CO SE STALO *</label><div class="iw"><span class="ip">&gt;_</span><select id="f2-pt"><option value="in">PŘÍJEM (vklad na účet)</option><option value="out">VÝDEJ (výběr z účtu)</option></select></div></div>'+
+    '<div class="field-group"><label class="fl">ČÁSTKA (₱) *</label><div class="iw"><span class="ip">₱</span><input type="number" id="f2-pa" min="0" step="any"/></div></div>'+
+    '<div class="field-group"><label class="fl">KATEGORIE</label><div class="iw"><span class="ip">&gt;_</span><select id="f2-pc">'+PCATS.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div></div>'+
+    '<div class="field-group"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="f2-pn" maxlength="120" placeholder="např. nákup surovin…"/></div></div></div>'+
+    '<div class="fp-ftr"><button class="btn-acc small" data-a="padd">₱ ZAPSAT</button><label class="ping-chk"><input type="checkbox" id="fin2-ping"/><span>🔔 Označit Member</span></label><span id="f2St" class="smsg"></span></div></div>'+
+    '<div class="sh" style="margin:0 0 .4rem;padding-left:0">// MOJE ZÁPISY</div>'+pesoRows(mine,30)+
+    '<div class="sh" style="margin:1rem 0 .4rem;padding-left:0">// POSLEDNÍ POHYBY CELÉ FRAKCE</div>'+pesoRows(plog().filter(function(x){return x.cur==='P';}),15);
+}
+function vUsd(m){
+  var drugs=(DB.get('warehouse')||[]).filter(function(i){return i.cat==='drugs';}).map(function(i){return i.name;}).concat(['Zakázka','Loupež','Jiné']);
+  var mine=L('incomes',[]).filter(function(i){return i.memberId===m.id;});
+  return '<div class="form-panel" style="margin:0 0 1rem"><div class="fp-title">// NAHLÁSIT PŘÍJEM DO KASY ($)</div><div class="form-grid">'+
+    '<div class="field-group"><label class="fl">ČÁSTKA ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="f2-ua" min="1"/></div></div>'+
+    '<div class="field-group"><label class="fl">ZDROJ *</label><div class="iw"><span class="ip">&gt;_</span><select id="f2-us">'+drugs.map(function(s){return '<option>'+esc(s)+'</option>';}).join('')+'</select></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="f2-un" maxlength="120"/></div></div></div>'+
+    '<div class="fp-ftr"><button class="btn-acc small" data-a="uadd">💰 NAHLÁSIT</button><label class="ping-chk"><input type="checkbox" id="fin2-ping-u"/><span>🔔 Označit Member</span></label><span id="f2SU" class="smsg"></span></div></div>'+
+    '<div class="sh" style="margin:0 0 .4rem;padding-left:0">// MÉ NAHLÁŠENÉ PŘÍJMY</div>'+(mine.length?mine.slice().reverse().slice(0,30).map(function(i){
+      var lb={confirmed:'✓ potvrzeno',rejected:'✗ zamítnuto',pending:'⏳ čeká'}[i.status];
+      return '<div class="f2-row '+(i.status==='rejected'?'bad':i.status==='pending'?'na':'')+'"><span class="m">'+esc(i.source)+(i.note?' — '+esc(i.note):'')+'<small>'+esc(i.date)+' · '+lb+'</small></span><span class="a">'+money(i.amount)+'</span></div>';}).join(''):'<div class="empty-s">// Žádné záznamy</div>');
+}
+
+/* ── zápisy ── */
+function addPeso(){
+  var m=getMember();if(!m)return;var st=$('f2St');
+  var type=$('f2-pt').value==='out'?'out':'in',amount=num($('f2-pa').value),cat=$('f2-pc').value,note=$('f2-pn').value.trim();
+  if(!amount){st.style.color='var(--red)';st.textContent='// ZADEJ ČÁSTKU';return;}
+  var arr=plog();arr.push({id:uid(),type:type,cur:'P',amount:amount,cat:cat,note:note,memberId:m.id,memberName:m.displayName,date:nowStr(),ts:Date.now()});
+  if(arr.length>3000)arr=arr.slice(-3000);DB.set('acctlog',arr);
+  var out=type==='out',bal=psum();bal=bal.P.i-bal.P.o;
+  addLog('acct',m.displayName+(out?' vydal ':' přijal ')+fmtP(amount)+' ('+cat+(note?', '+note:'')+').',{extraPing:pingBox('fin2-ping'),
+    embed:rich(out?C_ORANGE:C_GREEN,out?'₱ VÝDEJ PESOS':'₱ PŘÍJEM PESOS',note||null,[['👤 Člen',m.displayName],['🏷 Kategorie',cat],['💰 Částka',fmtP(amount)],['🏦 Zůstatek pesos',fmtP(bal)]],{by:m.displayName})});
+  toast('Zápis uložen ✓','success');lastSig='';render();try{renderAdminFinance();}catch(e){}
+}
+function addUsd(){
+  var m=getMember();if(!m)return;var st=$('f2SU'),amount=Math.floor(num($('f2-ua').value));
+  if(!amount){st.style.color='var(--red)';st.textContent='// ZADEJ ČÁSTKU';return;}
+  var src=$('f2-us').value,note=$('f2-un').value.trim(),arr=L('incomes',[]);
+  arr.push({id:uid(),memberId:m.id,memberName:m.displayName,amount:amount,source:src,note:note,date:nowStr(),status:'pending'});DB.set('incomes',arr);
+  addLog('fin','Člen "'+m.displayName+'" nahlásil příjem $'+amount+' ('+src+').',{extraPing:pingBox('fin2-ping-u'),embed:rich(C_YELLOW,'💵 NAHLÁŠEN PŘÍJEM',null,[['👤 Člen',m.displayName],['💵 Částka',money(amount)],['📦 Zdroj',src]],{by:m.displayName})});
+  toast('Příjem nahlášen ✓','success');lastSig='';render();
+}
+
+/* ── vykreslení ── */
+function render(force){
+  var m=getMember(),host=$('mt-finance');if(!m||!host)return;
+  build();var body=$('f2Body');if(!body)return;
+  var bank=$('bankCardM');
+  var sig=tab+'|'+['finance','finsettings','acctlog','acctbase','incomes','warehouse'].map(function(k){return JSON.stringify(DB.cache[k]||'');}).join('|');
+  var a=document.activeElement;
+  if(sig===lastSig||(a&&body.contains(a)&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)&&!force))return;
+  lastSig=sig;
+  if(bank&&bank.parentNode!==host){host.appendChild(bank);bank.style.display='none';}
+  body.innerHTML=tab==='fee'?vFee(m):tab==='peso'?vPeso(m):tab==='usd'?vUsd(m):vOver(m);
+  document.querySelectorAll('#fin2Root .ttab').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-t')===tab);});
+  if(tab==='fee'&&bank){var slot=$('f2Bank');if(slot){slot.appendChild(bank);bank.style.display='';}}
+}
+var _prev=window.renderMyFinance;
+window.renderMyFinance=function(){var r=typeof _prev==='function'?_prev.apply(this,arguments):undefined;try{render(true);}catch(e){console.error('fin2',e);}return r;};
+setInterval(function(){if(!document.hidden&&getMember()&&$('mt-finance')&&$('mt-finance').classList.contains('active'))try{render();}catch(e){console.error(e);}},1500);
+})();
