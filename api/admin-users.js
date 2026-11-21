@@ -110,8 +110,7 @@ module.exports = async (req, res) => {
 
       if (b.action === 'setPassword') {
         const password = String(b.password || '');
-        if (password.length < 6) return res.status(400).json({ error: 'Heslo musí mít min. 6 znaků' });
-        const r = await svc('/auth/v1/admin/users/' + id, { method: 'PUT', body: JSON.stringify({ password }) });
+if      (password.length < 8) return res.status(400).json({ error: 'Heslo musí mít min. 8 znaků' });        const r = await svc('/auth/v1/admin/users/' + id, { method: 'PUT', body: JSON.stringify({ password }) });
         if (!r.ok) {
           const j = await r.json().catch(() => ({}));
           return res.status(400).json({ error: j.msg || j.message || 'Změna hesla selhala' });
