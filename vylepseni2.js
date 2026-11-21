@@ -80,7 +80,7 @@
     var h;try{h=build();}catch(e){return;}
     if(h===null)return;
     var box=$('todayBox');
-    if(!box){box=document.createElement('div');box.id='todayBox';box.className='today';
+    if(!box){box=document.createElement('div');box.id='todayBox';box.className='dnes-box';
       var anchor=$('dashM');if(!anchor)return;anchor.before(box);
       box.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b&&typeof goNav==='function')goNav('m',b.getAttribute('data-go'));});}
     if(box.dataset.h!==h){box.dataset.h=h;box.innerHTML=h;}

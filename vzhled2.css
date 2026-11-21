@@ -6,7 +6,7 @@ html body .sh,html body .nbadge,html body .log-time,html body .log-type,html bod
 html body .task-date,html body .radio-desc,html body .wh-cat,html body .wh-unit,html body .mc-id,html body .smsg,
 html body .ev-who,html body .cal-wd,html body .boost-stat,html body .bp-type,html body .pchip,html body .prof-sub,
 html body .fin-entry-date,html body .excuse-date-info,html body .msg-from,html body .rep-from,html body .inc-date{
-  font-size:max(.72rem,1em)!important}
+  font-size:.74rem!important}
 html body .log-text{font-size:.78rem!important}
 html body :focus-visible{outline:2px solid var(--acc)!important;outline-offset:2px;border-radius:6px}
 html body button,html body .nb,html body .wf{min-height:34px}
@@ -25,10 +25,10 @@ html body #boardPosts:empty,html body #dashM:empty{
   animation:shim 1.4s linear infinite}
 
 /* 4) BLOK „DNES“ na Oznámeních */
-.today{margin:1rem 1.2rem .4rem;padding:1.1rem 1.3rem;border-radius:16px;
+.dnes-box{margin:1rem 1.2rem .4rem;padding:1.1rem 1.3rem;border-radius:16px;
   background:radial-gradient(500px 200px at 100% 0,color-mix(in srgb,var(--acc) 16%,transparent),transparent 70%),#0e0e0d;
   border:1px solid color-mix(in srgb,var(--acc) 25%,transparent)}
-.today h3{font-size:.72rem;letter-spacing:.22em;color:var(--acc);margin-bottom:.7rem;font-weight:600}
+.dnes-box h3{font-size:.72rem;letter-spacing:.22em;color:var(--acc);margin-bottom:.7rem;font-weight:600}
 .today-list{display:flex;flex-wrap:wrap;gap:.5rem}
 .today-it{flex:1;min-width:170px;display:flex;gap:.7rem;align-items:center;padding:.65rem .8rem;border-radius:12px;
   background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:var(--textb);cursor:pointer;
@@ -37,7 +37,7 @@ html body #boardPosts:empty,html body #dashM:empty{
 .today-it .i{font-size:1.4rem}.today-it small{display:block;color:var(--text);font-size:.75rem}
 .today-it.warn{border-color:var(--red-dim);background:color-mix(in srgb,var(--red) 9%,transparent)}
 .today-it.ok{border-color:var(--gdim)}
-@media(max-width:700px){.today{margin:.8rem .7rem .3rem}.today-it{min-width:100%}}
+@media(max-width:700px){.dnes-box{margin:.8rem .7rem .3rem}.today-it{min-width:100%}}
 
 /* 5) MOBIL: tabulky jako karty (využívá data-l v Crew Listu a statistikách) */
 @media(max-width:700px){
@@ -68,7 +68,7 @@ html[data-mode=light] body .dc,html[data-mode=light] body .st-box,html[data-mode
 html[data-mode=light] body #adminScreen .form-panel,html[data-mode=light] body .board-post,html[data-mode=light] body .heist-card,
 html[data-mode=light] body .task-card,html[data-mode=light] body .ev-card,html[data-mode=light] body .member-card,
 html[data-mode=light] body .wh2-card,html[data-mode=light] body .radio-card,html[data-mode=light] body .esc-card,
-html[data-mode=light] body .contact-card,html[data-mode=light] body .goal,html[data-mode=light] body .today,
+html[data-mode=light] body .contact-card,html[data-mode=light] body .goal,html[data-mode=light] body .dnes-box,
 html[data-mode=light] body .modal-box,html[data-mode=light] body .sel-box,html[data-mode=light] body .f3-card,
 html[data-mode=light] body .f3-tx,html[data-mode=light] body .f3-fee,html[data-mode=light] body .wh2-st{
   background:#fff!important;border-color:#e2dac2!important;box-shadow:0 8px 24px -14px rgba(60,50,20,.3)!important}
