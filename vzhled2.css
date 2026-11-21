@@ -1,0 +1,83 @@
+/* ══ VZHLED 2.1 — přístupnost, mobil, světlý režim, prázdné stavy (načítat za vzhled.css) ══ */
+
+/* 1) PŘÍSTUPNOST: čitelnější drobný text a kontrast */
+:root{--muted:#938a68}
+html body .sh,html body .nbadge,html body .log-time,html body .log-type,html body .dc-sub,html body .bp-date,
+html body .task-date,html body .radio-desc,html body .wh-cat,html body .wh-unit,html body .mc-id,html body .smsg,
+html body .ev-who,html body .cal-wd,html body .boost-stat,html body .bp-type,html body .pchip,html body .prof-sub,
+html body .fin-entry-date,html body .excuse-date-info,html body .msg-from,html body .rep-from,html body .inc-date{
+  font-size:max(.72rem,1em)!important}
+html body .log-text{font-size:.78rem!important}
+html body :focus-visible{outline:2px solid var(--acc)!important;outline-offset:2px;border-radius:6px}
+html body button,html body .nb,html body .wf{min-height:34px}
+
+/* 2) PRÁZDNÉ STAVY */
+html body .empty-s{
+  display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:2.5rem 1rem!important;
+  border:1px dashed rgba(255,255,255,.1);border-radius:var(--r,14px);margin:.6rem 0;letter-spacing:.06em!important}
+html body .empty-s::before{content:'✦';font-size:1.8rem;color:var(--acc-dim);opacity:.7}
+
+/* 3) SKELETON při načítání */
+@keyframes shim{from{background-position:-200% 0}to{background-position:200% 0}}
+html body #boardPosts:empty,html body #dashM:empty{
+  min-height:90px;border-radius:14px;margin:1rem 1.2rem;
+  background:linear-gradient(90deg,rgba(255,255,255,.03) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.03) 75%) 0 0/200% 100%;
+  animation:shim 1.4s linear infinite}
+
+/* 4) BLOK „DNES“ na Oznámeních */
+.today{margin:1rem 1.2rem .4rem;padding:1.1rem 1.3rem;border-radius:16px;
+  background:radial-gradient(500px 200px at 100% 0,color-mix(in srgb,var(--acc) 16%,transparent),transparent 70%),#0e0e0d;
+  border:1px solid color-mix(in srgb,var(--acc) 25%,transparent)}
+.today h3{font-size:.72rem;letter-spacing:.22em;color:var(--acc);margin-bottom:.7rem;font-weight:600}
+.today-list{display:flex;flex-wrap:wrap;gap:.5rem}
+.today-it{flex:1;min-width:170px;display:flex;gap:.7rem;align-items:center;padding:.65rem .8rem;border-radius:12px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:var(--textb);cursor:pointer;
+  transition:transform .2s,border-color .2s;text-align:left;font-size:.92rem}
+.today-it:hover{transform:translateY(-2px);border-color:var(--acc-dim)}
+.today-it .i{font-size:1.4rem}.today-it small{display:block;color:var(--text);font-size:.75rem}
+.today-it.warn{border-color:var(--red-dim);background:color-mix(in srgb,var(--red) 9%,transparent)}
+.today-it.ok{border-color:var(--gdim)}
+@media(max-width:700px){.today{margin:.8rem .7rem .3rem}.today-it{min-width:100%}}
+
+/* 5) MOBIL: tabulky jako karty (využívá data-l v Crew Listu a statistikách) */
+@media(max-width:700px){
+  html body .rs-table,html body .rs-table tbody,html body .rs-table tr,html body .rs-table td,
+  html body .st-table,html body .st-table tbody,html body .st-table tr,html body .st-table td{display:block;width:100%;min-width:0}
+  html body .rs-table thead,html body .st-table thead{display:none}
+  html body .rs-table tr,html body .st-table tr{margin:.6rem 0;padding:.5rem .8rem;border-radius:14px;
+    background:#0e0e0d;border:1px solid rgba(255,255,255,.07)}
+  html body .rs-table td,html body .st-table td{display:flex;justify-content:space-between;gap:1rem;
+    padding:.35rem 0!important;border-bottom:1px solid rgba(255,255,255,.05)!important;text-align:right}
+  html body .rs-table td::before,html body .st-table td::before{content:attr(data-l);color:var(--acc);font-size:.7rem;
+    letter-spacing:.1em;text-transform:uppercase;text-align:left;flex:none}
+  html body .rs-scroll{border:0}
+  html body .btn-acc,html body .btn-ghost,html body .btn-danger{min-height:42px}
+  html body .iw input,html body .iw select{font-size:16px!important} /* iOS nezoomuje */
+}
+
+/* 6) SVĚTLÝ REŽIM (tlačítko 🌓 v postranním panelu) */
+html[data-mode=light]{color-scheme:light;
+  --bg:#f4f1e8;--deep:#f8f6ef;--card:#ffffff;--surf:#f0ece0;--border:#ddd5bd;--brite:#cfc6a8;
+  --text:#6a5f3c;--textb:#1c1a12;--muted:#8d8465;--dim:#d8d0b4}
+html[data-mode=light] body{background:#f4f1e8!important}
+html[data-mode=light] body .main,html[data-mode=light] body #adminScreen .main{
+  background:radial-gradient(700px 380px at 85% -5%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 70%),#f8f6ef!important}
+html[data-mode=light] body .sidebar,html[data-mode=light] body #adminScreen .sidebar{
+  background:linear-gradient(180deg,#fff,#f0ece0)!important;border-right-color:#ddd5bd!important}
+html[data-mode=light] body .dc,html[data-mode=light] body .st-box,html[data-mode=light] body .form-panel,
+html[data-mode=light] body #adminScreen .form-panel,html[data-mode=light] body .board-post,html[data-mode=light] body .heist-card,
+html[data-mode=light] body .task-card,html[data-mode=light] body .ev-card,html[data-mode=light] body .member-card,
+html[data-mode=light] body .wh2-card,html[data-mode=light] body .radio-card,html[data-mode=light] body .esc-card,
+html[data-mode=light] body .contact-card,html[data-mode=light] body .goal,html[data-mode=light] body .today,
+html[data-mode=light] body .modal-box,html[data-mode=light] body .sel-box,html[data-mode=light] body .f3-card,
+html[data-mode=light] body .f3-tx,html[data-mode=light] body .f3-fee,html[data-mode=light] body .wh2-st{
+  background:#fff!important;border-color:#e2dac2!important;box-shadow:0 8px 24px -14px rgba(60,50,20,.3)!important}
+html[data-mode=light] body .iw,html[data-mode=light] body .adm-ta,html[data-mode=light] body textarea,
+html[data-mode=light] body .wh-search{background:#faf8f1!important;border-color:#ddd5bd!important}
+html[data-mode=light] body .pt{text-shadow:none}
+html[data-mode=light] body .nb{color:#5a5030!important}
+html[data-mode=light] body .nb.active{color:#8a6a00!important}
+html[data-mode=light] body .today-it{background:#faf8f1;border-color:#e2dac2}
+html[data-mode=light] body select option{background:#fff!important;color:#1c1a12!important}
+html[data-mode=light] body .sel-bg{background:radial-gradient(700px 460px at 50% 35%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 70%),#f4f1e8!important}
+html[data-mode=light] body .btn-acc{color:#fff!important}
