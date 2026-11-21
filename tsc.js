@@ -9714,3 +9714,51 @@ var _prev=window.renderMyFinance;
 window.renderMyFinance=function(){var r=typeof _prev==='function'?_prev.apply(this,arguments):undefined;try{render(true);}catch(e){console.error('fin3',e);}return r;};
 setInterval(function(){if(!document.hidden&&getMember()&&$('mt-finance')&&$('mt-finance').classList.contains('active'))try{render();}catch(e){console.error(e);}},1500);
 })();
+
+/* ===== BEZPEČNOST 1: Discord přes server + settings jen pro adminy ===== */
+(function(){
+'use strict';
+var _get=DB.get,_set=DB.set,_sd=DB.setDefault;
+function meNow(){var ms=_get.call(DB,'members')||[];return ms.filter(function(m){return m.id===currentMemberId;})[0]||null;}
+function admin(){var m=meNow();return !!m&&!!m.adminAccess;}
+
+/* člen vidí z nastavení jen ID role Member */
+DB.get=function(k){
+  if(k==='settings'&&!admin()){var p=_get.call(DB,'pubcfg')||{};return {memberRoleId:p.memberRoleId||''};}
+  return _get.apply(this,arguments);
+};
+/* admin ukládá nastavení → zrcadlí se veřejná část */
+DB.set=function(k,v){
+  var r=_set.apply(this,arguments);
+  if(k==='settings'&&v&&typeof v==='object'){
+    var id=String(v.memberRoleId||''),cur=_get.call(DB,'pubcfg')||{};
+    if(cur.memberRoleId!==id)_set.call(DB,'pubcfg',{memberRoleId:id});
+  }
+  return r;
+};
+/* člen nesmí zakládat výchozí settings (po zapnutí RLS by to hlásilo chybu ukládání) */
+DB.setDefault=function(k){if(k==='settings')return;return _sd.apply(this,arguments);};
+
+/* jednorázová migrace: admin po přihlášení vytvoří pubcfg ze stávajících nastavení */
+setInterval(function(){
+  if(document.hidden||!currentMemberId||!admin())return;
+  var s=_get.call(DB,'settings');if(!s||typeof s!=='object')return;
+  var id=String(s.memberRoleId||''),cur=_get.call(DB,'pubcfg')||{};
+  if(cur.memberRoleId!==id)_set.call(DB,'pubcfg',{memberRoleId:id});
+},4000);
+
+/* Discord jde přes /api/discord — webhook URL klient nikdy nevidí */
+window.sendToDiscord=function(type,msg,opts){
+  opts=opts||{};
+  if(!tscToken)return;
+  var payload={type:type,msg:String(msg==null?'':msg),time:nowStr(),opts:{
+    embed:opts.embed,extraEmbeds:opts.extraEmbeds,embedTitle:opts.embedTitle,
+    img:opts.img?absImg(opts.img):'',extraPing:opts.extraPing||'',
+    noPing:!!opts.noPing,private:!!opts.private,pingCat:opts.pingCat||''}};
+  try{
+    fetch('/api/discord',{method:'POST',keepalive:true,
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tscToken},
+      body:JSON.stringify(payload)}).catch(function(){});
+  }catch(e){}
+};
+})();
