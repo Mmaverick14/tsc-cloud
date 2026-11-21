@@ -9583,7 +9583,6 @@ function build(){
     else if(act==='padd')addPeso();
     else if(act==='uadd')addUsd();
     else if(act==='pdel'&&typeof acctDel==='function')acctDel(id);
-    else if(act==='preset')resetPeso();
   });
 }
 
@@ -9645,7 +9644,7 @@ function vPeso(m){
   var boss=m.position==='Mastermind',out=ptype==='out';
   return '<div class="f3-hero"><small>₱ ZŮSTATEK NA ÚČTU</small><span class="f3-big'+(bal<0?' neg':'')+'">'+fmtP(bal)+'</span>'+
     '<div class="f3-minis"><div><span>CELKEM VLOŽENO</span><b>'+fmtP(s.P.i)+'</b></div><div><span>CELKEM VYBRÁNO</span><b>'+fmtP(s.P.o)+'</b></div></div>'+
-    (boss?'<div style="margin-top:1rem"><button class="f3-btn ghost" data-a="preset">🔄 Vynulovat pesos (Boss)</button></div>':'')+'</div>'+
+    (boss?'<div style="margin-top:1rem"><button class="f3-btn ghost" data-a="preset">🔄 Vynulovat pesos (Mastermind)</button></div>':'')+'</div>'+
     '<div class="f3-card"><div class="f3-two"><button class="f3-tg in'+(ptype==='in'?' on':'')+'" data-k="pt" data-v="in">↓ Vklad</button><button class="f3-tg out'+(ptype==='out'?' on':'')+'" data-k="pt" data-v="out">↑ Výběr</button></div>'+
     '<div class="f3-amt"><span>₱</span><input type="number" id="f2-pa" min="0" step="any" placeholder="0" inputmode="decimal"/></div>'+
     '<div class="f3-chips">'+PCATS.map(function(c){return '<button class="f3-chip'+(pcat===c[0]?' on':'')+'" data-k="pc" data-v="'+c[0]+'">'+c[1]+' '+c[0]+'</button>';}).join('')+'</div>'+
@@ -9676,7 +9675,6 @@ function addPeso(){
   var m=getMember();if(!m)return;var st=$('f2St');
   var amount=num($('f2-pa').value),note=$('f2-pn').value.trim();
   if(!amount){st.style.color='var(--red)';st.textContent='// ZADEJ ČÁSTKU';return;}
-  if(ptype==='out'&&note.length<3){st.style.color='var(--red)';st.textContent='// U VÝBĚRU JE POVINNÝ DŮVOD';$('f2-pn').focus();return;}
   var type=ptype,cat=pcat,arr=plog();
   arr.push({id:uid(),type:type,cur:'P',amount:amount,cat:cat,note:note,memberId:m.id,memberName:m.displayName,date:nowStr(),ts:Date.now()});
   if(arr.length>3000)arr=arr.slice(-3000);DB.set('acctlog',arr);
@@ -9699,28 +9697,6 @@ function addUsd(){
 }
 
 /* ── vykreslení ── */
-function resetPeso(){
-  var m=getMember();
-  if(!m||m.position!=='Mastermind'){toast('Pesos smí vynulovat jen Boss (Mastermind)','error');return;}
-  var s=psum(),bal=s.P.i-s.P.o;
-  function go(){
-    var me=getMember();
-    if(!me||me.position!=='Mastermind')return;
-    var all=plog(),pesos=all.filter(function(x){return x.cur==='P';});
-    var ar=L('acctarchive',[]);
-    ar.push({date:nowStr(),by:me.displayName,balance:bal,log:pesos});
-    DB.set('acctarchive',ar.slice(-10));
-    DB.set('acctlog',all.filter(function(x){return x.cur!=='P';}));
-    DB.set('acctbase',{P:0,by:me.displayName,date:nowStr()});
-    addLog('acct',me.displayName+' vynuloval pesos (původní zůstatek '+fmtP(bal)+').',{
-      embed:rich(C_RED,'🔄 PESOS VYNULOVÁNY',null,[['👤 Boss',me.displayName],['↩ Původní zůstatek',fmtP(bal)],['🏦 Nový zůstatek',fmtP(0)]],{by:me.displayName})});
-    toast('Pesos vynulovány ✓','success');
-    lastSig='';render(true);try{renderAdminFinance();}catch(e){}
-  }
-  if(typeof window.tscDialog==='function')
-    window.tscDialog({title:'⚠ VYNULOVAT PESOS?',text:'Zůstatek <b>'+fmtP(bal)+'</b> se nastaví na 0 a historie pesos se smaže.<div class="tsc-sub">Staré záznamy se uloží do zálohy (acctarchive).</div>',ok:'VYNULOVAT',danger:true,cancel:'ZRUŠIT'},go);
-  else if(window.confirm('Vynulovat pesos?'))go();
-}
 function render(force){
   var m=getMember(),host=$('mt-finance');if(!m||!host)return;
   build();var body=$('f2Body');if(!body)return;
