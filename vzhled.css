@@ -1,0 +1,136 @@
+/* ══ VZHLED 2.0 — „Soft Luxe“ — načítat POSLEDNÍ (za tsc.css). Smazáním řádku v index.html se vše vrátí. ══ */
+:root{
+  --r:14px;--r-sm:10px;
+  --glass:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  --sh:0 10px 30px -14px rgba(0,0,0,.85);
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+
+/* pozadí: jemná záře */
+html body{background:#050505!important}
+html body .main,html body #adminScreen .main{
+  background:
+    radial-gradient(700px 380px at 85% -5%,color-mix(in srgb,var(--acc) 12%,transparent),transparent 70%),
+    radial-gradient(600px 400px at 0% 100%,color-mix(in srgb,var(--acc) 6%,transparent),transparent 70%),
+    #070707!important}
+
+/* karty a panely: bez rohových ozdob, zaoblené, skleněné */
+html body .dc,html body .st-box,html body .form-panel,html body #adminScreen .form-panel,
+html body .bank-card,html body .board-post,html body .heist-card,html body .task-card,html body .ev-card,
+html body .member-card,html body .wh-item,html body .wh2-card,html body .radio-card,html body .pr,
+html body .esc-card,html body .excuse-card,html body .msg-card,html body .rep-card,html body .inc-card,
+html body .contact-card,html body .goal,html body .gk-card,html body .biz-card,html body .cap-bar,
+html body .att-box,html body .bank-all,html body #unpaidBox,html body .prof-tile{
+  background:var(--glass),#0e0e0d!important;
+  border:1px solid rgba(255,255,255,.07)!important;
+  border-radius:var(--r)!important;
+  box-shadow:var(--sh)!important;
+  transition:transform .25s var(--ease),border-color .25s,box-shadow .25s,background .25s!important}
+html body .board-post,html body .heist-card,html body .task-card,html body .ev-card,html body .radio-card{
+  border-left:3px solid var(--acc-dim)!important}
+html body .board-post.urgent,html body .task-card.urgent{border-left-color:var(--red)!important}
+html body .board-post.warning{border-left-color:orange!important}
+html body .dc:hover,html body .board-post:hover,html body .heist-card:hover,html body .task-card:hover,
+html body .ev-card:hover,html body .member-card:hover,html body .wh2-card:hover,html body .radio-card:hover,
+html body .esc-card:hover,html body .contact-card:hover{
+  transform:translateY(-3px)!important;
+  border-color:color-mix(in srgb,var(--acc) 40%,transparent)!important;
+  box-shadow:0 18px 40px -16px rgba(0,0,0,.9),0 0 0 1px color-mix(in srgb,var(--acc) 18%,transparent)!important;
+  background:var(--glass),#121211!important}
+html body .form-panel,html body #adminScreen .form-panel{padding:1.5rem 1.7rem!important}
+html body .fp-title{font-size:1.25rem!important;border-bottom:1px solid rgba(255,255,255,.07)!important}
+
+/* hlavička stránky: čistší, nadpis s linkou */
+html body .ph,html body #adminScreen .ph{padding:1.6rem 1.5rem 1.3rem!important}
+html body .ph::before{display:none!important}
+html body .ph::after,html body #adminScreen .ph::after{
+  width:min(300px,60%)!important;height:2px!important;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--acc),transparent)!important}
+html body .pt{font-size:1.9rem!important;letter-spacing:.06em!important;
+  text-shadow:0 0 28px color-mix(in srgb,var(--acc) 35%,transparent)}
+
+/* menu */
+@media(min-width:701px){
+  html body .sidebar,html body #adminScreen .sidebar{
+    background:linear-gradient(180deg,#0c0c0b,#050505)!important;
+    border-right:1px solid rgba(255,255,255,.06)!important;box-shadow:10px 0 40px -20px #000}
+  html body .sb-nav{padding:0 .6rem!important}
+  html body .sb-nav .nb{border-radius:var(--r-sm)!important;padding:.5rem .8rem!important;transition:all .2s var(--ease)!important}
+  html body .sb-nav .nb:hover{background:rgba(255,255,255,.05)!important;padding-left:1rem!important}
+  html body .sb-nav .nb.active,html body #adminScreen .sb-nav .nb.active{
+    background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 24%,transparent),color-mix(in srgb,var(--acc) 4%,transparent))!important;
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 30%,transparent),0 6px 20px -10px var(--acc)!important}
+  html body .lux-ind{display:none!important}
+}
+html body .nav-grp{border-top:0!important;opacity:.85}
+html body .nbadge,html body .nbadge.unread{border-radius:999px!important;padding:.1rem .4rem!important}
+
+/* tlačítka */
+html body .btn-acc{
+  border-radius:999px!important;border:0!important;color:#0a0a09!important;font-weight:700!important;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 60%,#fff),var(--acc))!important;
+  box-shadow:0 6px 18px -8px var(--acc)!important;text-transform:none!important;letter-spacing:.06em!important}
+html body .btn-acc::before{display:none!important}
+html body .btn-acc:hover{filter:brightness(1.1);transform:translateY(-1px);color:#0a0a09!important}
+html body .btn-acc:active{transform:scale(.97)}
+html body .btn-ghost,html body .btn-back,html body .btn-micro,html body .btn-danger,html body .wf,html body .ttab,html body .rsvp{
+  border-radius:999px!important;text-transform:none!important}
+html body .btn-micro{padding:.3rem .7rem!important}
+html body .wf.active,html body .ttab.active{box-shadow:0 0 16px -6px var(--acc)!important}
+
+/* formuláře: plná pole místo podtržení */
+html body .iw{
+  background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.08)!important;
+  border-bottom:1px solid rgba(255,255,255,.08)!important;border-radius:var(--r-sm)!important;padding-left:.3rem;
+  transition:border-color .2s,box-shadow .2s,background .2s!important}
+html body .iw:focus-within{
+  border-color:var(--acc)!important;background:rgba(255,255,255,.055)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent)!important}
+html body .adm-ta,html body .wh-search,html body .lux-find,html body .st-range,html body textarea{
+  background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.08)!important;
+  border-radius:var(--r-sm)!important;padding:.7rem .9rem!important}
+html body .adm-ta:focus,html body .wh-search:focus,html body textarea:focus{
+  border-color:var(--acc)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent)!important}
+html body .fl{font-size:.7rem!important;opacity:.9}
+
+/* okna, toasty, paleta */
+html body .modal-box,html body .sel-box{
+  background:var(--glass),#0e0e0d!important;border:1px solid rgba(255,255,255,.09)!important;
+  border-radius:20px!important;box-shadow:0 30px 80px rgba(0,0,0,.85),0 0 60px -30px var(--acc)!important}
+html body .modal-ov{backdrop-filter:blur(8px)!important}
+html body .toast{border-radius:var(--r-sm)!important;backdrop-filter:blur(10px);box-shadow:var(--sh)}
+html body .lux-pal-box,html body .theme-pop,html body .notif-panel,html body .size-pop{border-radius:var(--r)!important;overflow:hidden}
+
+/* tabulky */
+html body .rs-scroll,html body .st-table-wrap,html body .mx-wrap{border-radius:var(--r);overflow:hidden}
+html body .rs-table,html body .mx{border-radius:var(--r)}
+html body .rs-table tbody tr:hover td,html body .mx tbody tr:hover td{background:color-mix(in srgb,var(--acc) 8%,transparent)!important}
+
+/* přihlášení */
+html body .sel-box{padding:2.4rem 2.6rem!important}
+html body .sel-logo{filter:drop-shadow(0 0 30px color-mix(in srgb,var(--acc) 45%,transparent))}
+html body .gk-badge{padding:.6rem 1rem;border-radius:var(--r);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);display:inline-flex}
+
+/* sklad: obrázky a ukazatele */
+html body .wh2-img,html body .wh-img{border-radius:var(--r-sm)!important}
+html body .wh2-lvl,html body .st-bt,html body .goal-bar,html body .cap-pips i{border-radius:999px!important;overflow:hidden}
+html body .wh2-lvl i,html body .st-bf,html body .goal-bar i{border-radius:999px}
+html body .wh2-st{border-radius:var(--r)!important;background:var(--glass),#0e0e0d!important}
+
+/* finance 3.0 už je zaoblená, jen sladit stíny */
+html body .f3-hero{box-shadow:0 20px 50px -24px var(--acc)}
+
+/* scrollbar */
+*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--acc) 40%,#222) transparent}
+
+/* mobil: plovoucí spodní lišta */
+@media(max-width:700px){
+  html body .sidebar,html body #adminScreen .sidebar{
+    left:.6rem!important;right:.6rem!important;bottom:calc(.5rem + env(safe-area-inset-bottom,0px))!important;
+    width:auto!important;border-radius:20px!important;border:1px solid rgba(255,255,255,.1)!important;
+    background:rgba(12,12,11,.88)!important;backdrop-filter:blur(16px);box-shadow:0 14px 40px rgba(0,0,0,.7)!important}
+  html body .nb.active,html body #adminScreen .nb.active{border-radius:14px!important;border-top:0!important}
+  html body .main{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))!important}
+  html body .pt{font-size:1.45rem!important}
+}
+@media(prefers-reduced-motion:reduce){html body *{transition:none!important}}
