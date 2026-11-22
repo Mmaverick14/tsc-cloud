@@ -10135,3 +10135,294 @@ if(typeof _rs==='function')window.renderSettings=function(){
   return r;
 };
 })();
+
+/* ===== VÁNOČNÍ MOTIV 2.0 (vlož ZA původní vánoční blok) ===== */
+(function(){
+'use strict';
+var OWNER_DC='726173849678512151',LS2='tsc_xmas2';
+function $(id){return document.getElementById(id);}
+var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var DEF={garland:true,caps:true,advent:true,sound:true,wind:true,login:true,autoOff:true,preview:false,intensity:'normal'};
+
+function loaded(){return !!DB.cache&&DB.cache.members!==undefined;}
+function isOwner(){var m=getMember();return !!m&&String(m.discordId||'')===OWNER_DC;}
+function lsj(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
+function base(){return loaded()?(DB.get('xmasCfg')||{}):(lsj('tsc_xmas')||{});}
+function c2(){
+  var c;
+  if(loaded()){c=Object.assign({},DEF,DB.get('xmasCfg2')||{});try{localStorage.setItem(LS2,JSON.stringify(c));}catch(e){}}
+  else c=Object.assign({},DEF,lsj(LS2)||{});
+  return c;
+}
+
+/* ───────── styl ───────── */
+if(!$('xmas2Css')){
+  var st=document.createElement('style');st.id='xmas2Css';
+  st.textContent=
+  'html.xm-garland #xmasLights{display:none!important}'+
+  'html.xm2snow #xmasSnow{display:none!important}'+
+  '#xmasGarland{position:fixed;top:0;left:0;width:100%;height:36px;z-index:9996;pointer-events:none}'+
+  '#xmasGarland path{fill:none;stroke:#1d1d1d;stroke-width:1.8}'+
+  '.xg-b{fill:var(--c);animation:xgB 2.2s ease-in-out infinite}'+
+  '@keyframes xgB{0%,100%{opacity:1;filter:drop-shadow(0 0 5px var(--c))}50%{opacity:.4;filter:none}}'+
+  '#xmasSnow2{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9995}'+
+  /* sněhové čepice na kartách */
+  'html.xm-caps .dc,html.xm-caps .board-post,html.xm-caps .form-panel,html.xm-caps .wh2-card,html.xm-caps .ev-card,html.xm-caps .st-box,html.xm-caps .heist-card,html.xm-caps .task-card{position:relative}'+
+  'html.xm-caps .dc::before,html.xm-caps .board-post::before,html.xm-caps .form-panel::before,html.xm-caps .wh2-card::before,html.xm-caps .ev-card::before,html.xm-caps .st-box::before,html.xm-caps .heist-card::before,html.xm-caps .task-card::before{'+
+    'content:"";position:absolute;left:6px;right:6px;top:-5px;height:8px;pointer-events:none;z-index:2;opacity:.94;'+
+    'background:radial-gradient(circle at 9px 5px,#fff 4.2px,transparent 4.8px) 0 0/24px 8px repeat-x,radial-gradient(circle at 20px 4px,#e6eef6 3.2px,transparent 3.8px) 0 0/24px 8px repeat-x,linear-gradient(#fff,#fff) 0 5px/100% 3px no-repeat;border-radius:4px}'+
+  'html.xmas .toast{border-left-color:#c0392b!important;border-right:3px solid #27ae60!important}'+
+  'html.xmas .modal-box,html.xmas .sel-box{box-shadow:0 0 0 1px rgba(192,57,43,.35),0 0 38px -14px #27ae60!important}'+
+  /* přihlášení */
+  '.xm-login{margin:.2rem 0 .5rem;font-size:1.6rem;letter-spacing:.5rem}'+
+  '.xm-login span{display:inline-block;animation:xmTw2 2.2s ease-in-out infinite}'+
+  '.xm-login span:nth-child(2n){animation-delay:.5s}.xm-login span:nth-child(3n){animation-delay:1s}'+
+  '.xm-login small{display:block;margin-top:.3rem;font-size:.65rem;letter-spacing:.4em;color:#ff8a7a}'+
+  '@keyframes xmTw2{0%,100%{transform:translateY(0);opacity:1}50%{transform:translateY(-4px);opacity:.6}}'+
+  /* adventní kalendář */
+  '.adv{margin:.9rem 1.2rem 0;padding:1rem 1.1rem;border:1px solid #7f1900;border-top:2px solid #c0392b;background:linear-gradient(160deg,rgba(192,57,43,.1),rgba(39,174,96,.08)),var(--card)}'+
+  '.adv-t{display:flex;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin-bottom:.7rem;font-size:.72rem;font-weight:600;letter-spacing:.2em;color:#ff8a7a}'+
+  '.adv-t span{color:var(--text);letter-spacing:.08em;font-weight:400;font-size:.8rem}'+
+  '.adv-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:.4rem}'+
+  '.adv-d{aspect-ratio:1;border:1px solid var(--brite);background:var(--surf);color:var(--textb);font-size:1.05rem;font-weight:700;cursor:pointer;position:relative;transition:transform .15s,border-color .15s}'+
+  '.adv-d:hover:not(:disabled){transform:translateY(-2px);border-color:#27ae60}'+
+  '.adv-d.today{border-color:#f1c40f;box-shadow:0 0 14px -3px #f1c40f;animation:xmTw2 1.8s ease-in-out infinite}'+
+  '.adv-d.open{background:rgba(39,174,96,.16);border-color:#27ae60;color:#6fdc9a}'+
+  '.adv-d:disabled{opacity:.35;cursor:not-allowed}'+
+  '.adv-d i{position:absolute;right:2px;top:0;font-style:normal;font-size:.7rem}'+
+  '@media(max-width:700px){.adv{margin:.7rem .7rem 0}.adv-g{grid-template-columns:repeat(6,1fr)}}'+
+  '@media(prefers-reduced-motion:reduce){.xg-b,.xm-login span,.adv-d.today{animation:none}}';
+  document.head.appendChild(st);
+}
+
+/* ───────── sníh s vrstvami, větrem a vločkami ───────── */
+var sc=null,sx=null,fl=[],sW=0,sH=0,sKey='',wind=0,mx=.5;
+addEventListener('pointermove',function(e){if(e.pointerType!=='touch')mx=e.clientX/Math.max(1,innerWidth);},{passive:true});
+function sSize(){var d=Math.min(2,devicePixelRatio||1);sW=innerWidth;sH=innerHeight;sc.width=sW*d;sc.height=sH*d;sx.setTransform(d,0,0,d,0,0);}
+function snowStop(){if(sc){sc.remove();sc=null;sx=null;}sKey='';document.documentElement.classList.remove('xm2snow');}
+function snowStart(intens){
+  if(reduce)return;
+  if(sc&&sKey===intens)return;
+  snowStop();sKey=intens;
+  sc=document.createElement('canvas');sc.id='xmasSnow2';document.body.appendChild(sc);sx=sc.getContext('2d');sSize();
+  var k={low:.5,normal:1,high:1.9}[intens]||1,n=Math.round(Math.min(220,Math.max(40,innerWidth/11))*k);
+  fl=[];
+  for(var i=0;i<n;i++){var z=Math.random();
+    fl.push({x:Math.random()*sW,y:Math.random()*sH,z:z,r:.7+z*2.7,v:.3+z*1.1,p:Math.random()*6.28,a:.3+z*.6,sw:.2+Math.random()*.5,rot:Math.random()*6.28});}
+  document.documentElement.classList.add('xm2snow');
+  requestAnimationFrame(sLoop);
+}
+function sLoop(t){
+  if(!sc)return;
+  var o=c2(),gust=Math.sin(t/4000)*.4+Math.sin(t/1700)*.15,target=gust+(o.wind?(mx-.5)*1.6:0);
+  wind+=(target-wind)*.02;
+  sx.clearRect(0,0,sW,sH);
+  for(var i=0;i<fl.length;i++){
+    var f=fl[i];
+    f.y+=f.v;f.x+=wind*(.4+f.z)+Math.sin(t/1500+f.p)*f.sw*.5;f.rot+=.01;
+    if(f.y>sH+8){f.y=-8;f.x=Math.random()*sW;}
+    if(f.x>sW+8)f.x=-8;else if(f.x<-8)f.x=sW+8;
+    sx.fillStyle='rgba(255,255,255,'+f.a+')';sx.strokeStyle='rgba(255,255,255,'+f.a+')';
+    if(f.r>2.9){                                   // velké = šestiramenné vločky
+      sx.lineWidth=.9;sx.beginPath();
+      for(var a=0;a<3;a++){var an=f.rot+a*1.0472,dx=Math.cos(an)*f.r*1.6,dy=Math.sin(an)*f.r*1.6;sx.moveTo(f.x-dx,f.y-dy);sx.lineTo(f.x+dx,f.y+dy);}
+      sx.stroke();
+    }else{sx.beginPath();sx.arc(f.x,f.y,f.r,0,6.283);sx.fill();}
+  }
+  requestAnimationFrame(sLoop);
+}
+addEventListener('resize',function(){if(sc)sSize();});
+
+/* ───────── girlanda s blikajícími žárovkami ───────── */
+var COLS=['#e74c3c','#f1c40f','#2ecc71','#3498db','#e056fd','#ff9f43'];
+function garlandSet(on){
+  var el=$('xmasGarland');
+  if(!on){if(el)el.remove();return;}
+  var w=innerWidth;
+  if(el&&el.dataset.w===String(w))return;
+  if(el)el.remove();
+  var seg=Math.max(70,Math.min(110,w/10)),n=Math.ceil(w/seg),d='M0,2',b='',idx=0;
+  for(var i=0;i<n;i++){
+    var x0=i*seg,x1=x0+seg,cx=x0+seg/2,cy=26;
+    d+=' Q'+cx+','+cy+' '+x1+',2';
+    [.2,.5,.8].forEach(function(t){
+      var u=1-t,x=u*u*x0+2*u*t*cx+t*t*x1,y=u*u*2+2*u*t*cy+t*t*2,c=COLS[idx%COLS.length];
+      b+='<rect x="'+(x-2)+'" y="'+(y-1)+'" width="4" height="5" fill="#2b2b2b"/>'+
+         '<circle class="xg-b" cx="'+x+'" cy="'+(y+8.5)+'" r="4.4" style="--c:'+c+';animation-delay:'+((idx*.37)%2.2)+'s"/>';
+      idx++;
+    });
+  }
+  el=document.createElement('div');el.id='xmasGarland';el.dataset.w=String(w);
+  el.innerHTML='<svg width="'+w+'" height="36" viewBox="0 0 '+w+' 36"><path d="'+d+'"/>'+b+'</svg>';
+  document.body.appendChild(el);
+}
+
+/* ───────── přihlašovací obrazovka ───────── */
+function loginSet(on){
+  var wrap=document.querySelector('#selectScreen .sel-wrap'),el=$('xmLogin');
+  if(!on||!wrap){if(el)el.remove();return;}
+  if(el)return;
+  el=document.createElement('div');el.id='xmLogin';el.className='xm-login';
+  el.innerHTML='<span>🎄</span><span>❄</span><span>🎁</span><span>❄</span><span>🎄</span><small>VESELÉ VÁNOCE</small>';
+  var logo=wrap.querySelector('.sel-logo');wrap.insertBefore(el,logo||wrap.firstChild);
+}
+
+/* ───────── rolničkový zvuk upozornění ───────── */
+var _beep=window.notifBeep;
+window.notifBeep=function(){
+  var on=document.documentElement.classList.contains('xmas')&&c2().sound;
+  if(!on||typeof _beep!=='function'&&!on)return typeof _beep==='function'?_beep.apply(this,arguments):undefined;
+  try{
+    if(localStorage.getItem('tsc_mute')==='1')return;
+    var C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    var ac=window._tscAC||(window._tscAC=new C());if(ac.state==='suspended')ac.resume();
+    [[1568,0],[2093,.1],[1976,.2],[2637,.32]].forEach(function(n){
+      [1,2.76].forEach(function(mul,k){
+        var o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=n[0]*mul;o.connect(g);g.connect(ac.destination);
+        var t=ac.currentTime+n[1],v=k?.025:.07;
+        g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+.55);
+        o.start(t);o.stop(t+.6);
+      });
+    });
+  }catch(e){}
+};
+
+/* ───────── úvodní uvítání ───────── */
+new MutationObserver(function(list){
+  if(!document.documentElement.classList.contains('xmas'))return;
+  list.forEach(function(m){m.addedNodes.forEach(function(n){
+    if(n.nodeType===1&&n.id==='wowIntro'){var h=n.querySelector('.wi-hi');if(h)h.textContent='Veselé Vánoce 🎄,';}
+  });});
+}).observe(document.body,{childList:true});
+
+/* klik na logo = zlatý déšť */
+document.addEventListener('click',function(e){
+  if(!document.documentElement.classList.contains('xmas'))return;
+  if(e.target.closest&&e.target.closest('.sb-logo')&&typeof window.tscBurst==='function')window.tscBurst();
+});
+
+/* ───────── adventní kalendář ───────── */
+var MSG=[
+ 'Začíná prosinec. Dej si horký čaj a zkontroluj sklad. 🍵','Kdo smí vzít poslední kus ze skladu? Nikdo. I o Vánocích. 📦','Připomínka: příspěvek se platí i v adventu. 💵',
+ 'Dneska se nese v duchu úklidu skladu. Žádné rozházené bedny.','První adventní týden za námi. Dobrá práce, crew!','Mikuláš už byl. Kdo dostal uhlí? 😈',
+ 'Tip: Ctrl + K najde cokoli, i dárek pro kolegu.','Dnes pochval někoho z crew. Zasloužil si to. ⭐','Doplň zásoby dřív, než vyprodají všechno.',
+ 'Vánoční hádanka: co mají společného heist a stromeček? Obojí se musí dobře naplánovat. 🎄','Kdo zítra přijde na akci, dostane virtuální cukroví. 🍪','Dnes je den dobrých úniků. Zkontroluj únikovky.',
+ 'Polovina prosince. Sníh padá, lootu přibývá. ❄','Zkontroluj vysílačky, ať ti nic neuteče.','Dnes nikomu nezávidíme. Ani lepšímu autu v Boostingu.',
+ 'Trocha klidu před svátky: nic se nemusí stihnout hned.','Poděkuj vedení, má práce víc, než je vidět. 🙏','Dnes žádný strike. Jen dobrá nálada.',
+ 'Tři dny do Štědrého dne. Připrav omluvenku, jestli budeš pryč. 📝','Vyměň si v crew pár slov o tom, co se letos povedlo.','Dnes ber úkoly s úsměvem. I ty urgentní.',
+ 'Zítra už je Štědrý den. Dárky zabaleny? 🎁','Skoro tam! Zhasni na chvíli displej a nadechni se.','🎄 ŠTĚDRÝ DEN! Přejeme všem v crew krásné Vánoce a hodně zdraví i štěstí. 🎅'
+];
+function advDay(o){
+  var n=new Date();
+  if(n.getMonth()===11&&n.getDate()<=26)return Math.min(24,n.getDate());
+  return o.preview?12:0;
+}
+function openedList(){var m=getMember();return (m&&lsj('tsc_adv_'+m.id+'_'+new Date().getFullYear()))||[];}
+function saveOpened(a){var m=getMember();if(m)try{localStorage.setItem('tsc_adv_'+m.id+'_'+new Date().getFullYear(),JSON.stringify(a));}catch(e){}}
+function advSet(on,o){
+  var el=$('xmasAdvent'),host=document.querySelector('#mt-board .ph'),day=on?advDay(o):0;
+  if(!on||!day||!host||!getMember()){if(el)el.remove();return;}
+  var op=openedList(),h=day+'|'+op.join(',');
+  if(!el){el=document.createElement('div');el.id='xmasAdvent';el.className='adv';
+    el.addEventListener('click',function(e){
+      var b=e.target.closest('.adv-d');if(!b||b.disabled)return;
+      var d=+b.getAttribute('data-d'),a=openedList();
+      if(a.indexOf(d)===-1){a.push(d);saveOpened(a);}
+      el.dataset.h='';
+      var dlg=window.tscDialog;
+      if(typeof dlg==='function')dlg({title:'🎁 DNES JE '+d+'. PROSINCE',text:esc(MSG[d-1]),ok:'DÍKY',single:true});
+      else toast(MSG[d-1],'info',6000);
+      if(d===24&&typeof window.tscBurst==='function')window.tscBurst();
+    });}
+  var anchor=$('xmasBanner')||host;
+  if(el.previousElementSibling!==anchor)anchor.after(el);
+  if(el.dataset.h===h)return;
+  el.dataset.h=h;
+  var g='';for(var d=1;d<=24;d++){
+    var isO=op.indexOf(d)!==-1,future=d>day;
+    g+='<button class="adv-d'+(d===day?' today':'')+(isO?' open':'')+'" data-d="'+d+'"'+(future?' disabled title="Ještě ne"':'')+'>'+d+(isO?'<i>🎁</i>':(future?'<i>🔒</i>':''))+'</button>';
+  }
+  el.innerHTML='<div class="adv-t">🎄 ADVENTNÍ KALENDÁŘ <span>'+(o.preview&&!(new Date().getMonth()===11)?'(náhled)':'Klikni na dnešní dvířka')+'</span></div><div class="adv-g">'+g+'</div>';
+}
+
+/* ───────── jednorázové události ───────── */
+var prevOn=null;
+function events(on){
+  if(prevOn===false&&on&&loaded()){
+    toast('🎄 Vánoční motiv zapnut','success');
+    if(typeof window.tscBurst==='function')window.tscBurst();
+  }
+  prevOn=on;
+  var n=new Date();
+  if(on&&loaded()&&n.getMonth()===11&&n.getDate()>=24&&n.getDate()<=26){
+    var k='tsc_xm_burst',y=String(n.getFullYear());
+    try{if(localStorage.getItem(k)!==y){localStorage.setItem(k,y);toast('🎅 Veselé Vánoce, crew!','success',6000);if(typeof window.tscBurst==='function')setTimeout(window.tscBurst,600);}}catch(e){}
+  }
+}
+/* po svátcích (po 6. 1., před 1. 11.) se motiv vypne sám, zapíše to admin */
+function autoOff(){
+  if(!loaded()||!getMember()||!isAdmin())return;
+  var o=c2(),b=DB.get('xmasCfg')||{};
+  if(!o.autoOff||!b.on)return;
+  var n=new Date(),m=n.getMonth(),d=n.getDate();
+  var out=(m===0&&d>6)||(m>=1&&m<=9);
+  if(out){b.on=false;DB.set('xmasCfg',b);addLog('sys','Vánoční motiv se po svátcích vypnul automaticky.',{noDiscord:true});}
+}
+
+/* ───────── hlavní smyčka ───────── */
+function tick(){
+  var html=document.documentElement,on=html.classList.contains('xmas'),o=c2(),b=base();
+  html.classList.toggle('xm-caps',on&&o.caps);
+  html.classList.toggle('xm-garland',on&&b.lights!==false&&o.garland);
+  if(on&&b.snow!==false)snowStart(o.intensity);else snowStop();
+  garlandSet(on&&b.lights!==false&&o.garland);
+  loginSet(on&&o.login);
+  advSet(on&&b.banner!==false&&o.advent,o);
+  events(on);
+  autoOff();
+}
+setInterval(function(){try{tick();}catch(e){console.error('xmas2',e);}},1000);
+tick();
+
+/* ───────── panel v Nastavení (jen vlastník) ───────── */
+function renderPanel(){
+  var host=$('at-settings'),p=$('xmas2Panel');
+  if(!host)return;
+  if(!isOwner()){if(p)p.remove();return;}
+  if(!p){
+    p=document.createElement('div');p.id='xmas2Panel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+    host.appendChild(p);
+    p.addEventListener('change',function(e){
+      if(!isOwner()){toast('Vánoční motiv smí měnit jen určený člen','error');return;}
+      var t=e.target,k=t.getAttribute('data-y');if(!k)return;
+      var c=Object.assign({},DEF,DB.get('xmasCfg2')||{});
+      c[k]=t.type==='checkbox'?t.checked:t.value;
+      DB.set('xmasCfg2',c);toast('Nastavení uloženo','success');
+      tick();renderPanel();
+    });
+  }
+  if(p.contains(document.activeElement))return;
+  var c=c2();
+  function cb(k,l){return '<label class="pick-item"><input type="checkbox" data-y="'+k+'"'+(c[k]?' checked':'')+'/><span>'+l+'</span></label>';}
+  p.innerHTML='<div class="fp-title">// 🎄 VÁNOČNÍ MOTIV 2.0 — DETAILY</div>'+
+    '<div class="pick-list" style="max-height:none">'+
+      cb('garland','💡 Girlanda s blikajícími žárovkami (místo jednoduchých světýlek)')+
+      cb('caps','☃ Sněhové čepice na kartách')+
+      cb('wind','🌬 Vítr podle myši a větší vločky')+
+      cb('advent','🎁 Adventní kalendář na Oznámeních (1.–24. 12.)')+
+      cb('sound','🔔 Rolničky místo pípnutí upozornění')+
+      cb('login','🎅 Ozdoba na přihlašovací obrazovce')+
+      cb('autoOff','⏱ Vypnout motiv automaticky po 6. lednu')+
+      cb('preview','👀 Náhled adventního kalendáře i mimo prosinec')+
+    '</div>'+
+    '<div class="field-group" style="margin-top:.8rem;max-width:260px"><label class="fl">HUSTOTA SNĚHU</label><div class="iw"><span class="ip">&gt;_</span>'+
+      '<select data-y="intensity"><option value="low"'+(c.intensity==='low'?' selected':'')+'>Řídký</option><option value="normal"'+(c.intensity==='normal'?' selected':'')+'>Normální</option><option value="high"'+(c.intensity==='high'?' selected':'')+'>Sněhová bouře</option></select></div></div>'+
+    '<div class="rx-hint" style="margin:.6rem 0 0">Hlavní vypínač a sníh/světýlka/pruh jsou v panelu výše. Tento panel vidí jen člen s Discord ID '+OWNER_DC+'.</div>';
+}
+var _rs=window.renderSettings;
+if(typeof _rs==='function')window.renderSettings=function(){
+  var r=_rs.apply(this,arguments);
+  try{renderPanel();}catch(e){console.error(e);}
+  return r;
+};
+})();
