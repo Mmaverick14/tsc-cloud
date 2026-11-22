@@ -9804,3 +9804,58 @@ window.sendToDiscord=function(type,msg,opts){
   }catch(e){}
 };
 })();
+
+/* ===== FINANCE: celkový zůstatek frakce viditelný pro všechny členy ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+function r2(n){return Math.round(n*100)/100;}
+function fmtP(n){return Number(r2(n)).toLocaleString('cs-CZ')+' ₱';}
+
+if(!$('f3TotalCss')){
+  var st=document.createElement('style');st.id='f3TotalCss';
+  st.textContent=
+   '.f3-total{display:grid;grid-template-columns:1fr 1fr;gap:1rem}'+
+   '.f3-total .col small{display:block;font-size:.68rem;letter-spacing:.2em;color:var(--text)}'+
+   'html body .f3-total .f3-big{font-size:2.4rem}'+
+   '.f3-total .sub{font-size:.72rem;color:var(--muted);margin-top:.2rem;line-height:1.4}'+
+   '.f3-total .ttl{grid-column:1/-1;font-size:.72rem;font-weight:600;letter-spacing:.2em;color:var(--acc)}'+
+   '@media(max-width:700px){.f3-total{grid-template-columns:1fr}}';
+  document.head.appendChild(st);
+}
+
+function balances(){
+  var log=DB.get('acctlog');log=Array.isArray(log)?log:[];
+  var base=DB.get('acctbase'),p=(base&&typeof base.P==='number')?base.P:0,outD=0;
+  log.forEach(function(x){
+    var a=num(x.amount),o=x.type==='out';
+    if(x.cur==='P')p+=o?-a:a;
+    else if(o)outD+=a;
+  });
+  var fin=DB.get('finance')||{payments:[],expenses:[]};
+  var inc=(DB.get('incomes')||[]).filter(function(i){return i.status==='confirmed';});
+  var pay=(fin.payments||[]).reduce(function(s,x){return s+num(x.amount);},0);
+  var incS=inc.reduce(function(s,x){return s+num(x.amount);},0);
+  var exp=(fin.expenses||[]).reduce(function(s,x){return s+num(x.amount);},0);
+  return {P:r2(p),D:r2(pay+incS-exp-outD),pay:pay,inc:incS,exp:exp,outD:outD};
+}
+
+function paint(){
+  var host=$('f2Body');if(!host||!getMember())return;
+  var b=document.querySelector('#fin2Root .f3-seg button.on');
+  var tab=b?b.getAttribute('data-t'):'';
+  var ex=$('f3Total');
+  if(tab!=='over'&&tab!=='usd'){if(ex)ex.remove();return;}
+  var v=balances();
+  var h='<div class="ttl">🏦 CELKOVÝ ZŮSTATEK FRAKCE</div>'+
+    '<div class="col"><small>₱ PESOS NA ÚČTU</small><span class="f3-big'+(v.P<0?' neg':'')+'">'+fmtP(v.P)+'</span></div>'+
+    '<div class="col"><small>$ KASA (DOLARY)</small><span class="f3-big'+(v.D<0?' neg':'')+'">'+money(v.D)+'</span>'+
+    '<div class="sub">příspěvky '+money(r2(v.pay))+' + příjmy '+money(r2(v.inc))+' − výdaje '+money(r2(v.exp))+' − výběry '+money(r2(v.outD))+'</div></div>';
+  if(ex&&ex.dataset.h===h&&host.firstChild===ex)return;
+  if(ex)ex.remove();
+  ex=document.createElement('div');ex.id='f3Total';ex.className='f3-hero f3-total';ex.dataset.h=h;ex.innerHTML=h;
+  host.insertBefore(ex,host.firstChild);
+}
+setInterval(function(){if(!document.hidden)try{paint();}catch(e){console.error('f3total',e);}},700);
+})();
