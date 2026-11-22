@@ -5979,12 +5979,12 @@ var WEEKS=16;
 var NG={
   member:{sel:'#memberScreen .sb-nav',g:[
     ['PŘEHLED',['board','ooc','tasks','messages','calendar','rules']],
-    ['INTERNÍ INFORMACE',['warehouse','boosting','heist','escape','clothing','vyroba','prodej','business']],
+    ['INTERNÍ INFORMACE',['warehouse','boosting','heist','escape','clothing','vyroba','xtc','prodej','business']],
     ['FINANCE & PAPÍRY',['finance','excuse','report']],
     ['LIDÉ',['radio','roster','pochvaly','contacts']]]},
   admin:{sel:'#adminScreen .sb-nav',g:[
     ['PŘEHLED',['board','tasks','templates','messages','calendar','rules']],
-    ['INTERNÍ INFORMACE',['warehouse','boosting','drugsales','heists','vyroba','clothing']],
+    ['INTERNÍ INFORMACE',['warehouse','boosting','drugsales','heists','vyroba','xtc','clothing']],
     ['FINANCE',['finance','incomes','excuses','reports']],
     ['LIDÉ',['members','roster','nabor','radio']],
     ['SYSTÉM',['stats','log','settings']]]}
@@ -10545,4 +10545,252 @@ if(typeof _rs==='function')window.renderSettings=function(){
   try{renderPanel();}catch(e){console.error(e);}
   return r;
 };
+})();
+
+/* ===== PRODEJ EXTÁZE: sáčky, cena pro skupinu, zbytek pro sebe (vlož na ÚPLNÝ KONEC tsc.js) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+function r2(n){return Math.round(n*100)/100;}
+function arr(a){return Array.isArray(a)?a:[];}
+
+if(!SECTIONS.some(function(x){return x.key==='xtc';}))SECTIONS.push({key:'xtc',label:'Prodej extáze — jen vlastní webhook, bez něj se neposílá'});
+LOG_ICONS.xtc='🧪';LOG_LABELS.xtc='PRODEJ EXTÁZE';
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.xtc='B';
+
+/* ── data a oprávnění ── */
+function sales(){return arr(DB.get('xtc_sales'));}
+function cfg(){
+  var c=DB.get('xtc_cfg')||{};
+  return {price:num(c.price)||900,vp:arr(c.vp),vm:arr(c.vm),pp:arr(c.pp),pm:arr(c.pm),by:c.by||'',date:c.date||''};
+}
+function canAll(){var m=getMember(),c=cfg();return !!m&&(isAdmin()||c.vp.indexOf(m.position)!==-1||c.vm.indexOf(m.id)!==-1);}
+function canPrice(){var m=getMember(),c=cfg();return !!m&&(isAdmin()||c.pp.indexOf(m.position)!==-1||c.pm.indexOf(m.id)!==-1);}
+function canDel(x){var m=getMember();return !!m&&(isAdmin()||x.memberId===m.id);}
+function sum(a,f){return a.reduce(function(s,x){return s+f(x);},0);}
+function card(t,v,c){return '<div class="inc-sum-card"><div class="inc-sum-title">'+t+'</div><div class="inc-sum-val '+(c||'acc')+'">'+v+'</div></div>';}
+
+/* ── styl ── */
+if(!$('xtcCss')){
+  var st=document.createElement('style');st.id='xtcCss';
+  st.textContent=
+   '.xtc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem;margin:1rem 1.2rem}'+
+   '.xtc-box{margin:0 1.2rem 1rem;overflow-x:auto}'+
+   '.xtc-row{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;padding:.7rem .9rem;margin-bottom:1px;background:var(--card);border-left:3px solid var(--acc-dim)}'+
+   '.xtc-row .w{flex:1;min-width:200px;color:var(--textb);font-size:.95rem;line-height:1.5}'+
+   '.xtc-row .w small{display:block;color:var(--muted);font-size:.75rem}'+
+   '.xtc-row .w b{color:var(--acc)}'+
+   '.xtc-mine{font-weight:700;white-space:nowrap;color:var(--green)}.xtc-mine.neg{color:var(--red)}'+
+   '.xtc-flt{margin:0 1.2rem .8rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}'+
+   '@media(max-width:700px){.xtc-stats,.xtc-box,.xtc-flt{margin-left:.7rem;margin-right:.7rem}}';
+  document.head.appendChild(st);
+}
+
+/* ── záložky (člen + administrace) ── */
+(function inject(){
+  var nav=document.querySelector('#memberScreen .sb-nav'),main=document.querySelector('#memberScreen .main');
+  if(nav&&main&&!$('mt-xtc')){
+    var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"mTab('xtc',this)");
+    b.innerHTML='<span class="ni">🧪</span><span class="nl">PRODEJ EXTÁZE</span>';
+    var af=nav.querySelector('.nb[onclick*="\'prodej\'"]')||nav.querySelector('.nb[onclick*="\'vyroba\'"]')||nav.querySelector('.nb[onclick*="\'clothing\'"]');
+    if(af)af.insertAdjacentElement('afterend',b);else nav.appendChild(b);
+    main.insertAdjacentHTML('beforeend','<div id="mt-xtc" class="mt"><div class="ph"><div class="pt">🧪 // PRODEJ EXTÁZE</div></div><div id="xtcRootM"></div></div>');
+  }
+  var an=document.querySelector('#adminScreen .sb-nav'),am=document.querySelector('#adminScreen .main');
+  if(an&&am&&!$('at-xtc')){
+    var c=document.createElement('button');c.className='nb';c.setAttribute('onclick',"aTab('xtc',this)");
+    c.innerHTML='<span class="ni">🧪</span><span class="nl">PRODEJ EXTÁZE</span>';
+    var ac=an.querySelector('.nb[onclick*="\'drugsales\'"]')||an.querySelector('.nb[onclick*="\'boosting\'"]');
+    if(ac)ac.insertAdjacentElement('afterend',c);else an.appendChild(c);
+    am.insertAdjacentHTML('beforeend','<div id="at-xtc" class="at"><div class="ph"><div class="pt">🧪 // PRODEJ EXTÁZE — VŠICHNI ČLENOVÉ</div></div><div id="xtcRootA"></div></div>');
+  }
+})();
+
+/* ── sestavení (jednou na scope) ── */
+var filt={m:'all',a:'all'};
+function build(sc){
+  var root=$('xtcRoot'+(sc==='a'?'A':'M'));root.dataset.built='1';
+  var s=sc;
+  root.innerHTML=
+   '<div id="xtcStats'+s+'" class="xtc-stats"></div>'+
+   '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// ZAPSAT PRODEJ EXTÁZE</div><div class="form-grid">'+
+     '<div class="field-group"><label class="fl">KOLIK SÁČKŮ JSI DOSTAL *</label><div class="iw"><span class="ip">🛍</span><input type="number" id="xtcB'+s+'" min="1" step="1" placeholder="0"/></div></div>'+
+     '<div class="field-group"><label class="fl">CENA PRO SKUPINU ($ ZA SÁČEK)'+'</label><div class="iw"><span class="ip">$</span><input type="number" id="xtcP'+s+'" min="0" step="any"/></div></div>'+
+     '<div class="field-group fg-full"><label class="fl">CELKEM ZÍSKÁNO Z PRODEJE ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="xtcT'+s+'" min="0" step="any" placeholder="kolik jsi za prodej celkem dostal"/></div></div>'+
+     '<div class="field-group fg-full"><label class="fl">POZNÁMKA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="xtcN'+s+'" maxlength="120" placeholder="Volitelné…"/></div></div>'+
+   '</div><div id="xtcPrev'+s+'" class="att-hint" style="margin-bottom:.6rem;font-size:.95rem"></div>'+
+   '<div class="fp-ftr"><button class="btn-acc small" onclick="xtcAdd(\''+s+'\')">🧪 ZAPSAT PRODEJ</button>'+
+   '<label class="ping-chk"><input type="checkbox" id="xtcPing'+s+'"/><span>🔔 Označit Member</span></label><span id="xtcSt'+s+'" class="smsg"></span></div></div>'+
+   '<div id="xtcCfg'+s+'"></div>'+
+   '<div id="xtcFlt'+s+'"></div><div id="xtcList'+s+'"></div>';
+  function prev(){
+    var b=Math.floor(num($('xtcB'+s).value)),t=num($('xtcT'+s).value),p=num($('xtcP'+s).value),el=$('xtcPrev'+s);
+    if(!b||!t){el.textContent='';return;}
+    var g=r2(b*p),mine=r2(t-g);
+    el.innerHTML=b+' sáčků × '+money(p)+' = skupina <b>'+money(g)+'</b> · pro sebe <b style="color:'+(mine<0?'var(--red)':'var(--green)')+'">'+money(mine)+'</b>';
+  }
+  ['xtcB','xtcT','xtcP'].forEach(function(i){$(i+s).addEventListener('input',prev);});
+  root.addEventListener('change',function(e){
+    if(e.target.id==='xtcF'+s){filt[s]=e.target.value;paintList(s);}
+  });
+}
+
+/* ── zápis ── */
+window.xtcAdd=function(s){
+  var m=getMember();if(!m)return;
+  var st=$('xtcSt'+s);
+  function err(t){st.style.color='var(--red)';st.textContent=t;}
+  var bags=Math.floor(num($('xtcB'+s).value)),total=num($('xtcT'+s).value),note=$('xtcN'+s).value.trim();
+  var price=canPrice()?num($('xtcP'+s).value):cfg().price;
+  if(!bags){err('// ZADEJ POČET SÁČKŮ');return;}
+  if(!total){err('// ZADEJ, KOLIK JSI CELKEM ZÍSKAL');return;}
+  if(!price){err('// CENA PRO SKUPINU NENÍ NASTAVENÁ');return;}
+  var group=r2(bags*price),mine=r2(total-group);
+  var list=sales();
+  list.push({id:uid(),memberId:m.id,memberName:m.displayName,bags:bags,price:price,total:total,group:group,mine:mine,note:note,date:nowStr(),ts:Date.now(),weekKey:getWeekKey()});
+  if(list.length>5000)list=list.slice(-5000);
+  DB.set('xtc_sales',list);
+  addLog('xtc',m.displayName+': '+bags+' sáčků extáze, získáno '+money(total)+', skupina '+money(group)+' ('+money(price)+'/sáček), pro sebe '+money(mine)+'.',{
+    private:true,extraPing:pingBox('xtcPing'+s),
+    embed:rich(mine<0?C_RED:C_GREEN,'🧪 PRODEJ EXTÁZE',note||null,[
+      ['👤 Člen',m.displayName],['🛍 Sáčků',String(bags)],['💲 Cena pro skupinu',money(price)+' / sáček'],
+      ['💰 Získáno celkem',money(total)],['🏛 Skupina',money(group)],['🧑 Zbytek pro sebe',money(mine)]],{by:m.displayName})});
+  ['xtcB','xtcT','xtcN'].forEach(function(i){$(i+s).value='';});$('xtcPrev'+s).textContent='';
+  st.style.color='';st.textContent='// ZAPSÁNO';setTimeout(function(){st.textContent='';},2000);
+  toast('Prodej zapsán ✓','success');render(s);
+};
+window.xtcDel=function(id){
+  var m=getMember(),x=sales().filter(function(y){return y.id===id;})[0];
+  if(!m||!x||!canDel(x))return;
+  function go(){
+    DB.set('xtc_sales',sales().filter(function(y){return y.id!==id;}));
+    addLog('xtc',m.displayName+' smazal záznam extáze ('+x.memberName+': '+x.bags+' sáčků, '+x.date+').',{noDiscord:true});
+    toast('Záznam smazán','info');render('m');render('a');
+  }
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT ZÁZNAM?',text:esc(x.memberName+' — '+x.bags+' sáčků, '+x.date),ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);else go();
+};
+/* změna ceny pro skupinu u hotového záznamu (jen kdo smí nastavovat cenu) */
+window.xtcEditPrice=function(id){
+  var m=getMember(),x=sales().filter(function(y){return y.id===id;})[0];
+  if(!m||!x)return;
+  if(!canPrice()){toast('Cenu pro skupinu smí měnit jen admin nebo určený člen','error');return;}
+  function go(val){
+    var p=num(val);if(!p){toast('Zadej cenu za sáček','error');return;}
+    var a=sales(),r=a.filter(function(y){return y.id===id;})[0];if(!r)return;
+    var old=r.price;r.price=p;r.group=r2(r.bags*p);r.mine=r2(r.total-r.group);
+    DB.set('xtc_sales',a);
+    addLog('xtc',m.displayName+' změnil cenu pro skupinu u záznamu '+r.memberName+' ('+money(old)+' → '+money(p)+' za sáček).',{
+      private:true,embed:rich(C_BLUE,'✏️ ZMĚNA CENY PRO SKUPINU',null,[['👤 Člen',r.memberName],['🛍 Sáčků',String(r.bags)],['↩ Původně',money(old)],['➡️ Nově',money(p)],['🧑 Zbytek pro sebe',money(r.mine)]],{by:m.displayName})});
+    toast('Cena upravena ✓','success');render('m');render('a');
+  }
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'✏️ CENA PRO SKUPINU',text:esc(x.memberName+' — '+x.bags+' sáčků')+'<div class="tsc-sub">Nová cena za 1 sáček ($)</div>',input:true,value:x.price,ok:'ULOŽIT',cancel:'ZRUŠIT'},go);
+  else go(prompt('Nová cena za sáček ($):',x.price));
+};
+
+/* ── nastavení (jen admin) ── */
+function cfgHtml(s){
+  var c=cfg(),poss=POSITIONS.filter(function(p){return ADMIN_POS.indexOf(p)===-1;});
+  var ms=(DB.get('members')||[]).filter(function(x){return !x.hidden&&!x.adminAccess;})
+    .sort(function(a,b){return String(a.displayName).localeCompare(String(b.displayName),'cs');});
+  function box(attr,key,val,lbl){return '<label class="pick-item"><input type="checkbox" data-'+attr+'="'+esc(val)+'"'+(c[key].indexOf(val)!==-1?' checked':'')+'/><span>'+lbl+'</span></label>';}
+  return '<div class="form-panel" style="margin:1.1rem 1.2rem"><div class="fp-title">// NASTAVENÍ PRODEJE EXTÁZE (jen admin)</div>'+
+    '<div class="form-grid"><div class="field-group"><label class="fl">VÝCHOZÍ CENA PRO SKUPINU ($ ZA SÁČEK)</label><div class="iw"><span class="ip">$</span><input type="number" id="xtcCP'+s+'" min="0" step="any" value="'+c.price+'"/></div></div></div>'+
+    '<div class="fp-ftr" style="margin-bottom:.8rem"><button class="btn-acc small" onclick="xtcSavePrice(\''+s+'\')">ULOŽIT CENU</button><span class="smsg" style="color:var(--text)">'+(c.by?'naposledy '+esc(c.by)+', '+esc(c.date):'')+'</span></div>'+
+    '<div class="rx-hint" style="margin:0 0 .6rem">Admini vidí a nastavují vše vždy. Zaškrtni, komu dalšímu to povolit — změny se ukládají hned.</div>'+
+    '<div class="fl" style="margin:.4rem 0">👁 SMÍ VIDĚT PRODEJE VŠECH — PODLE POZICE</div><div class="pick-list" style="max-height:none">'+poss.map(function(p){return box('vp','vp',p,esc(p));}).join('')+'</div>'+
+    '<div class="fl" style="margin:.7rem 0 .4rem">👁 SMÍ VIDĚT PRODEJE VŠECH — KONKRÉTNÍ LIDÉ</div><div class="pick-list">'+(ms.length?ms.map(function(x){return box('vm','vm',x.id,esc(x.displayName)+' <em>('+esc(x.position)+')</em>');}).join(''):'<span class="pick-item off">Žádní členové</span>')+'</div>'+
+    '<div class="fl" style="margin:.9rem 0 .4rem">💲 SMÍ NASTAVOVAT CENU PRO SKUPINU — PODLE POZICE</div><div class="pick-list" style="max-height:none">'+poss.map(function(p){return box('pp','pp',p,esc(p));}).join('')+'</div>'+
+    '<div class="fl" style="margin:.7rem 0 .4rem">💲 SMÍ NASTAVOVAT CENU PRO SKUPINU — KONKRÉTNÍ LIDÉ</div><div class="pick-list">'+(ms.length?ms.map(function(x){return box('pm','pm',x.id,esc(x.displayName)+' <em>('+esc(x.position)+')</em>');}).join(''):'<span class="pick-item off">Žádní členové</span>')+'</div></div>';
+}
+window.xtcSavePrice=function(s){
+  var m=getMember();if(!m||!isAdmin()){toast('Cenu výchozí smí měnit jen admin','error');return;}
+  var p=num($('xtcCP'+s).value);if(!p){toast('Zadej cenu za sáček','error');return;}
+  var c=DB.get('xtc_cfg')||{};c.price=p;c.by=m.displayName;c.date=nowStr();DB.set('xtc_cfg',c);
+  addLog('xtc',m.displayName+' nastavil výchozí cenu pro skupinu na '+money(p)+' za sáček.',{noDiscord:true});
+  toast('Cena uložena','success');render('m');render('a');
+};
+document.addEventListener('change',function(e){
+  var t=e.target;if(!t.dataset||!(t.dataset.vp!==undefined||t.dataset.vm!==undefined||t.dataset.pp!==undefined||t.dataset.pm!==undefined))return;
+  if(!t.closest('[id^=xtcCfg]'))return;
+  var m=getMember();if(!m||!isAdmin()){toast('Oprávnění smí měnit jen admin','error');return;}
+  var c=DB.get('xtc_cfg')||{};
+  ['vp','vm','pp','pm'].forEach(function(k){
+    if(t.dataset[k]===undefined)return;
+    var l=arr(c[k]),v=t.dataset[k],i=l.indexOf(v);
+    if(t.checked&&i===-1)l.push(v);else if(!t.checked&&i!==-1)l.splice(i,1);
+    c[k]=l;
+  });
+  DB.set('xtc_cfg',c);
+  addLog('xtc',m.displayName+' upravil oprávnění u prodeje extáze.',{noDiscord:true});
+  toast('Oprávnění uložena','success');
+});
+
+/* ── vykreslení ── */
+function statsHtml(a){
+  return card('SÁČKŮ CELKEM',String(sum(a,function(x){return num(x.bags);})))+
+    card('ZÍSKÁNO CELKEM',money(r2(sum(a,function(x){return num(x.total);}))))+
+    card('SKUPINĚ',money(r2(sum(a,function(x){return num(x.group);}))),'')+
+    card('PRO SEBE',money(r2(sum(a,function(x){return num(x.mine);}))),'green');
+}
+function rows(a,showWho){
+  if(!a.length)return '<div class="empty-s">// Zatím žádné záznamy</div>';
+  return '<div class="xtc-box">'+a.slice().sort(function(x,y){return (y.ts||0)-(x.ts||0);}).slice(0,200).map(function(x){
+    return '<div class="xtc-row"><span class="w">'+(showWho?'<b>'+esc(x.memberName)+'</b> — ':'')+x.bags+' sáčků extáze — '+money(x.price)+' za sáček → skupina <b>'+money(x.group)+'</b>'+
+      '<small>'+esc(x.date)+' · získáno celkem '+money(x.total)+(x.note?' · '+esc(x.note):'')+'</small></span>'+
+      '<span class="xtc-mine'+(x.mine<0?' neg':'')+'">pro sebe '+money(x.mine)+'</span>'+
+      (canPrice()?'<button class="btn-micro" title="Upravit cenu pro skupinu" onclick="xtcEditPrice(\''+esc(x.id)+'\')">✎ CENA</button>':'')+
+      (canDel(x)?'<button class="btn-micro del" onclick="xtcDel(\''+esc(x.id)+'\')">✕</button>':'')+'</div>';
+  }).join('')+'</div>';
+}
+function paintList(s){
+  var m=getMember();if(!m)return;
+  var all=canAll(),A=sales(),mine=A.filter(function(x){return x.memberId===m.id;});
+  var stats=$('xtcStats'+s);
+  var flt=$('xtcFlt'+s),list=$('xtcList'+s);
+  var data=mine,showWho=false,head='<div class="sh">// MOJE PRODEJE</div>';
+  if(all){
+    var mem={};A.forEach(function(x){var k=x.memberId;mem[k]=mem[k]||{name:x.memberName,b:0,t:0,g:0,m:0};mem[k].name=x.memberName;mem[k].b+=num(x.bags);mem[k].t+=num(x.total);mem[k].g+=num(x.group);mem[k].m+=num(x.mine);});
+    (DB.get('members')||[]).forEach(function(x){if(mem[x.id])mem[x.id].name=x.displayName;});
+    var ids=Object.keys(mem).sort(function(a,b){return mem[b].t-mem[a].t;});
+    if(filt[s]!=='all'&&!mem[filt[s]])filt[s]='all';
+    data=filt[s]==='all'?A:A.filter(function(x){return x.memberId===filt[s];});showWho=true;
+    stats.innerHTML=statsHtml(A);
+    head='<div class="sh">// 🛡 PŘEHLED VŠECH ČLENŮ</div><div class="xtc-box"><table class="mx"><thead><tr><th>ČLEN</th><th>SÁČKŮ</th><th>ZÍSKAL</th><th>SKUPINĚ</th><th>PRO SEBE</th></tr></thead><tbody>'+
+      (ids.length?ids.map(function(id){var r=mem[id];return '<tr><td>'+esc(r.name)+'</td><td>'+r.b+'</td><td>'+money(r2(r.t))+'</td><td>'+money(r2(r.g))+'</td><td class="ok">'+money(r2(r.m))+'</td></tr>';}).join(''):'<tr><td colspan="5" class="na">—</td></tr>')+
+      '</tbody></table></div>';
+    var sel='<div class="xtc-flt"><span class="fl" style="margin:0">ZOBRAZIT ZÁZNAMY:</span><select id="xtcF'+s+'" class="st-range"><option value="all">Všichni členové</option>'+
+      ids.map(function(id){return '<option value="'+esc(id)+'"'+(filt[s]===id?' selected':'')+'>'+esc(mem[id].name)+'</option>';}).join('')+'</select></div>';
+    if(!(flt.contains(document.activeElement)&&document.activeElement.tagName==='SELECT'))flt.innerHTML=head+sel;
+  }else{
+    stats.innerHTML=statsHtml(mine);flt.innerHTML=head;
+  }
+  list.innerHTML=rows(data,showWho);
+}
+function render(s){
+  var m=getMember(),root=$('xtcRoot'+(s==='a'?'A':'M'));if(!m||!root)return;
+  if(!root.dataset.built)build(s);
+  /* cena pro skupinu: kdo nesmí měnit, vidí jen pevnou hodnotu */
+  var P=$('xtcP'+s);
+  if(P){P.disabled=!canPrice();if(document.activeElement!==P)P.value=cfg().price;}
+  /* nastavení jen pro admina */
+  var c=$('xtcCfg'+s);
+  if(isAdmin()){if(!c.contains(document.activeElement)){var h=cfgHtml(s);if(c.dataset.h!==h){c.dataset.h=h;c.innerHTML=h;}}}
+  else if(c.innerHTML){c.innerHTML='';c.dataset.h='';}
+  paintList(s);
+}
+
+if(typeof M_RENDER!=='undefined')M_RENDER.xtc=function(){render('m');};
+if(typeof A_RENDER!=='undefined')A_RENDER.xtc=function(){render('a');};
+var _mt=window.mTab;
+window.mTab=function(tab){var r=_mt.apply(this,arguments);if(tab==='xtc')render('m');return r;};
+var _at=window.aTab;
+window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='xtc')render('a');return r;};
+setInterval(function(){
+  if(document.hidden||!getMember())return;
+  try{
+    if($('mt-xtc')&&$('mt-xtc').classList.contains('active'))render('m');
+    if($('at-xtc')&&$('at-xtc').classList.contains('active'))render('a');
+  }catch(e){console.error('xtc',e);}
+},1500);
 })();
