@@ -9886,3 +9886,104 @@ function paint(){
 }
 setInterval(function(){if(!document.hidden)try{paint();}catch(e){}},700);
 })();
+
+/* ===== FINANCE: výběr v dolarech (jako u pesos) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v){var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isNaN(n)||n<0?0:n;}
+function r2(n){return Math.round(n*100)/100;}
+var CATS=[['Nákup','🧾'],['Výplata','💼'],['Zakázka','📦'],['Převod','🔁'],['Jiné','✨']];
+var cat='Nákup',draft={a:'',n:'',p:false};
+
+function logs(){var a=DB.get('acctlog');return Array.isArray(a)?a:[];}
+function dBal(){
+  var fin=DB.get('finance')||{payments:[],expenses:[]};
+  var inc=(DB.get('incomes')||[]).filter(function(i){return i.status==='confirmed';});
+  var s=0;
+  (fin.payments||[]).forEach(function(x){s+=num(x.amount);});
+  inc.forEach(function(x){s+=num(x.amount);});
+  (fin.expenses||[]).forEach(function(x){s-=num(x.amount);});
+  logs().forEach(function(x){if(x.cur==='D'&&x.type==='out')s-=num(x.amount);});
+  return r2(s);
+}
+
+function rows(){
+  var me=getMember();
+  var arr=logs().filter(function(x){return x.cur==='D'&&x.type==='out';})
+    .sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,30);
+  if(!arr.length)return '<div class="f3-empty">Zatím žádné výběry v dolarech</div>';
+  return arr.map(function(x){
+    var del=me&&(isAdmin()||x.memberId===me.id);
+    return '<div class="f3-tx out"><span class="f3-ic">↑</span><span class="m">'+esc(x.cat||'Výdej')+' · '+esc(x.memberName||'?')+
+      '<small>'+esc([x.date,x.note].filter(Boolean).join(' · '))+'</small></span><span class="a">−'+money(r2(num(x.amount)))+'</span>'+
+      (del?'<button class="f3-x" title="Smazat" data-a="pdel" data-id="'+esc(x.id)+'">✕</button>':'')+'</div>';
+  }).join('');
+}
+
+function panelHtml(){
+  return '<div class="f3-h">$ VÝBĚR Z KASY</div>'+
+    '<div class="f3-card"><div class="smsg" style="color:var(--text);margin-bottom:.4rem">Aktuálně v kase: <b>'+money(dBal())+'</b></div>'+
+    '<div class="f3-amt"><span>$</span><input type="number" id="f3d-a" min="0" step="any" placeholder="0" inputmode="decimal"/></div>'+
+    '<div class="f3-chips">'+CATS.map(function(c){return '<button type="button" class="f3-chip'+(cat===c[0]?' on':'')+'" data-dc="'+c[0]+'">'+c[1]+' '+c[0]+'</button>';}).join('')+'</div>'+
+    '<input type="text" id="f3d-n" class="f3-note" maxlength="120" placeholder="DŮVOD VÝBĚRU * (povinné) — např. nákup surovin"/>'+
+    '<button type="button" class="f3-btn wide" id="f3d-go">Zapsat výběr</button>'+
+    '<div class="f3-foot"><label class="ping-chk"><input type="checkbox" id="f3d-p"/><span>🔔 Označit Member</span></label><span id="f3d-st" class="smsg"></span></div></div>'+
+    '<div class="f3-h">VÝBĚRY V DOLARECH</div><div id="f3d-list">'+rows()+'</div>';
+}
+
+function paint(){
+  var body=$('f2Body');if(!body||!getMember())return;
+  var b=document.querySelector('#fin2Root .f3-seg button.on');
+  var tab=b?b.getAttribute('data-t'):'';
+  var ex=$('f3dBox');
+  if(tab!=='usd'){if(ex)ex.remove();return;}
+  var a=document.activeElement;
+  if(ex&&ex.contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName))return;   // nepřepisovat při psaní
+  var h=panelHtml();
+  if(ex&&ex.dataset.h===h&&ex.parentNode===body)return;
+  if(ex)ex.remove();
+  ex=document.createElement('div');ex.id='f3dBox';ex.dataset.h=h;
+  ex.style.cssText='display:flex;flex-direction:column;gap:1rem';
+  ex.innerHTML=h;
+  var card=body.querySelector('.f3-card');
+  if(card)card.after(ex);else body.appendChild(ex);
+  $('f3d-a').value=draft.a;$('f3d-n').value=draft.n;$('f3d-p').checked=draft.p;
+  $('f3d-a').oninput=function(){draft.a=this.value;};
+  $('f3d-n').oninput=function(){draft.n=this.value;};
+  $('f3d-p').onchange=function(){draft.p=this.checked;};
+  $('f3d-go').onclick=add;
+}
+
+document.addEventListener('click',function(e){
+  var c=e.target.closest&&e.target.closest('[data-dc]');
+  if(!c)return;
+  cat=c.getAttribute('data-dc');
+  var ex=$('f3dBox');if(ex)ex.dataset.h='';
+  var box=ex;if(box){box.querySelectorAll('[data-dc]').forEach(function(x){x.classList.toggle('on',x===c);});}
+});
+
+function add(){
+  var m=getMember();if(!m)return;
+  var st=$('f3d-st'),amount=num($('f3d-a').value),note=$('f3d-n').value.trim();
+  function err(t){st.style.color='var(--red)';st.textContent=t;}
+  if(!amount){err('// ZADEJ ČÁSTKU');return;}
+  if(note.length<3){err('// U VÝBĚRU JE POVINNÝ DŮVOD');$('f3d-n').focus();return;}
+  var bal=dBal();
+  if(amount>bal){err('// V KASE JE JEN '+money(bal));return;}
+  var arr=logs();
+  arr.push({id:uid(),type:'out',cur:'D',amount:amount,cat:cat,note:note,memberId:m.id,memberName:m.displayName,date:nowStr(),ts:Date.now()});
+  if(arr.length>3000)arr=arr.slice(-3000);
+  DB.set('acctlog',arr);
+  var after=dBal();
+  addLog('acct',m.displayName+' vybral z kasy '+money(amount)+' ('+cat+', '+note+'). Zůstatek kasy: '+money(after)+'.',{
+    extraPing:pingBox('f3d-p'),
+    embed:rich(C_ORANGE,'$ VÝBĚR Z KASY',note,[['👤 Člen',m.displayName],['🏷 Kategorie',cat],['💰 Částka',money(amount)],['🏦 Zůstatek kasy',money(after)]],{by:m.displayName})});
+  draft={a:'',n:'',p:false};
+  toast('Výběr zapsán ✓','success');
+  var ex=$('f3dBox');if(ex)ex.remove();
+  try{renderAdminFinance();}catch(e){}
+  paint();
+}
+setInterval(function(){if(!document.hidden)try{paint();}catch(e){console.error('usd-out',e);}},700);
+})();
