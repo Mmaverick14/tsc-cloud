@@ -10426,3 +10426,123 @@ if(typeof _rs==='function')window.renderSettings=function(){
   return r;
 };
 })();
+
+/* ===== VÁNOČNÍ HUDBA (zapíná/vypíná jen člen s Discord ID 726173849678512151) ===== */
+(function(){
+'use strict';
+var OWNER_DC='726173849678512151',VID='KhqNTjbQ71A',MUTE_LS='tsc_xm_mute';
+function $(id){return document.getElementById(id);}
+function loaded(){return !!DB.cache&&DB.cache.members!==undefined;}
+function isOwner(){var m=getMember();return !!m&&String(m.discordId||'')===OWNER_DC;}
+function cfg(){var c=DB.get('xmasMusic')||{};var v=parseInt(c.vol,10);return {on:!!c.on,vol:isNaN(v)?35:Math.min(100,Math.max(0,v))};}
+function localMuted(){try{return localStorage.getItem(MUTE_LS)==='1';}catch(e){return false;}}
+function setLocalMuted(v){try{localStorage.setItem(MUTE_LS,v?'1':'0');}catch(e){}}
+/* hraje jen od listopadu do 26. 12. (pak se vypne samo) */
+function inSeason(){var n=new Date(),m=n.getMonth(),d=n.getDate();return m===10||(m===11&&d<=26);}
+function shouldPlay(){
+  return loaded()&&!!getMember()&&document.documentElement.classList.contains('xmas')&&cfg().on&&inSeason();
+}
+
+if(!$('xmMusicCss')){
+  var st=document.createElement('style');st.id='xmMusicCss';
+  st.textContent=
+   '#xmMusicHost{position:fixed;left:-9999px;top:0;width:200px;height:200px;overflow:hidden;pointer-events:none;opacity:0}'+
+   '#xmMusicBtn{position:fixed;z-index:9997;left:calc(var(--rail,14.75rem) + 1rem);bottom:1rem;display:flex;align-items:center;gap:.5rem;'+
+    'padding:.45rem .8rem;background:var(--card);border:1px solid #7f1900;border-left:3px solid #c0392b;color:var(--textb);font-size:.8rem;letter-spacing:.1em;cursor:pointer;opacity:.9}'+
+   '#xmMusicBtn:hover{opacity:1;border-color:#27ae60}'+
+   '#xmMusicBtn.wait{animation:xmTw2 1.6s ease-in-out infinite}'+
+   '@media(max-width:700px){#xmMusicBtn{left:.7rem;bottom:calc(72px + env(safe-area-inset-bottom,0px))}}';
+  document.head.appendChild(st);
+}
+
+/* ── YouTube přehrávač ── */
+var player=null,ready=false,loading=false,gesture=false;
+function loadApi(){
+  if(loading)return;loading=true;
+  var prev=window.onYouTubeIframeAPIReady;
+  window.onYouTubeIframeAPIReady=function(){if(typeof prev==='function')try{prev();}catch(e){}create();};
+  if(window.YT&&window.YT.Player){create();return;}
+  var s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s);
+}
+function create(){
+  if(player||!window.YT||!YT.Player)return;
+  var h=document.createElement('div');h.id='xmMusicHost';h.innerHTML='<div id="xmYT"></div>';document.body.appendChild(h);
+  player=new YT.Player('xmYT',{width:'200',height:'200',videoId:VID,
+    playerVars:{autoplay:0,controls:0,disablekb:1,playsinline:1,rel:0,modestbranding:1,origin:location.origin},
+    events:{
+      onReady:function(){ready=true;try{player.setVolume(cfg().vol);}catch(e){}},
+      onStateChange:function(e){if(e.data===0){try{player.seekTo(0);player.playVideo();}catch(x){}}}  /* smyčka */
+    }});
+}
+function state(){try{return player.getPlayerState();}catch(e){return -2;}}
+
+/* prohlížeč zakazuje zvuk bez kliknutí → čeká se na první klik/klávesu */
+['pointerdown','keydown','touchstart'].forEach(function(ev){
+  document.addEventListener(ev,function(){gesture=true;tick();},{capture:true,passive:true});
+});
+
+function button(show,muted,waiting){
+  var b=$('xmMusicBtn');
+  if(!show){if(b)b.remove();return;}
+  if(!b){
+    b=document.createElement('button');b.id='xmMusicBtn';b.type='button';
+    b.onclick=function(){gesture=true;setLocalMuted(!localMuted());tick();};
+    document.body.appendChild(b);
+  }
+  var t=waiting?'🎵 KLIKNI PRO HUDBU':(muted?'🔇 HUDBA VYPNUTA (jen u tebe)':'🎵 VÁNOČNÍ HUDBA');
+  if(b.textContent!==t)b.textContent=t;
+  b.classList.toggle('wait',!!waiting);
+  b.title=muted?'Zapnout hudbu u mě':'Ztlumit hudbu u mě';
+}
+
+function tick(){
+  var want=shouldPlay();
+  if(!want){
+    if(player&&ready&&state()===1)try{player.pauseVideo();}catch(e){}
+    button(false);return;
+  }
+  if(!player)loadApi();
+  var muted=localMuted();
+  if(player&&ready){
+    var s=state(),playing=(s===1||s===3);
+    try{player.setVolume(cfg().vol);}catch(e){}
+    if(muted){if(s===1)try{player.pauseVideo();}catch(e){}}
+    else if(gesture&&!playing)try{player.playVideo();}catch(e){}
+    button(true,muted,!muted&&!gesture&&!playing);
+  }else button(true,muted,!muted&&!gesture);
+}
+setInterval(function(){try{tick();}catch(e){console.error('xmMusic',e);}},1000);
+
+/* ── panel v Administraci → Nastavení (jen vlastník) ── */
+function renderPanel(){
+  var host=$('at-settings'),p=$('xmMusicPanel');
+  if(!host)return;
+  if(!isOwner()){if(p)p.remove();return;}
+  if(!p){
+    p=document.createElement('div');p.id='xmMusicPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+    host.appendChild(p);
+    p.addEventListener('change',function(e){
+      if(!isOwner()){toast('Hudbu smí měnit jen určený člen','error');return;}
+      var t=e.target,k=t.getAttribute('data-m');if(!k)return;
+      var c=cfg();
+      if(k==='on')c.on=t.checked;else if(k==='vol')c.vol=Math.min(100,Math.max(0,parseInt(t.value,10)||0));
+      DB.set('xmasMusic',c);
+      addLog('sys',getMember().displayName+' '+(k==='on'?(c.on?'ZAPNUL':'VYPNUL')+' vánoční hudbu.':'změnil hlasitost vánoční hudby na '+c.vol+' %.'),{noDiscord:true});
+      toast(k==='on'?(c.on?'🎵 Hudba zapnuta':'Hudba vypnuta'):'Hlasitost uložena','success');
+      tick();renderPanel();
+    });
+  }
+  if(p.contains(document.activeElement))return;
+  var c=cfg();
+  p.innerHTML='<div class="fp-title">// 🎵 VÁNOČNÍ HUDBA</div>'+
+    '<div class="iw" style="padding:.4rem .8rem;margin-bottom:.8rem"><label class="ping-chk"><input type="checkbox" data-m="on"'+(c.on?' checked':'')+'/><span><b>Hudba zapnutá</b> (hraje všem přihlášeným, když je zapnutý vánoční motiv)</span></label></div>'+
+    '<div class="field-group" style="max-width:300px"><label class="fl">HLASITOST (%)</label><div class="iw"><span class="ip">♪</span><input type="number" data-m="vol" min="0" max="100" step="5" value="'+c.vol+'"/></div></div>'+
+    '<div class="rx-hint" style="margin:.6rem 0 0">Hraje jen v období listopad – 26. 12. a jen při zapnutém vánočním motivu. Každý člen si ji může u sebe ztlumit tlačítkem vlevo dole, ale vypnout ji všem smí jen člen s Discord ID '+OWNER_DC+'. Prohlížeče pustí zvuk až po prvním kliknutí na stránce.</div>';
+}
+var _rs=window.renderSettings;
+if(typeof _rs==='function')window.renderSettings=function(){
+  var r=_rs.apply(this,arguments);
+  try{renderPanel();}catch(e){console.error(e);}
+  return r;
+};
+})();
