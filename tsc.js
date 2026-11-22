@@ -9987,3 +9987,151 @@ function add(){
 }
 setInterval(function(){if(!document.hidden)try{paint();}catch(e){console.error('usd-out',e);}},700);
 })();
+
+/* ===== VÁNOČNÍ MOTIV (zapíná/vypíná jen člen s Discord ID 726173849678512151) ===== */
+(function(){
+'use strict';
+var OWNER_DC='726173849678512151',LS='tsc_xmas';
+function $(id){return document.getElementById(id);}
+var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── styl ── */
+if(!$('xmasCss')){
+  var st=document.createElement('style');st.id='xmasCss';
+  st.textContent=
+  'html.xmas{--corner:linear-gradient(#c0392b,#c0392b)}'+
+  'html.xmas .nb.active,html.xmas #adminScreen .nb.active{background:linear-gradient(90deg,rgba(192,57,43,.28),transparent)!important;color:#ff8a7a!important}'+
+  'html.xmas .nb.active .ni{color:#ff8a7a!important}'+
+  'html.xmas .nb:hover{color:#6fdc9a!important}'+
+  'html.xmas .ph::before{background:#c0392b!important}'+
+  'html.xmas .ph::after,html.xmas #adminScreen .ph::after{background:linear-gradient(90deg,transparent,#c0392b,#27ae60,#c0392b,transparent)!important}'+
+  'html.xmas .btn-acc{border-color:#c0392b!important;color:#ff8a7a!important}'+
+  'html.xmas .btn-acc::before{background:#c0392b!important}'+
+  'html.xmas .btn-acc:hover{color:#fff!important}'+
+  'html.xmas .wf.active,html.xmas .ttab.active{border-color:#27ae60!important;color:#6fdc9a!important;background:rgba(39,174,96,.12)!important}'+
+  'html.xmas .sidebar::after{background:linear-gradient(180deg,transparent,#c0392b 25%,#27ae60 75%,transparent)!important}'+
+  'html.xmas .sb-logo::before{content:"🎄";margin-right:.45rem;font-size:1.1em}'+
+  'html.xmas .board-post{border-left-color:#27ae60!important}'+
+  '#xmasLights{position:fixed;top:0;left:0;right:0;height:10px;z-index:9996;pointer-events:none;'+
+    'background:'+
+    'radial-gradient(circle at 10px 6px,#e74c3c 3.5px,transparent 4.5px) 0 0/80px 10px repeat-x,'+
+    'radial-gradient(circle at 30px 6px,#f1c40f 3.5px,transparent 4.5px) 0 0/80px 10px repeat-x,'+
+    'radial-gradient(circle at 50px 6px,#2ecc71 3.5px,transparent 4.5px) 0 0/80px 10px repeat-x,'+
+    'radial-gradient(circle at 70px 6px,#3498db 3.5px,transparent 4.5px) 0 0/80px 10px repeat-x,'+
+    'linear-gradient(#2a2a2a,#2a2a2a) 0 2px/100% 1px no-repeat;'+
+    'filter:drop-shadow(0 0 4px rgba(255,255,255,.35));animation:xmTw 2.4s ease-in-out infinite}'+
+  '@keyframes xmTw{0%,100%{opacity:1}50%{opacity:.55}}'+
+  '#xmasSnow{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9995}'+
+  '.xm-banner{margin:.9rem 1.2rem 0;padding:.7rem 1.1rem;text-align:center;font-size:1rem;color:#f3ead0;letter-spacing:.06em;'+
+    'border:1px solid #7f1900;border-left:4px solid #c0392b;border-right:4px solid #27ae60;background:linear-gradient(90deg,rgba(192,57,43,.14),rgba(39,174,96,.14))}'+
+  '.xm-banner b{color:#ff8a7a}'+
+  '@media(max-width:700px){.xm-banner{margin:.7rem .7rem 0;font-size:.88rem}}'+
+  '@media(prefers-reduced-motion:reduce){#xmasLights{animation:none}}';
+  document.head.appendChild(st);
+}
+
+/* ── konfigurace ── */
+function isOwner(){var m=getMember();return !!m&&String(m.discordId||'')===OWNER_DC;}
+function cfg(){var c=DB.get('xmasCfg')||{};return {on:!!c.on,snow:c.snow!==false,lights:c.lights!==false,banner:c.banner!==false};}
+function loaded(){return !!DB.cache&&DB.cache.members!==undefined;}
+function lsGet2(){try{return JSON.parse(localStorage.getItem(LS)||'null');}catch(e){return null;}}
+function lsSet2(c){try{localStorage.setItem(LS,JSON.stringify(c));}catch(e){}}
+function effective(){
+  if(loaded()){var c=cfg();lsSet2(c);return c;}      /* po načtení dat platí ta z databáze */
+  return lsGet2()||{on:false};                        /* před přihlášením: poslední známá */
+}
+
+/* ── sníh ── */
+var cv=null,cx=null,flakes=[],W=0,H=0,D=1,running=false;
+function size(){D=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*D;cv.height=H*D;cx.setTransform(D,0,0,D,0,0);}
+function snowOn(){
+  if(cv||reduce)return;
+  cv=document.createElement('canvas');cv.id='xmasSnow';document.body.appendChild(cv);cx=cv.getContext('2d');size();
+  var n=Math.round(Math.min(110,Math.max(45,innerWidth/14)));flakes=[];
+  for(var i=0;i<n;i++)flakes.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2.4+.8,v:Math.random()*.9+.35,p:Math.random()*6.28,a:Math.random()*.5+.4});
+  if(!running){running=true;requestAnimationFrame(loop);}
+}
+function snowOff(){if(cv){cv.remove();cv=null;cx=null;}}
+function loop(t){
+  if(!cv){running=false;return;}
+  cx.clearRect(0,0,W,H);
+  flakes.forEach(function(f){
+    f.y+=f.v;f.x+=Math.sin(t/1500+f.p)*.35;
+    if(f.y>H+5){f.y=-5;f.x=Math.random()*W;}
+    if(f.x>W+5)f.x=-5;else if(f.x<-5)f.x=W+5;
+    cx.beginPath();cx.fillStyle='rgba(255,255,255,'+f.a+')';cx.arc(f.x,f.y,f.r,0,6.283);cx.fill();
+  });
+  requestAnimationFrame(loop);
+}
+addEventListener('resize',function(){if(cv)size();});
+
+/* ── světýlka + banner ── */
+function lightsSet(on){
+  var el=$('xmasLights');
+  if(on&&!el){el=document.createElement('div');el.id='xmasLights';document.body.appendChild(el);}
+  else if(!on&&el)el.remove();
+}
+function daysText(){
+  var n=new Date(),y=n.getFullYear(),m=n.getMonth(),d=n.getDate();
+  if(m===11&&d===24)return 'Dnes je <b>Štědrý den</b> 🎄';
+  if(m===11&&(d===25||d===26))return '<b>Veselé Vánoce</b> 🎁';
+  var t=new Date(y,11,24),today=new Date(y,m,d);
+  if(today>t)t=new Date(y+1,11,24);
+  var k=Math.round((t-today)/864e5);
+  return 'Do Štědrého dne zbývá <b>'+k+' '+(k===1?'den':(k>=2&&k<=4?'dny':'dní'))+'</b> 🎅';
+}
+function bannerSet(on){
+  var el=$('xmasBanner'),ph=document.querySelector('#mt-board .ph');
+  if(!on||!ph){if(el)el.remove();return;}
+  if(!el){el=document.createElement('div');el.id='xmasBanner';el.className='xm-banner';}
+  if(el.previousElementSibling!==ph)ph.after(el);
+  var h='🎄 Přejeme všem v crew krásné svátky — '+daysText();
+  if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h;}
+}
+
+/* ── použití ── */
+function apply(){
+  var c=effective(),on=!!c.on;
+  document.documentElement.classList.toggle('xmas',on);
+  if(on&&c.snow!==false)snowOn();else snowOff();
+  lightsSet(on&&c.lights!==false);
+  bannerSet(on&&c.banner!==false&&!!getMember());
+}
+apply();
+setInterval(function(){try{apply();}catch(e){console.error('xmas',e);}},1000);
+
+/* ── panel v Administraci → Nastavení (jen vlastník) ── */
+function renderPanel(){
+  var host=$('at-settings'),p=$('xmasPanel');
+  if(!host)return;
+  if(!isOwner()){if(p)p.remove();return;}
+  if(!p){
+    p=document.createElement('div');p.id='xmasPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+    host.appendChild(p);
+    p.addEventListener('change',function(e){
+      if(!isOwner()){toast('Vánoční motiv smí měnit jen určený člen','error');return;}
+      var t=e.target,k=t.getAttribute('data-x');if(!k)return;
+      var c=cfg();c[k]=t.checked;
+      DB.set('xmasCfg',c);
+      addLog('sys',getMember().displayName+' '+(k==='on'?(c.on?'ZAPNUL':'VYPNUL')+' vánoční motiv.':'upravil vánoční motiv.'),{noDiscord:true});
+      toast(k==='on'?(c.on?'🎄 Vánoční motiv zapnut':'Vánoční motiv vypnut'):'Nastavení uloženo','success');
+      apply();renderPanel();
+    });
+  }
+  if(p.contains(document.activeElement))return;
+  var c=cfg(),dis=c.on?'':' disabled';
+  p.innerHTML='<div class="fp-title">// 🎄 VÁNOČNÍ MOTIV</div>'+
+    '<div class="iw" style="padding:.4rem .8rem;margin-bottom:.8rem"><label class="ping-chk"><input type="checkbox" data-x="on"'+(c.on?' checked':'')+'/><span><b>Vánoční motiv zapnutý</b> (platí pro všechny členy)</span></label></div>'+
+    '<div class="pick-list" style="max-height:none;opacity:'+(c.on?1:.45)+'">'+
+      '<label class="pick-item"><input type="checkbox" data-x="snow"'+(c.snow?' checked':'')+dis+'/><span>❄ Padající sníh</span></label>'+
+      '<label class="pick-item"><input type="checkbox" data-x="lights"'+(c.lights?' checked':'')+dis+'/><span>💡 Světýlka nahoře</span></label>'+
+      '<label class="pick-item"><input type="checkbox" data-x="banner"'+(c.banner?' checked':'')+dis+'/><span>🎅 Pruh s odpočtem na Oznámeních</span></label></div>'+
+    '<div class="rx-hint" style="margin:.6rem 0 0">Tento panel vidí jen člen s Discord ID '+OWNER_DC+'. Členům, kteří mají zapnuté snížené animace v systému, se sníh a blikání nezobrazí.</div>';
+}
+var _rs=window.renderSettings;
+if(typeof _rs==='function')window.renderSettings=function(){
+  var r=_rs.apply(this,arguments);
+  try{renderPanel();}catch(e){console.error(e);}
+  return r;
+};
+})();
