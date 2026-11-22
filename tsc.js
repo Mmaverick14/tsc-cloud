@@ -9859,3 +9859,30 @@ function paint(){
 }
 setInterval(function(){if(!document.hidden)try{paint();}catch(e){console.error('f3total',e);}},700);
 })();
+
+/* ===== VÝROBA: „Obnovit výchozí itemy“ jen pro adminy ===== */
+(function(){
+'use strict';
+
+/* 1) pojistka: funkci nespustí nikdo bez admin přístupu */
+var _reset=window.vyResetItems;
+if(typeof _reset==='function'){
+  window.vyResetItems=function(){
+    if(!isAdmin()){
+      toast('Výchozí itemy smí obnovit jen admin','error');
+      return;
+    }
+    return _reset.apply(this,arguments);
+  };
+}
+
+/* 2) tlačítko se členům schová (hledá se podle onclick) */
+function paint(){
+  var btn=document.querySelector('#vyRoot button[onclick*="vyResetItems"]');
+  if(!btn)return;
+  var show=!!getMember()&&isAdmin();
+  var want=show?'':'none';
+  if(btn.style.display!==want)btn.style.display=want;
+}
+setInterval(function(){if(!document.hidden)try{paint();}catch(e){}},700);
+})();
