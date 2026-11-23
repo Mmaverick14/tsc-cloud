@@ -11089,8 +11089,7 @@ function paint(scope){
       var ic=b.querySelector('.ni'),nl=b.querySelector('.nl'),name=nl?nl.textContent:k;
       cards+='<button type="button" class="hub-card" data-k="'+k+'"><span class="hub-ic">'+(ic?ic.textContent:'•')+'</span>'+
         '<span class="hub-t"><b>'+name+'</b></span><span class="hub-go">→</span></button>';
-      guide+='<div class="hub-gr" data-k="'+k+'"><b>'+name+':</b><span>'+h.items[k]+'</span></div>';
-    });
+        guide+='<div class="hub-gr" data-k="'+k+'"><b><i class="hg-i">'+(ic?ic.textContent:'•')+'</i>'+name+':</b><span>'+h.items[k]+'</span></div>';    });
     var html='<div class="hub-cards">'+cards+'</div>'+(guide?'<div class="hub-line"></div><div class="hub-guide">'+guide+'</div>':'');
     if(g.dataset.h!==html){g.dataset.h=html;g.innerHTML=html;}
     g.onclick=function(e){
