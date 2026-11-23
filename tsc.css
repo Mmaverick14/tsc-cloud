@@ -2037,3 +2037,35 @@ html body .cal-d.empty{background:transparent!important;border-color:transparent
 html body .cal-d.today{border-radius:8px!important}
 html body .cal-grid-wrap{min-width:0;overflow:hidden}
 html body .cal-layout{grid-template-columns:minmax(280px,360px) minmax(0,1fr)}
+
+/* ── OPRAVA ČITELNOSTI TLAČÍTEK (vánoční motiv + světlý režim + disabled) ── */
+html.xmas body .btn-acc,
+html.xmas body .btn-acc *,
+html[data-mode=light] body .btn-acc,
+html[data-mode=light] body .btn-acc *{
+  color:#0a0a09!important;
+  -webkit-text-fill-color:#0a0a09!important;
+  text-shadow:none!important;
+}
+html.xmas body .btn-acc{border:0!important}
+html.xmas body .btn-acc:hover,
+html.xmas body .btn-acc:hover *{
+  color:#0a0a09!important;
+  -webkit-text-fill-color:#0a0a09!important;
+}
+
+/* neaktivní tlačítko: ztlumené, ale čitelné */
+html body .btn-acc:disabled,
+html body .btn-acc[disabled]{
+  opacity:1!important;
+  background:rgba(255,255,255,.08)!important;
+  color:#9a9072!important;
+  -webkit-text-fill-color:#9a9072!important;
+  box-shadow:none!important;
+  cursor:not-allowed;
+}
+html[data-mode=light] body .btn-acc:disabled{
+  background:#e8e2cf!important;
+  color:#7a7152!important;
+  -webkit-text-fill-color:#7a7152!important;
+}
