@@ -10795,222 +10795,139 @@ setInterval(function(){
 },1500);
 })();
 
-/* ══ ŽÁDOSTI O PENÍZE — načíst ZA tsc.js ══
-   Člen: Finance → „POŽÁDAT O PENÍZE“ (částka + důvod)
-   Vedení: Admin → Finance → fronta žádostí (schválit / zamítnout)
-   Data: DB klíč 'moneyreq' (pole objektů)                                    */
+/* ══ ŽÁDOSTI O PENÍZE (v2) ══
+   Člen: Finance → dole „POŽÁDAT O PENÍZE“ (částka + důvod)
+   Vedení: Admin → Finance → fronta žádostí (schválit / zamítnout)        */
 (function(){
-  var KEY='moneyreq',SEEN='tsc_req_seen';
-  function $(id){return document.getElementById(id);}
-  function E(s){return typeof esc==='function'?esc(s):String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function M(n){return typeof money==='function'?money(n):'$'+Number(n).toLocaleString('cs-CZ');}
-  function T(msg,type){if(typeof toast==='function')toast(msg,type||'info');}
-  function all(){try{return DB.get(KEY)||[];}catch(e){return [];}}
-  function save(a){if(typeof DB==='undefined'||typeof DB.set!=='function'){T('Ukládání není dostupné','error');return false;}DB.set(KEY,a);return true;}
-  function me(){return typeof getMember==='function'?getMember():null;}
-  function nm(m){return m.name||m.nick||m.firstName||('#'+m.id);}
-  function fmt(ts){var d=new Date(ts);return d.toLocaleDateString('cs-CZ')+' '+d.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});}
-  var LBL={pending:'⏳ ČEKÁ NA VEDENÍ',approved:'✅ SCHVÁLENO',rejected:'❌ ZAMÍTNUTO'};
-  var CLS={pending:'pending',approved:'confirmed',rejected:'rejected'};
+'use strict';
+var KEY='moneyreq',SEEN='tsc_req_seen';
+function $(id){return document.getElementById(id);}
+function E(s){return esc(s);}
+function all(){var a=DB.get(KEY);return Array.isArray(a)?a:[];}
+function me(){return getMember();}
+function fmt(ts){var d=new Date(ts);return d.toLocaleDateString('cs-CZ')+' '+d.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});}
+var LBL={pending:'⏳ ČEKÁ NA VEDENÍ',approved:'✅ SCHVÁLENO',rejected:'❌ ZAMÍTNUTO'};
+var CLS={pending:'pending',approved:'confirmed',rejected:'rejected'};
 
-  /* ── čekající mají hlasitější barvu, historie ztlumená ── */
-  var st=document.createElement('style');
-  st.textContent='.rq-card{margin-bottom:.5rem}.rq-reason{margin:.35rem 0;color:var(--textb);font-size:.95rem;line-height:1.5;word-break:break-word;white-space:pre-wrap}'
-    +'.rq-act{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap}.rq-ok{border-color:var(--green)!important;color:var(--green)!important}.rq-ok:hover{background:var(--green)!important;color:#080808!important}'
-    +'.rq-cnt{display:inline-block;margin-left:.5rem;padding:.05rem .5rem;background:var(--acc);color:#080808;font-size:.75rem;font-weight:700}'
-    +'.rq-dec{font-size:.72rem;color:var(--muted);letter-spacing:.06em;margin-top:.3rem}';
+if(!SECTIONS.some(function(x){return x.key==='req';}))SECTIONS.push({key:'req',label:'Žádosti o peníze'});
+LOG_ICONS.req='🙏';LOG_LABELS.req='ŽÁDOST';
+
+if(!$('rqCss')){
+  var st=document.createElement('style');st.id='rqCss';
+  st.textContent='.rq-card{margin-bottom:.5rem}'+
+   '.rq-reason{margin:.35rem 0;color:var(--textb);font-size:.95rem;line-height:1.5;word-break:break-word;white-space:pre-wrap}'+
+   '.rq-act{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap}'+
+   '.rq-ok{border-color:var(--green)!important;color:var(--green)!important}'+
+   '.rq-ok:hover{background:var(--green)!important;color:#080808!important}'+
+   '.rq-cnt{display:inline-block;margin-left:.5rem;padding:.05rem .5rem;background:var(--acc);color:#080808;font-size:.75rem;font-weight:700}'+
+   '.rq-dec{font-size:.72rem;color:var(--muted);letter-spacing:.06em;margin-top:.3rem}'+
+   '#reqMember{margin:1.5rem 0 0}#reqMember .f3-body{margin:0 1.2rem}';
   document.head.appendChild(st);
+}
 
-  /* ── ČLEN: formulář + moje žádosti ── */
-  function buildMember(){
-    if($('reqMember'))return;
-    var anchor=$('myFinance');if(!anchor)return;
-    var w=document.createElement('div');w.id='reqMember';
-    w.innerHTML='<div class="ph" style="margin-top:.5rem;"><div class="pt">🙏 // POŽÁDAT O PENÍZE</div></div>'
-      +'<div class="form-panel" style="margin:0 1.2rem .5rem;"><div class="form-grid">'
-      +'<div class="field-group"><label class="fl">ČÁSTKA ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="rqAmt" min="1" placeholder="0"/></div></div>'
-      +'<div class="field-group fg-full"><label class="fl">DŮVOD *</label><textarea id="rqWhy" class="adm-ta" style="min-height:70px;" maxlength="500" placeholder="Na co peníze potřebuješ..."></textarea></div>'
-      +'</div><div class="fp-ftr"><button class="btn-acc small" id="rqSend" type="button">📨 ODESLAT VEDENÍ</button><span id="rqMsg" class="smsg"></span></div></div>'
-      +'<div class="ph" style="margin-top:.5rem;"><div class="pt">📋 // MÉ ŽÁDOSTI</div></div><div id="rqMine" style="padding:.5rem 1.2rem 1rem;"></div>';
-    anchor.after(w);
-    $('rqSend').onclick=submit;
-  }
-  function submit(){
-    var m=me();if(!m)return;
-    var amt=Math.floor(Number($('rqAmt').value)),why=($('rqWhy').value||'').trim(),msg=$('rqMsg');
-    if(!(amt>0)){msg.style.color='var(--red)';msg.textContent='Zadej částku.';return;}
-    if(why.length<3){msg.style.color='var(--red)';msg.textContent='Napiš důvod.';return;}
-    var a=all();
-    a.push({id:'rq'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),memberId:m.id,name:nm(m),amount:amt,reason:why.slice(0,500),status:'pending',ts:Date.now()});
-    if(!save(a))return;
-    $('rqAmt').value='';$('rqWhy').value='';
-    msg.style.color='';msg.textContent='✓ Odesláno vedení';setTimeout(function(){msg.textContent='';},3000);
-    paintMember(true);
-  }
-  function card(r,admin){
-    var dec=r.status!=='pending'?'<div class="rq-dec">'+(r.status==='approved'?'Schválil':'Zamítl')+': '+E(r.by||'vedení')+' · '+fmt(r.decidedTs)+'</div>':'';
-    var btn=admin&&r.status==='pending'?'<div class="rq-act"><button type="button" class="btn-micro rq-ok" data-rq="approved" data-id="'+E(r.id)+'">✓ SCHVÁLIT</button><button type="button" class="btn-micro del" data-rq="rejected" data-id="'+E(r.id)+'">✕ ZAMÍTNOUT</button></div>':'';
-    return '<div class="inc-card rq-card '+CLS[r.status]+'"><div class="inc-card-top"><span class="inc-source">'+(admin?E(r.name):'ŽÁDOST')+'</span><span class="inc-amount">'+M(r.amount)+'</span></div>'
-      +'<div class="rq-reason">'+E(r.reason)+'</div><div class="inc-card-bot"><span class="inc-date">'+fmt(r.ts)+'</span><span class="inc-status '+CLS[r.status]+'">'+LBL[r.status]+'</span></div>'+dec+btn+'</div>';
-  }
-  var hm='',ha='';
-  function paintMember(force){
-    var tab=$('mt-finance');if(!tab||!tab.classList.contains('active'))return;
-    var m=me();if(!m)return;buildMember();
-    var box=$('rqMine');if(!box)return;
-    var mine=all().filter(function(r){return r.memberId===m.id;}).sort(function(a,b){return b.ts-a.ts;});
-    var h=mine.length?mine.map(function(r){return card(r,false);}).join(''):'<div class="empty-s">ZATÍM ŽÁDNÉ ŽÁDOSTI</div>';
-    if(force||h!==hm){hm=h;box.innerHTML=h;}
-  }
+function card(r,admin){
+  var dec=r.status!=='pending'?'<div class="rq-dec">'+(r.status==='approved'?'Schválil':'Zamítl')+': '+E(r.by||'vedení')+' · '+fmt(r.decidedTs)+'</div>':'';
+  var btn=admin&&r.status==='pending'?'<div class="rq-act"><button type="button" class="btn-micro rq-ok" data-rq="approved" data-id="'+E(r.id)+'">✓ SCHVÁLIT</button><button type="button" class="btn-micro del" data-rq="rejected" data-id="'+E(r.id)+'">✕ ZAMÍTNOUT</button></div>':'';
+  return '<div class="inc-card rq-card '+CLS[r.status]+'"><div class="inc-card-top"><span class="inc-source">'+(admin?E(r.name):'ŽÁDOST')+'</span><span class="inc-amount">'+money(r.amount)+'</span></div>'+
+    '<div class="rq-reason">'+E(r.reason)+'</div><div class="inc-card-bot"><span class="inc-date">'+fmt(r.ts)+'</span><span class="inc-status '+CLS[r.status]+'">'+LBL[r.status]+'</span></div>'+dec+btn+'</div>';
+}
 
-  /* ── VEDENÍ: fronta ── */
-  function buildAdmin(){
-    if($('reqAdmin'))return;
-    var anchor=$('financeAdminPanel');if(!anchor)return;
-    var w=document.createElement('div');w.id='reqAdmin';w.style.cssText='padding:0 1.2rem;';
-    w.addEventListener('click',function(e){
-      var b=e.target.closest('[data-rq]');if(!b)return;
-      var a=all(),r=a.filter(function(x){return x.id===b.getAttribute('data-id');})[0];
-      if(!r||r.status!=='pending')return;
-      var m=me();r.status=b.getAttribute('data-rq');r.by=m?nm(m):'vedení';r.decidedTs=Date.now();
-      if(save(a)){T(r.status==='approved'?'Žádost schválena':'Žádost zamítnuta',r.status==='approved'?'success':'info');paintAdmin(true);}
-    });
-    anchor.before(w);
-  }
-  function paintAdmin(force){
-    var tab=$('at-finance');if(!tab||!tab.classList.contains('active'))return;
-    buildAdmin();var box=$('reqAdmin');if(!box)return;
-    var a=all(),pend=a.filter(function(r){return r.status==='pending';}).sort(function(x,y){return x.ts-y.ts;}),
-        done=a.filter(function(r){return r.status!=='pending';}).sort(function(x,y){return y.decidedTs-x.decidedTs;}).slice(0,15);
-    var h='<div class="sh" style="padding-left:0;">// ŽÁDOSTI O PENÍZE'+(pend.length?'<span class="rq-cnt">'+pend.length+'</span>':'')+'</div>'
-      +(pend.length?pend.map(function(r){return card(r,true);}).join(''):'<div class="empty-s">ŽÁDNÉ ČEKAJÍCÍ ŽÁDOSTI</div>')
-      +(done.length?'<details class="att-box" style="margin-top:.6rem;"><summary>HISTORIE ('+done.length+')</summary><div style="margin-top:.5rem;">'+done.map(function(r){return card(r,true);}).join('')+'</div></details>':'');
-    if(force||h!==ha){var open=box.querySelector('details')&&box.querySelector('details').open;ha=h;box.innerHTML=h;if(open&&box.querySelector('details'))box.querySelector('details').open=true;}
-  }
+/* ── ČLEN ── */
+function buildMember(){
+  if($('reqMember'))return;
+  var host=$('fin2Root');if(!host)return;
+  var w=document.createElement('div');w.id='reqMember';
+  w.innerHTML='<div class="f3-body">'+
+    '<div class="f3-h">🙏 POŽÁDAT VEDENÍ O PENÍZE</div>'+
+    '<div class="f3-card">'+
+      '<div class="f3-amt"><span>$</span><input type="number" id="rqAmt" min="1" step="1" placeholder="0" inputmode="numeric"/></div>'+
+      '<textarea id="rqWhy" class="f3-note" maxlength="500" rows="3" placeholder="DŮVOD * — na co peníze potřebuješ"></textarea>'+
+      '<button type="button" class="f3-btn wide" id="rqSend">📨 Odeslat vedení</button>'+
+      '<div class="f3-foot"><span id="rqMsg" class="smsg"></span></div>'+
+    '</div>'+
+    '<div class="f3-h">MÉ ŽÁDOSTI</div><div id="rqMine"></div></div>';
+  host.appendChild(w);
+  $('rqSend').onclick=submit;
+}
+function submit(){
+  var m=me();if(!m)return;
+  var msg=$('rqMsg');
+  function err(t){msg.style.color='var(--red)';msg.textContent=t;}
+  var amt=Math.floor(Number($('rqAmt').value)),why=($('rqWhy').value||'').trim();
+  if(!(amt>0)){err('// ZADEJ ČÁSTKU');return;}
+  if(why.length<3){err('// NAPIŠ DŮVOD');return;}
+  var a=all();
+  a.push({id:uid(),memberId:m.id,name:m.displayName,amount:amt,reason:why.slice(0,500),status:'pending',ts:Date.now()});
+  DB.set(KEY,a);
+  addLog('req',m.displayName+' žádá vedení o '+money(amt)+' — '+why.slice(0,120),{
+    embed:rich(C_YELLOW,'🙏 NOVÁ ŽÁDOST O PENÍZE',why.slice(0,500),[['👤 Člen',m.displayName],['💵 Částka',money(amt)]],{by:m.displayName})});
+  $('rqAmt').value='';$('rqWhy').value='';
+  msg.style.color='';msg.textContent='// ODESLÁNO VEDENÍ';setTimeout(function(){msg.textContent='';},3000);
+  toast('Žádost odeslána vedení ✓','success');
+  hm='';paintMember();
+}
+var hm='',ha='';
+function paintMember(){
+  var tab=$('mt-finance');if(!tab||!tab.classList.contains('active')||!me())return;
+  buildMember();
+  var box=$('rqMine');if(!box)return;
+  var mine=all().filter(function(r){return r.memberId===me().id;}).sort(function(a,b){return b.ts-a.ts;});
+  var h=mine.length?mine.slice(0,30).map(function(r){return card(r,false);}).join(''):'<div class="f3-empty">Zatím žádné žádosti</div>';
+  if(h!==hm){hm=h;box.innerHTML=h;}
+}
 
-  /* ── člen dostane toast, když vedení rozhodne ── */
-  function notify(){
-    var m=me();if(!m||typeof toast!=='function')return;
-    var seen={};try{seen=JSON.parse(localStorage.getItem(SEEN)||'{}');}catch(e){}
-    var first=!Object.keys(seen).length,ch=false;
-    all().forEach(function(r){
-      if(r.memberId!==m.id||r.status==='pending'||seen[r.id])return;
-      seen[r.id]=1;ch=true;
-      if(!first)T('💰 Žádost na '+M(r.amount)+': '+(r.status==='approved'?'SCHVÁLENO':'ZAMÍTNUTO'),r.status==='approved'?'success':'error');
-    });
-    if(ch||first){try{localStorage.setItem(SEEN,JSON.stringify(seen));}catch(e){}}
+/* ── VEDENÍ ── */
+function buildAdmin(){
+  if($('reqAdmin'))return;
+  var anchor=$('financeAdminPanel');if(!anchor)return;
+  var w=document.createElement('div');w.id='reqAdmin';w.style.cssText='padding:0 1.2rem;';
+  w.addEventListener('click',function(e){
+    var b=e.target.closest('[data-rq]');if(!b)return;
+    var m=me();if(!m||!isAdmin()){toast('Rozhodovat smí jen vedení','error');return;}
+    var a=all(),r=a.filter(function(x){return x.id===b.getAttribute('data-id');})[0];
+    if(!r||r.status!=='pending')return;
+    r.status=b.getAttribute('data-rq')==='approved'?'approved':'rejected';
+    r.by=m.displayName;r.decidedTs=Date.now();
+    DB.set(KEY,a);
+    var ok=r.status==='approved';
+    var tm=(DB.get('members')||[]).filter(function(x){return x.id===r.memberId;})[0];
+    addLog('req',m.displayName+(ok?' schválil':' zamítl')+' žádost '+r.name+' o '+money(r.amount)+'.',{
+      extraPing:(tm&&tm.discordId)?'<@'+tm.discordId+'>':'',
+      embed:rich(ok?C_GREEN:C_RED,ok?'✅ ŽÁDOST SCHVÁLENA':'❌ ŽÁDOST ZAMÍTNUTA',r.reason,[['👤 Člen',r.name],['💵 Částka',money(r.amount)],['🧑 Rozhodl',m.displayName]],{by:m.displayName})});
+    toast(ok?'Žádost schválena':'Žádost zamítnuta',ok?'success':'info');
+    ha='';paintAdmin();
+  });
+  anchor.before(w);
+}
+function paintAdmin(){
+  var tab=$('at-finance');if(!tab||!tab.classList.contains('active')||!me()||!isAdmin())return;
+  buildAdmin();var box=$('reqAdmin');if(!box)return;
+  var a=all(),
+    pend=a.filter(function(r){return r.status==='pending';}).sort(function(x,y){return x.ts-y.ts;}),
+    done=a.filter(function(r){return r.status!=='pending';}).sort(function(x,y){return (y.decidedTs||0)-(x.decidedTs||0);}).slice(0,15);
+  var h='<div class="sh" style="padding-left:0">// ŽÁDOSTI O PENÍZE'+(pend.length?'<span class="rq-cnt">'+pend.length+'</span>':'')+'</div>'+
+    (pend.length?pend.map(function(r){return card(r,true);}).join(''):'<div class="empty-s">// Žádné čekající žádosti</div>')+
+    (done.length?'<details class="att-box" style="margin-top:.6rem"><summary>HISTORIE ('+done.length+')</summary><div style="margin-top:.5rem">'+done.map(function(r){return card(r,true);}).join('')+'</div></details>':'');
+  if(h!==ha){
+    var d=box.querySelector('details'),open=d&&d.open;
+    ha=h;box.innerHTML=h;
+    if(open&&box.querySelector('details'))box.querySelector('details').open=true;
   }
+}
 
-  setInterval(function(){paintMember();paintAdmin();},2000);
-  setInterval(notify,10000);
-})();
+/* ── člen dostane toast po rozhodnutí ── */
+function notify(){
+  var m=me();if(!m)return;
+  var seen={};try{seen=JSON.parse(localStorage.getItem(SEEN)||'{}');}catch(e){}
+  var first=!Object.keys(seen).length,ch=false;
+  all().forEach(function(r){
+    if(r.memberId!==m.id||r.status==='pending'||seen[r.id])return;
+    seen[r.id]=1;ch=true;
+    if(!first)toast('💰 Žádost na '+money(r.amount)+': '+(r.status==='approved'?'SCHVÁLENO':'ZAMÍTNUTO'),r.status==='approved'?'success':'error',6000);
+  });
+  if(ch||first){try{localStorage.setItem(SEEN,JSON.stringify(seen));}catch(e){}}
+}
 
-/* ══ ŽÁDOSTI O PENÍZE — načíst ZA tsc.js ══
-   Člen: Finance → „POŽÁDAT O PENÍZE“ (částka + důvod)
-   Vedení: Admin → Finance → fronta žádostí (schválit / zamítnout)
-   Data: DB klíč 'moneyreq' (pole objektů)                                    */
-(function(){
-  var KEY='moneyreq',SEEN='tsc_req_seen';
-  function $(id){return document.getElementById(id);}
-  function E(s){return typeof esc==='function'?esc(s):String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function M(n){return typeof money==='function'?money(n):'$'+Number(n).toLocaleString('cs-CZ');}
-  function T(msg,type){if(typeof toast==='function')toast(msg,type||'info');}
-  function all(){try{return DB.get(KEY)||[];}catch(e){return [];}}
-  function save(a){if(typeof DB==='undefined'||typeof DB.set!=='function'){T('Ukládání není dostupné','error');return false;}DB.set(KEY,a);return true;}
-  function me(){return typeof getMember==='function'?getMember():null;}
-  function nm(m){return m.name||m.nick||m.firstName||('#'+m.id);}
-  function fmt(ts){var d=new Date(ts);return d.toLocaleDateString('cs-CZ')+' '+d.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});}
-  var LBL={pending:'⏳ ČEKÁ NA VEDENÍ',approved:'✅ SCHVÁLENO',rejected:'❌ ZAMÍTNUTO'};
-  var CLS={pending:'pending',approved:'confirmed',rejected:'rejected'};
-
-  /* ── čekající mají hlasitější barvu, historie ztlumená ── */
-  var st=document.createElement('style');
-  st.textContent='.rq-card{margin-bottom:.5rem}.rq-reason{margin:.35rem 0;color:var(--textb);font-size:.95rem;line-height:1.5;word-break:break-word;white-space:pre-wrap}'
-    +'.rq-act{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap}.rq-ok{border-color:var(--green)!important;color:var(--green)!important}.rq-ok:hover{background:var(--green)!important;color:#080808!important}'
-    +'.rq-cnt{display:inline-block;margin-left:.5rem;padding:.05rem .5rem;background:var(--acc);color:#080808;font-size:.75rem;font-weight:700}'
-    +'.rq-dec{font-size:.72rem;color:var(--muted);letter-spacing:.06em;margin-top:.3rem}';
-  document.head.appendChild(st);
-
-  /* ── ČLEN: formulář + moje žádosti ── */
-  function buildMember(){
-    if($('reqMember'))return;
-    var anchor=$('myFinance');if(!anchor)return;
-    var w=document.createElement('div');w.id='reqMember';
-    w.innerHTML='<div class="ph" style="margin-top:.5rem;"><div class="pt">🙏 // POŽÁDAT O PENÍZE</div></div>'
-      +'<div class="form-panel" style="margin:0 1.2rem .5rem;"><div class="form-grid">'
-      +'<div class="field-group"><label class="fl">ČÁSTKA ($) *</label><div class="iw"><span class="ip">$</span><input type="number" id="rqAmt" min="1" placeholder="0"/></div></div>'
-      +'<div class="field-group fg-full"><label class="fl">DŮVOD *</label><textarea id="rqWhy" class="adm-ta" style="min-height:70px;" maxlength="500" placeholder="Na co peníze potřebuješ..."></textarea></div>'
-      +'</div><div class="fp-ftr"><button class="btn-acc small" id="rqSend" type="button">📨 ODESLAT VEDENÍ</button><span id="rqMsg" class="smsg"></span></div></div>'
-      +'<div class="ph" style="margin-top:.5rem;"><div class="pt">📋 // MÉ ŽÁDOSTI</div></div><div id="rqMine" style="padding:.5rem 1.2rem 1rem;"></div>';
-    anchor.after(w);
-    $('rqSend').onclick=submit;
-  }
-  function submit(){
-    var m=me();if(!m)return;
-    var amt=Math.floor(Number($('rqAmt').value)),why=($('rqWhy').value||'').trim(),msg=$('rqMsg');
-    if(!(amt>0)){msg.style.color='var(--red)';msg.textContent='Zadej částku.';return;}
-    if(why.length<3){msg.style.color='var(--red)';msg.textContent='Napiš důvod.';return;}
-    var a=all();
-    a.push({id:'rq'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),memberId:m.id,name:nm(m),amount:amt,reason:why.slice(0,500),status:'pending',ts:Date.now()});
-    if(!save(a))return;
-    $('rqAmt').value='';$('rqWhy').value='';
-    msg.style.color='';msg.textContent='✓ Odesláno vedení';setTimeout(function(){msg.textContent='';},3000);
-    paintMember(true);
-  }
-  function card(r,admin){
-    var dec=r.status!=='pending'?'<div class="rq-dec">'+(r.status==='approved'?'Schválil':'Zamítl')+': '+E(r.by||'vedení')+' · '+fmt(r.decidedTs)+'</div>':'';
-    var btn=admin&&r.status==='pending'?'<div class="rq-act"><button type="button" class="btn-micro rq-ok" data-rq="approved" data-id="'+E(r.id)+'">✓ SCHVÁLIT</button><button type="button" class="btn-micro del" data-rq="rejected" data-id="'+E(r.id)+'">✕ ZAMÍTNOUT</button></div>':'';
-    return '<div class="inc-card rq-card '+CLS[r.status]+'"><div class="inc-card-top"><span class="inc-source">'+(admin?E(r.name):'ŽÁDOST')+'</span><span class="inc-amount">'+M(r.amount)+'</span></div>'
-      +'<div class="rq-reason">'+E(r.reason)+'</div><div class="inc-card-bot"><span class="inc-date">'+fmt(r.ts)+'</span><span class="inc-status '+CLS[r.status]+'">'+LBL[r.status]+'</span></div>'+dec+btn+'</div>';
-  }
-  var hm='',ha='';
-  function paintMember(force){
-    var tab=$('mt-finance');if(!tab||!tab.classList.contains('active'))return;
-    var m=me();if(!m)return;buildMember();
-    var box=$('rqMine');if(!box)return;
-    var mine=all().filter(function(r){return r.memberId===m.id;}).sort(function(a,b){return b.ts-a.ts;});
-    var h=mine.length?mine.map(function(r){return card(r,false);}).join(''):'<div class="empty-s">ZATÍM ŽÁDNÉ ŽÁDOSTI</div>';
-    if(force||h!==hm){hm=h;box.innerHTML=h;}
-  }
-
-  /* ── VEDENÍ: fronta ── */
-  function buildAdmin(){
-    if($('reqAdmin'))return;
-    var anchor=$('financeAdminPanel');if(!anchor)return;
-    var w=document.createElement('div');w.id='reqAdmin';w.style.cssText='padding:0 1.2rem;';
-    w.addEventListener('click',function(e){
-      var b=e.target.closest('[data-rq]');if(!b)return;
-      var a=all(),r=a.filter(function(x){return x.id===b.getAttribute('data-id');})[0];
-      if(!r||r.status!=='pending')return;
-      var m=me();r.status=b.getAttribute('data-rq');r.by=m?nm(m):'vedení';r.decidedTs=Date.now();
-      if(save(a)){T(r.status==='approved'?'Žádost schválena':'Žádost zamítnuta',r.status==='approved'?'success':'info');paintAdmin(true);}
-    });
-    anchor.before(w);
-  }
-  function paintAdmin(force){
-    var tab=$('at-finance');if(!tab||!tab.classList.contains('active'))return;
-    buildAdmin();var box=$('reqAdmin');if(!box)return;
-    var a=all(),pend=a.filter(function(r){return r.status==='pending';}).sort(function(x,y){return x.ts-y.ts;}),
-        done=a.filter(function(r){return r.status!=='pending';}).sort(function(x,y){return y.decidedTs-x.decidedTs;}).slice(0,15);
-    var h='<div class="sh" style="padding-left:0;">// ŽÁDOSTI O PENÍZE'+(pend.length?'<span class="rq-cnt">'+pend.length+'</span>':'')+'</div>'
-      +(pend.length?pend.map(function(r){return card(r,true);}).join(''):'<div class="empty-s">ŽÁDNÉ ČEKAJÍCÍ ŽÁDOSTI</div>')
-      +(done.length?'<details class="att-box" style="margin-top:.6rem;"><summary>HISTORIE ('+done.length+')</summary><div style="margin-top:.5rem;">'+done.map(function(r){return card(r,true);}).join('')+'</div></details>':'');
-    if(force||h!==ha){var open=box.querySelector('details')&&box.querySelector('details').open;ha=h;box.innerHTML=h;if(open&&box.querySelector('details'))box.querySelector('details').open=true;}
-  }
-
-  /* ── člen dostane toast, když vedení rozhodne ── */
-  function notify(){
-    var m=me();if(!m||typeof toast!=='function')return;
-    var seen={};try{seen=JSON.parse(localStorage.getItem(SEEN)||'{}');}catch(e){}
-    var first=!Object.keys(seen).length,ch=false;
-    all().forEach(function(r){
-      if(r.memberId!==m.id||r.status==='pending'||seen[r.id])return;
-      seen[r.id]=1;ch=true;
-      if(!first)T('💰 Žádost na '+M(r.amount)+': '+(r.status==='approved'?'SCHVÁLENO':'ZAMÍTNUTO'),r.status==='approved'?'success':'error');
-    });
-    if(ch||first){try{localStorage.setItem(SEEN,JSON.stringify(seen));}catch(e){}}
-  }
-
-  setInterval(function(){paintMember();paintAdmin();},2000);
-  setInterval(notify,10000);
+setInterval(function(){if(document.hidden)return;try{paintMember();paintAdmin();}catch(e){console.error('req',e);}},1500);
+setInterval(function(){if(!document.hidden)try{notify();}catch(e){}},10000);
 })();
