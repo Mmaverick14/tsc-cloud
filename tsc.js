@@ -10972,3 +10972,125 @@ window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='requests'){h
 setInterval(function(){if(document.hidden)return;try{paintMember();paintAdmin();badge();}catch(e){console.error('req',e);}},1500);
 setInterval(function(){if(!document.hidden)try{notify();}catch(e){}},10000);
 })();
+
+/* ===== HUB MENU: související záložky v jedné, uvnitř dlaždice ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+
+var HUBS={
+  m:{nav:'#memberScreen .sb-nav',main:'#memberScreen .main',pre:'mt-',fn:'mTab',
+    top:{board:1,tasks:2,calendar:3,warehouse:4,clothing:5},
+    hubs:[
+      {k:'hub_komu',ic:'💬',n:'KOMUNIKACE',o:10,sub:'Zprávy, hlášení a pravidla',items:{ooc:'OOC oznámení',messages:'Zprávy od vedení',report:'Hlášení pro vedení',excuse:'Omluvenky',rules:'Pravidla a souhlas'}},
+      {k:'hub_prace',ic:'🧰',n:'PRÁCE A BYZNYS',o:11,sub:'Akce, výroba a prodej',items:{boosting:'Vozidla k boostingu',heist:'Reporty z heistů',escape:'Únikové cesty',vyroba:'Výroba extáze',xtc:'Prodej extáze',prodej:'Prodej drog',business:'Podnik / dílna'}},
+      {k:'hub_fin',ic:'💵',n:'FINANCE',o:12,sub:'Příspěvky a peníze',items:{finance:'Příspěvky, pesos a dolary',requests:'Požádat vedení o peníze'}},
+      {k:'hub_lide',ic:'👥',n:'LIDÉ',o:13,sub:'Crew a komunikace',items:{radio:'Aktuální frekvence',roster:'Seznam členů, striky',pochvaly:'Pochvaly členů',contacts:'Telefonní čísla a partneři'}}
+    ]},
+  a:{nav:'#adminScreen .sb-nav',main:'#adminScreen .main',pre:'at-',fn:'aTab',
+    top:{board:1,tasks:2,calendar:3,warehouse:4},
+    hubs:[
+      {k:'hub_komu',ic:'💬',n:'KOMUNIKACE',o:10,sub:'Zprávy, šablony a pravidla',items:{messages:'Poslat zprávu',templates:'Šablony úkolů a hlášení',rules:'Pravidla a souhlasy',excuses:'Omluvenky',reports:'Hlášení od členů'}},
+      {k:'hub_prace',ic:'🧰',n:'PRÁCE A BYZNYS',o:11,sub:'Akce, výroba a prodej',items:{boosting:'Vozidla',heists:'Všechny reporty',vyroba:'Výroba extáze',xtc:'Prodej extáze',drugsales:'Prodej drog',clothing:'Outfit sety'}},
+      {k:'hub_fin',ic:'💵',n:'FINANCE',o:12,sub:'Kasa, příjmy, žádosti',items:{finance:'Příspěvky a bilance',requests:'Žádosti o peníze',incomes:'Příjmy do kasy'}},
+      {k:'hub_lide',ic:'👥',n:'LIDÉ',o:13,sub:'Členové, nábor, vysílačka',items:{members:'Správa členů',roster:'Striky a povýšení',nabor:'Nábor',radio:'Frekvence'}},
+      {k:'hub_sys',ic:'⚙️',n:'SYSTÉM',o:14,sub:'Statistiky, log, nastavení',items:{stats:'Přehledy a grafy',log:'Záznamy akcí',settings:'Discord, panic, motivy'}}
+    ]}
+};
+
+if(!$('hubCss')){
+  var st=document.createElement('style');st.id='hubCss';
+  st.textContent=
+  '.nav-grp{display:none!important}'+
+  'html body .sb-nav .nb.hub-child{display:none!important}'+
+  'html body .sb-nav .nb.grp-hide:not(.hub-child){display:flex!important}'+
+  '.hub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.8rem;padding:1.2rem 1.4rem 2rem}'+
+  '.hub-card{display:flex;align-items:center;gap:1rem;padding:1.1rem 1.2rem;background:var(--card);border:1px solid var(--border);border-radius:14px;color:var(--textb);text-align:left;cursor:pointer;transition:border-color .2s,background .2s,transform .2s}'+
+  '.hub-card:hover{border-color:var(--acc);background:var(--surf);transform:translateY(-2px)}'+
+  '.hub-ic{flex:none;width:2.8rem;height:2.8rem;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--surf);border-radius:10px}'+
+  '.hub-t{flex:1;min-width:0}.hub-t b{display:block;font-size:1.05rem;font-weight:600;letter-spacing:.04em}'+
+  '.hub-t small{display:block;margin-top:.1rem;font-size:.8rem;color:var(--muted)}'+
+  '.hub-go{flex:none;font-size:1.2rem;color:var(--muted);transition:transform .2s,color .2s}'+
+  '.hub-card:hover .hub-go{transform:translateX(4px);color:var(--acc)}'+
+  '@media(max-width:700px){.hub-grid{grid-template-columns:1fr;padding:.8rem .7rem 2rem}}';
+  document.head.appendChild(st);
+}
+
+function btnOf(cfg,key){
+  var nav=document.querySelector(cfg.nav);if(!nav)return null;
+  return nav.querySelector(':scope > .nb[onclick*="\''+key+'\'"]');
+}
+function childOf(cfg,key){
+  var h=cfg.hubs.filter(function(x){return x.items[key]!==undefined;})[0];return h||null;
+}
+
+function build(scope){
+  var cfg=HUBS[scope],nav=document.querySelector(cfg.nav),main=document.querySelector(cfg.main);
+  if(!nav||!main)return;
+  cfg.hubs.forEach(function(h){
+    if(!$(cfg.pre+h.k)){
+      var b=document.createElement('button');b.className='nb hub-btn';
+      b.setAttribute('onclick',cfg.fn+"('"+h.k+"',this)");
+      b.innerHTML='<span class="ni">'+h.ic+'</span><span class="nl">'+h.n+'</span>';
+      nav.appendChild(b);
+      main.insertAdjacentHTML('beforeend','<div id="'+cfg.pre+h.k+'" class="'+(scope==='m'?'mt':'at')+'"><div class="ph"><div class="pt">'+h.ic+' // '+h.n+'</div></div><div class="hub-grid" id="hubg_'+scope+'_'+h.k+'"></div></div>');
+    }
+  });
+}
+
+function paint(scope){
+  var cfg=HUBS[scope];
+  cfg.hubs.forEach(function(h){
+    var g=$('hubg_'+scope+'_'+h.k);if(!g)return;
+    var html='';
+    Object.keys(h.items).forEach(function(k){
+      var b=btnOf(cfg,k);if(!b||b.classList.contains('hidden'))return;
+      var ic=b.querySelector('.ni'),nl=b.querySelector('.nl');
+      html+='<button type="button" class="hub-card" data-k="'+k+'"><span class="hub-ic">'+(ic?ic.textContent:'•')+'</span>'+
+        '<span class="hub-t"><b>'+(nl?nl.textContent:k)+'</b><small>'+h.items[k]+'</small></span><span class="hub-go">→</span></button>';
+    });
+    if(g.dataset.h!==html){g.dataset.h=html;g.innerHTML=html;}
+    g.onclick=function(e){
+      var c=e.target.closest('.hub-card');if(!c)return;
+      goNav(scope,c.getAttribute('data-k'));
+    };
+  });
+}
+
+function layout(scope){
+  var cfg=HUBS[scope],nav=document.querySelector(cfg.nav);if(!nav)return;
+  Array.prototype.forEach.call(nav.querySelectorAll(':scope > .nb'),function(b){
+    var m=/\(\s*'([^']+)'/.exec(b.getAttribute('onclick')||''),
+        key=b.id==='adminNavBtn'?'admin':(m?m[1]:null);if(!key)return;
+    var hub=cfg.hubs.filter(function(x){return x.k===key;})[0],ch=childOf(cfg,key);
+    b.classList.toggle('hub-child',!!ch);
+    var ord=hub?hub.o:(cfg.top[key]!==undefined?cfg.top[key]:(key==='admin'?30:20));
+    if(b.style.order!==String(ord))b.style.order=ord;
+    if(hub){
+      /* tečka u hubu, když je uvnitř něco nového */
+      var alert=Object.keys(hub.items).some(function(k){
+        var c=btnOf(cfg,k);return c&&(c.classList.contains('has-new')||c.querySelector('.nbadge.visible'));});
+      b.classList.toggle('has-new',alert);
+    }
+  });
+  /* aktivní podstránka = podsvítí se její hub */
+  var act=document.querySelector(cfg.main+' .'+(scope==='m'?'mt':'at')+'.active');
+  if(act){
+    var tab=act.id.slice(3),hub2=childOf(cfg,tab);
+    if(hub2){
+      Array.prototype.forEach.call(nav.querySelectorAll(':scope > .nb'),function(b){
+        b.classList.toggle('active',b===btnOf(cfg,hub2.k));
+      });
+    }
+  }
+}
+
+function tick(){
+  if(document.hidden||!getMember())return;
+  ['m','a'].forEach(function(s){try{build(s);layout(s);paint(s);}catch(e){console.error('hub',e);}});
+}
+/* po každém přepnutí záložky hned srovnat zvýraznění */
+var _mt=window.mTab;window.mTab=function(){var r=_mt.apply(this,arguments);try{layout('m');}catch(e){}return r;};
+var _at=window.aTab;window.aTab=function(){var r=_at.apply(this,arguments);try{layout('a');}catch(e){}return r;};
+setInterval(tick,1000);setTimeout(tick,300);
+})();
