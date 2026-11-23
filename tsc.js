@@ -11260,3 +11260,273 @@ window.addEventListener('beforeunload',function(e){
   if(n){e.preventDefault();e.returnValue='';}
 });
 })();
+
+/* ===== CHANGELOG: grafický changelog + odeslání na Discord (jen admin) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function arr(a){return Array.isArray(a)?a:[];}
+
+if(!SECTIONS.some(function(x){return x.key==='changelog';}))SECTIONS.push({key:'changelog',label:'Changelog — jen vlastní webhook, bez něj se neposílá'});
+LOG_ICONS.changelog='📋';LOG_LABELS.changelog='CHANGELOG';
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.changelog='E';
+
+var TYPES={
+  new :{ic:'✨',n:'Nové',      c:0x2ecc71,css:'#2ecc71'},
+  look:{ic:'🎨',n:'Vzhled',    c:0x9b59b6,css:'#9b59b6'},
+  opt :{ic:'⚡',n:'Optimalizace',c:0xf1c40f,css:'#f1c40f'},
+  fix :{ic:'🐛',n:'Opravy',    c:0xe74c3c,css:'#e74c3c'},
+  chg :{ic:'🔧',n:'Změny',     c:0x3498db,css:'#3498db'},
+  sec :{ic:'🔒',n:'Bezpečnost',c:0x95a5a6,css:'#95a5a6'}
+};
+var ORD=['new','look','opt','fix','chg','sec'];
+var KEYMAP={nove:'new',new:'new','+':'new',vzhled:'look',design:'look',look:'look',ui:'look',
+  opt:'opt',optimalizace:'opt',rychlost:'opt',oprava:'fix',opravy:'fix',fix:'fix',bug:'fix',
+  zmena:'chg',zmeny:'chg',chg:'chg',change:'chg',bezpecnost:'sec',security:'sec',sec:'sec'};
+
+var rows=[{t:'new',x:''}],editId=null;
+
+/* ── styl ── */
+if(!$('clCss')){
+  var st=document.createElement('style');st.id='clCss';
+  st.textContent=
+   '.cl-wrap{max-width:980px;margin:0 auto;padding:0 0 2.5rem}'+
+   '.cl-row{display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem}'+
+   '.cl-row select{flex:none;width:150px;background:var(--surf);border:1px solid var(--border);color:var(--textb);padding:.5rem;color-scheme:dark}'+
+   '.cl-row input{flex:1;min-width:0;background:transparent;border:0;border-bottom:1px solid var(--brite);color:var(--textb);padding:.5rem .3rem;font-size:.95rem;outline:0}'+
+   '.cl-row input:focus{border-bottom-color:var(--acc)}'+
+   '.cl-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:0 1.2rem}'+
+   '.cl-grid .form-panel{margin:0!important}'+
+   '.cl-prev{background:#2b2d31;border-left:4px solid var(--c,#c49a14);border-radius:6px;padding:.9rem 1rem;color:#dbdee1;font-family:system-ui,Segoe UI,sans-serif!important;font-size:.9rem;line-height:1.45}'+
+   '.cl-prev *{font-family:system-ui,Segoe UI,sans-serif!important}'+
+   '.cl-prev .t{font-weight:700;color:#fff;font-size:1rem;margin-bottom:.3rem}'+
+   '.cl-prev .d{color:#dbdee1;margin-bottom:.5rem;white-space:pre-wrap}'+
+   '.cl-prev .f{margin-top:.55rem}.cl-prev .f b{display:block;color:#fff;font-size:.88rem}'+
+   '.cl-prev .f div{padding-left:.2rem}'+
+   '.cl-prev img{max-width:100%;border-radius:4px;margin-top:.6rem}'+
+   '.cl-prev .ft{margin-top:.7rem;font-size:.72rem;color:#949ba4}'+
+   '.cl-hist{margin:0 1.2rem}'+
+   '.cl-h{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;padding:.7rem .9rem;margin-bottom:1px;background:var(--card);border-left:3px solid var(--acc-dim)}'+
+   '.cl-h .v{font:700 1.1rem Orbitron,sans-serif!important;color:var(--acc)}'+
+   '.cl-h .w{flex:1;min-width:180px;color:var(--textb)}.cl-h .w small{display:block;color:var(--muted);font-size:.75rem}'+
+   '@media(max-width:900px){.cl-grid{grid-template-columns:1fr}}'+
+   '@media(max-width:700px){.cl-grid,.cl-hist{margin-left:.7rem;margin-right:.7rem}.cl-row select{width:110px}}';
+  document.head.appendChild(st);
+}
+
+/* ── záložka v Administraci ── */
+(function inject(){
+  var an=document.querySelector('#adminScreen .sb-nav'),am=document.querySelector('#adminScreen .main');
+  if(!an||!am||$('at-changelog'))return;
+  var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"aTab('changelog',this)");
+  b.innerHTML='<span class="ni">📋</span><span class="nl">CHANGELOG</span>';
+  var af=an.querySelector('.nb[onclick*="\'stats\'"]')||an.querySelector('.nb[onclick*="\'log\'"]');
+  if(af)af.insertAdjacentElement('afterend',b);else an.appendChild(b);
+  am.insertAdjacentHTML('beforeend','<div id="at-changelog" class="at"><div class="ph"><div class="pt">📋 // CHANGELOG</div></div><div id="clRoot" class="cl-wrap"></div></div>');
+})();
+
+/* ── data ── */
+function hist(){return arr(DB.get('changelog'));}
+function nextVer(){
+  var h=hist();if(!h.length)return '2.1';
+  var p=String(h[h.length-1].ver||'2.0').split('.').map(function(n){return parseInt(n,10)||0;});
+  p[p.length-1]++;return p.join('.');
+}
+function collect(){
+  var items=[];
+  Array.prototype.forEach.call(document.querySelectorAll('#clRows .cl-row'),function(r){
+    var t=r.querySelector('select').value,x=r.querySelector('input').value.trim();
+    if(x)items.push({t:t,x:x.slice(0,300)});
+  });
+  return {ver:$('cl-ver').value.trim().slice(0,12),title:$('cl-title').value.trim().slice(0,80),
+    intro:$('cl-intro').value.trim().slice(0,600),banner:$('cl-banner').value.trim(),items:items};
+}
+function syncRows(){
+  rows=[];
+  Array.prototype.forEach.call(document.querySelectorAll('#clRows .cl-row'),function(r){
+    rows.push({t:r.querySelector('select').value,x:r.querySelector('input').value});
+  });
+  if(!rows.length)rows=[{t:'new',x:''}];
+}
+
+/* ── sestavení formuláře ── */
+function build(){
+  var root=$('clRoot');root.dataset.built='1';
+  root.innerHTML=
+  '<div class="cl-grid"><div class="form-panel"><div class="fp-title" id="clFT">// NOVÝ CHANGELOG</div><div class="form-grid">'+
+    '<div class="field-group"><label class="fl">VERZE *</label><div class="iw"><span class="ip">v</span><input type="text" id="cl-ver" maxlength="12"/></div></div>'+
+    '<div class="field-group"><label class="fl">NÁZEV AKTUALIZACE</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cl-title" maxlength="80" placeholder="např. Vánoční update"/></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">ÚVODNÍ VĚTA</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cl-intro" maxlength="600" placeholder="Volitelné krátké shrnutí…"/></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">BANNER — URL OBRÁZKU (nepovinné)</label><div class="iw"><span class="ip">&gt;_</span><input type="text" id="cl-banner" placeholder="https://r2.fivemanage.com/..."/></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">RYCHLÉ VLOŽENÍ (jeden řádek = jedna změna, např. „vzhled: nový panel“, „oprava: sklad“)</label>'+
+      '<textarea id="cl-bulk" class="adm-ta" style="min-height:80px" placeholder="nové: Záložka Changelog&#10;vzhled: Nový panel financí&#10;optimalizace: Rychlejší načítání&#10;oprava: Kalendář na mobilu"></textarea>'+
+      '<div style="margin-top:.4rem"><button type="button" class="btn-ghost small" id="clBulkGo">⤵ ROZLOŽIT DO ŘÁDKŮ</button></div></div>'+
+    '<div class="field-group fg-full"><label class="fl">ZMĚNY *</label><div id="clRows"></div>'+
+      '<button type="button" class="btn-micro" id="clAdd">+ PŘIDAT ŘÁDEK</button></div>'+
+  '</div><div class="fp-ftr"><button class="btn-acc small" id="clSend">📤 ODESLAT NA DISCORD</button>'+
+    '<button class="btn-ghost small" id="clSave">💾 JEN ULOŽIT</button><button class="btn-ghost small" id="clReset">ZRUŠIT</button>'+
+    '<label class="ping-chk"><input type="checkbox" id="cl-ping"/><span>🔔 Označit Member</span></label><span id="clSt" class="smsg"></span></div></div>'+
+  '<div class="form-panel"><div class="fp-title">// NÁHLED</div><div id="clPrev" class="cl-prev"></div></div></div>'+
+  '<div class="sh" style="margin-top:1.2rem">// HISTORIE CHANGELOGŮ</div><div id="clHist" class="cl-hist"></div>';
+
+  $('cl-ver').value=nextVer();
+  rowsPaint();prev();
+
+  root.addEventListener('input',function(e){if(e.target.closest('.cl-grid'))prev();});
+  root.addEventListener('change',function(e){if(e.target.closest('.cl-grid'))prev();});
+  root.addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;
+    if(b.id==='clAdd'){syncRows();rows.push({t:rows.length?rows[rows.length-1].t:'new',x:''});rowsPaint();prev();
+      var l=document.querySelectorAll('#clRows .cl-row input');if(l.length)l[l.length-1].focus();}
+    else if(b.classList.contains('cl-del')){syncRows();rows.splice(+b.getAttribute('data-i'),1);if(!rows.length)rows=[{t:'new',x:''}];rowsPaint();prev();}
+    else if(b.id==='clBulkGo')bulk();
+    else if(b.id==='clSend')submit(true);
+    else if(b.id==='clSave')submit(false);
+    else if(b.id==='clReset')reset();
+    else if(b.getAttribute('data-h')){
+      var a=b.getAttribute('data-h'),id=b.getAttribute('data-id');
+      if(a==='resend')resend(id);else if(a==='edit')load(id);else if(a==='del')del(id);
+    }
+  });
+}
+function rowsPaint(){
+  $('clRows').innerHTML=rows.map(function(r,i){
+    return '<div class="cl-row"><select>'+ORD.map(function(k){return '<option value="'+k+'"'+(r.t===k?' selected':'')+'>'+TYPES[k].ic+' '+TYPES[k].n+'</option>';}).join('')+'</select>'+
+      '<input type="text" maxlength="300" placeholder="Co se změnilo…" value="'+esc(r.x).replace(/<br>/g,' ')+'"/>'+
+      '<button type="button" class="btn-micro del cl-del" data-i="'+i+'" title="Odebrat">✕</button></div>';
+  }).join('');
+}
+function bulk(){
+  var ta=$('cl-bulk'),lines=ta.value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  if(!lines.length){toast('Nejdřív něco vlož','error');return;}
+  syncRows();rows=rows.filter(function(r){return r.x.trim();});
+  lines.forEach(function(l){
+    var m=/^[-•*]?\s*([^:]{1,14}):\s*(.+)$/.exec(l),t='new',x=l.replace(/^[-•*]\s*/,'');
+    if(m){var k=KEYMAP[normS(m[1]).trim()];if(k){t=k;x=m[2].trim();}}
+    else if(/^\+\s*/.test(l)){x=l.replace(/^\+\s*/,'');}
+    rows.push({t:t,x:x});
+  });
+  ta.value='';rowsPaint();prev();toast('Rozloženo do řádků ✓','success');
+}
+
+/* ── náhled ── */
+function color(items){
+  var cnt={};items.forEach(function(i){cnt[i.t]=(cnt[i.t]||0)+1;});
+  var best=ORD.filter(function(k){return cnt[k];}).sort(function(a,b){return cnt[b]-cnt[a];})[0];
+  return TYPES[best||'new'];
+}
+function prev(){
+  var e=$('clPrev');if(!e)return;
+  var d=collect(),c=color(d.items),by=(getMember()||{}).displayName||'';
+  e.style.setProperty('--c',c.css);
+  var h='<div class="t">📋 CHANGELOG — v'+esc(d.ver||'?')+(d.title?' · '+esc(d.title):'')+'</div>'+(d.intro?'<div class="d">'+esc(d.intro)+'</div>':'');
+  ORD.forEach(function(k){
+    var it=d.items.filter(function(i){return i.t===k;});if(!it.length)return;
+    h+='<div class="f"><b>'+TYPES[k].ic+' '+TYPES[k].n+'</b>'+it.map(function(i){return '<div>• '+esc(i.x)+'</div>';}).join('')+'</div>';
+  });
+  if(!d.items.length)h+='<div class="f" style="color:#949ba4">Přidej aspoň jednu změnu…</div>';
+  if(/^https?:\/\//i.test(d.banner))h+='<img src="'+esc(d.banner)+'" alt="" onerror="this.style.display=\'none\'"/>';
+  h+='<div class="ft">'+esc(by)+' • '+esc(nowStr())+'</div>';
+  e.innerHTML=h;
+}
+
+/* ── Discord embed ── */
+function embedOf(d,by){
+  var c=color(d.items);
+  var fields=[];
+  ORD.forEach(function(k){
+    var it=d.items.filter(function(i){return i.t===k;});if(!it.length)return;
+    var parts=splitText(it.map(function(i){return '• '+i.x;}).join('\n'),1000);
+    parts.forEach(function(p,i){fields.push([i===0?TYPES[k].ic+' '+TYPES[k].n:'\u200b',p,false]);});
+  });
+  var em=rich(c.c,'📋 CHANGELOG — v'+d.ver+(d.title?' · '+d.title:''),d.intro||null,fields,
+    {by:by,img:/^https?:\/\//i.test(d.banner)?d.banner:'',big:true});
+  em.timestamp=new Date().toISOString();
+  return em;
+}
+function hookOk(){
+  var s=DB.get('settings')||{},sec=(s.sections||{}).changelog||{};
+  if(sec.on===false){toast('Sekce „Changelog“ je v Nastavení vypnutá','error',4500);return false;}
+  if(!(sec.url||'').trim()){toast('Nastav webhook sekce „Changelog“ (Nastavení → Discord po sekcích)','error',5000);return false;}
+  return true;
+}
+function sendEntry(d,by,ping){
+  addLog('changelog',by+' vydal changelog v'+d.ver+(d.title?' — '+d.title:'')+' ('+d.items.length+' změn).',
+    {private:true,extraPing:ping,embed:embedOf(d,by)});
+}
+
+/* ── akce ── */
+function submit(send){
+  var m=getMember(),st=$('clSt');
+  if(!m||!isAdmin()){toast('Changelog smí tvořit jen admin','error');return;}
+  function err(t){st.style.color='var(--red)';st.textContent=t;}
+  var d=collect();
+  if(!d.ver){err('// ZADEJ VERZI');return;}
+  if(!d.items.length){err('// PŘIDEJ ALESPOŇ JEDNU ZMĚNU');return;}
+  if(send&&!hookOk())return;
+  var list=hist(),rec;
+  if(editId&&(rec=list.filter(function(x){return x.id===editId;})[0])){
+    Object.assign(rec,d,{edited:nowStr()});
+  }else{
+    rec={id:uid(),ver:d.ver,title:d.title,intro:d.intro,banner:d.banner,items:d.items,date:nowStr(),ts:Date.now(),by:m.displayName,sent:false};
+    list.push(rec);
+  }
+  if(send){rec.sent=true;rec.sentAt=nowStr();}
+  if(list.length>100)list=list.slice(-100);
+  DB.set('changelog',list);
+  if(send)sendEntry(d,m.displayName,pingBox('cl-ping'));
+  st.style.color='';st.textContent=send?'// ODESLÁNO':'// ULOŽENO';setTimeout(function(){st.textContent='';},2500);
+  toast(send?'Changelog odeslán na Discord ✓':'Changelog uložen ✓','success');
+  if(send&&typeof window.tscBurst==='function')window.tscBurst();
+  reset();
+}
+function reset(){
+  editId=null;rows=[{t:'new',x:''}];
+  ['cl-title','cl-intro','cl-banner','cl-bulk'].forEach(function(i){var e=$(i);if(e)e.value='';});
+  $('cl-ver').value=nextVer();$('cl-ping').checked=false;$('clFT').textContent='// NOVÝ CHANGELOG';$('clSend').textContent='📤 ODESLAT NA DISCORD';
+  rowsPaint();prev();paintHist();
+}
+function load(id){
+  var r=hist().filter(function(x){return x.id===id;})[0];if(!r)return;
+  editId=id;rows=arr(r.items).map(function(i){return {t:i.t,x:i.x};});
+  $('cl-ver').value=r.ver||'';$('cl-title').value=r.title||'';$('cl-intro').value=r.intro||'';$('cl-banner').value=r.banner||'';
+  $('clFT').textContent='// UPRAVIT CHANGELOG v'+r.ver;$('clSend').textContent='📤 ULOŽIT A ODESLAT';
+  rowsPaint();prev();$('clFT').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function resend(id){
+  var m=getMember(),r=hist().filter(function(x){return x.id===id;})[0];
+  if(!m||!isAdmin()||!r||!hookOk())return;
+  sendEntry(r,m.displayName,'');
+  var l=hist(),x=l.filter(function(y){return y.id===id;})[0];if(x){x.sent=true;x.sentAt=nowStr();DB.set('changelog',l);}
+  toast('Changelog znovu odeslán ✓','success');paintHist();
+}
+function del(id){
+  var m=getMember(),r=hist().filter(function(x){return x.id===id;})[0];
+  if(!m||!isAdmin()||!r)return;
+  function go(){DB.set('changelog',hist().filter(function(x){return x.id!==id;}));
+    addLog('changelog',m.displayName+' smazal changelog v'+r.ver+'.',{noDiscord:true});toast('Smazáno','info');paintHist();}
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT CHANGELOG?',text:esc('v'+r.ver+(r.title?' — '+r.title:'')),ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);else go();
+}
+function paintHist(){
+  var h=$('clHist');if(!h)return;
+  var l=hist().slice().reverse();
+  h.innerHTML=l.length?l.map(function(r){
+    var n=arr(r.items).length;
+    return '<div class="cl-h"><span class="v">v'+esc(r.ver)+'</span><span class="w">'+esc(r.title||'(bez názvu)')+
+      '<small>'+esc(r.date)+' · '+esc(r.by||'')+' · '+n+' změn · '+(r.sent?'✅ odesláno '+esc(r.sentAt||''):'📝 jen uloženo')+'</small></span>'+
+      '<button class="btn-micro" data-h="resend" data-id="'+esc(r.id)+'" title="Odeslat znovu">📤</button>'+
+      '<button class="btn-micro" data-h="edit" data-id="'+esc(r.id)+'" title="Upravit">✎</button>'+
+      '<button class="btn-micro del" data-h="del" data-id="'+esc(r.id)+'" title="Smazat">✕</button></div>';
+  }).join(''):'<div class="empty-s">// Zatím žádný changelog</div>';
+}
+
+function render(){
+  var m=getMember(),root=$('clRoot');if(!m||!root)return;
+  if(!isAdmin()){root.innerHTML='';root.dataset.built='';return;}
+  if(!root.dataset.built)build();
+  paintHist();
+}
+if(typeof A_RENDER!=='undefined')A_RENDER.changelog=render;
+var _at=window.aTab;
+window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='changelog')render();return r;};
+})();
