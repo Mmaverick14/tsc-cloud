@@ -11530,3 +11530,125 @@ if(typeof A_RENDER!=='undefined')A_RENDER.changelog=render;
 var _at=window.aTab;
 window.aTab=function(tab){var r=_at.apply(this,arguments);if(tab==='changelog')render();return r;};
 })();
+
+/* ══ VYLEPŠENÍ 3 — načíst PO tsc.js ══
+   1) Rychlé akce na Oznámeních
+   2) Štítek NOVÉ (příspěvky do 24 h) + sbalení dlouhých příspěvků
+   3) Tlačítko „nahoru“
+   4) Lišta při přepnutí záložky
+   5) Ripple efekt na tlačítkách
+   6) Nápověda kláves (stiskni ?)                                         */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function ready(){return typeof getMember==='function'&&!!getMember();}
+
+/* 1) RYCHLÉ AKCE */
+var QA=[['💎','Heist report','heist'],['💰','Nahlásit příjem','finance'],['📝','Omluvenka','excuse'],
+        ['📢','Hlášení','report'],['📅','Kalendář','calendar'],['📦','Sklad','warehouse']];
+function quick(){
+  var tab=$('mt-board');
+  if(!tab||!tab.classList.contains('active')||$('quickBar'))return;
+  var anchor=tab.querySelector('.gk-card')||tab.querySelector('.ph');
+  if(!anchor)return;
+  var bar=document.createElement('div');bar.id='quickBar';bar.className='qa-bar';
+  bar.innerHTML='<span class="qa-t">⚡ RYCHLÉ AKCE</span>'+QA.map(function(q){
+    return '<button type="button" class="qa-b" data-go="'+q[2]+'"><i>'+q[0]+'</i>'+q[1]+'</button>';}).join('');
+  bar.addEventListener('click',function(e){
+    var b=e.target.closest('[data-go]');
+    if(b&&typeof goNav==='function')goNav('m',b.getAttribute('data-go'));
+  });
+  anchor.after(bar);
+}
+
+/* 2) NOVÉ + sbalení */
+function posts(){
+  var tab=$('mt-board'),host=$('boardPosts');
+  if(!tab||!host||!tab.classList.contains('active'))return;
+  var list=(DB.get('board')||[]).slice().reverse();
+  host.querySelectorAll(':scope > .board-post').forEach(function(c,i){
+    var p=list[i];if(!p)return;
+    if(!c.dataset.nw){
+      c.dataset.nw='1';
+      var d=typeof parseCz==='function'?parseCz(p.date):null;
+      var t=c.querySelector('.bp-title');
+      if(d&&t&&Date.now()-d.getTime()<864e5)t.insertAdjacentHTML('beforeend','<span class="new-tag">NOVÉ</span>');
+    }
+    var b=c.querySelector('.bp-body');
+    if(b&&!c.dataset.cl&&b.scrollHeight>190){
+      c.dataset.cl='1';b.classList.add('clamped');
+      var btn=document.createElement('button');btn.type='button';btn.className='bp-more';btn.textContent='▼ ZOBRAZIT VÍCE';
+      btn.onclick=function(){
+        var open=b.classList.toggle('clamped');
+        btn.textContent=open?'▼ ZOBRAZIT VÍCE':'▲ ZOBRAZIT MÉNĚ';
+      };
+      b.after(btn);
+    }
+  });
+}
+
+/* 3) TLAČÍTKO NAHORU */
+var bt=document.createElement('button');
+bt.id='backTop';bt.type='button';bt.title='Nahoru';bt.setAttribute('aria-label','Nahoru');bt.textContent='↑';
+document.body.appendChild(bt);
+bt.onclick=function(){
+  window.scrollTo({top:0,behavior:'smooth'});
+  document.querySelectorAll('.main').forEach(function(m){m.scrollTo({top:0,behavior:'smooth'});});
+};
+document.addEventListener('scroll',function(e){
+  var t=e.target,y=(t===document||t===document.documentElement)?window.scrollY:(t.classList&&t.classList.contains('main')?t.scrollTop:null);
+  if(y===null)return;
+  bt.classList.toggle('on',y>400);
+},true);
+
+/* 4) LIŠTA PŘI PŘEPNUTÍ ZÁLOŽKY */
+var bar=document.createElement('div');bar.id='tabBar';document.body.appendChild(bar);
+function flash(){bar.classList.remove('go');void bar.offsetWidth;bar.classList.add('go');}
+['mTab','aTab'].forEach(function(n){
+  var o=window[n];if(typeof o!=='function')return;
+  window[n]=function(){var r=o.apply(this,arguments);try{flash();}catch(e){}return r;};
+});
+
+/* 5) RIPPLE */
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('.btn-acc,.btn-ghost,.f3-btn,.hub-card,.qa-b');
+  if(!b||b.disabled)return;
+  var r=b.getBoundingClientRect(),s=Math.max(r.width,r.height)*2,sp=document.createElement('span');
+  sp.className='rip';
+  sp.style.cssText='width:'+s+'px;height:'+s+'px;left:'+(e.clientX-r.left-s/2)+'px;top:'+(e.clientY-r.top-s/2)+'px';
+  b.appendChild(sp);setTimeout(function(){sp.remove();},650);
+},true);
+
+/* 6) NÁPOVĚDA KLÁVES */
+function help(){
+  var old=$('kbHelp');if(old){old.remove();return;}
+  var ov=document.createElement('div');ov.id='kbHelp';ov.className='modal-ov';
+  ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+  ov.innerHTML='<div class="modal-box" style="max-width:420px;width:92vw"><div class="modal-title">⌨ KLÁVESOVÉ ZKRATKY</div>'+
+    '<div class="kb-list">'+
+    '<kbd>Ctrl + K</kbd><span>Rychlé hledání a skok na záložku</span>'+
+    '<kbd>Alt + 1–9</kbd><span>Přepnutí záložky podle pořadí v menu</span>'+
+    '<kbd>Ctrl + Alt + +/−</kbd><span>Velikost webu</span>'+
+    '<kbd>?</kbd><span>Tato nápověda</span>'+
+    '<kbd>Esc</kbd><span>Zavřít okno</span></div>'+
+    '<div class="modal-ftr"><button class="btn-ghost small" id="kbX">ZAVŘÍT</button></div></div>';
+  document.body.appendChild(ov);
+  function close(){document.removeEventListener('keydown',key,true);ov.remove();}
+  function key(e){if(e.key==='Escape'){e.stopPropagation();close();}}
+  document.addEventListener('keydown',key,true);
+  $('kbX').onclick=close;
+  ov.addEventListener('mousedown',function(e){if(e.target===ov)close();});
+}
+document.addEventListener('keydown',function(e){
+  if(e.key!=='?'||e.ctrlKey||e.metaKey||e.altKey||!ready())return;
+  var a=document.activeElement;
+  if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||(a&&a.isContentEditable))return;
+  e.preventDefault();help();
+});
+
+/* smyčka */
+setInterval(function(){
+  if(document.hidden||!ready())return;
+  try{quick();posts();}catch(e){console.error('vylepseni3',e);}
+},1200);
+})();
