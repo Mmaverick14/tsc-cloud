@@ -2100,3 +2100,67 @@ html body .hub-line{margin:2.5rem 0 1.8rem}
   html body .hub-gr b{flex:none;justify-content:flex-start;font-size:1.05rem}
   html body .hub-gr span{font-size:1rem}
 }
+
+/* ══ VZHLED 3.0 — rychlé akce, štítek NOVÉ, sbalené příspěvky, tlačítko nahoru, ripple, lišta přepnutí záložky, nápověda kláves ══
+   Načítat ZA vzhled2.css. Smazáním řádku v index.html se vše vrátí. */
+
+/* 1) RYCHLÉ AKCE na Oznámeních */
+.qa-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:.2rem 1.2rem .8rem;padding:.7rem .9rem;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 10%,var(--card)),var(--card));
+  border:1px solid var(--border);border-left:3px solid var(--acc)}
+.qa-t{font-size:.7rem;font-weight:600;letter-spacing:.2em;color:var(--acc);margin-right:.4rem;white-space:nowrap}
+.qa-b{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:.45rem;padding:.5rem .95rem;
+  background:var(--surf);border:1px solid var(--brite);border-radius:999px;color:var(--textb);
+  font-size:.85rem;font-weight:500;letter-spacing:.04em;cursor:pointer;transition:transform .18s,border-color .18s,background .18s,box-shadow .18s}
+.qa-b:hover{transform:translateY(-2px);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,var(--surf));box-shadow:0 8px 18px -10px var(--acc)}
+.qa-b:active{transform:scale(.96)}
+.qa-b i{font-style:normal;font-size:1.1rem}
+@media(max-width:700px){.qa-bar{margin:.2rem .7rem .8rem}.qa-b{flex:1 1 calc(50% - .5rem);justify-content:center}}
+
+/* 2) Štítek NOVÉ + sbalení dlouhých příspěvků */
+.new-tag{display:inline-block;margin-left:.5rem;padding:.08rem .45rem;background:var(--acc);color:#080808;
+  font-size:.6rem;font-weight:700;letter-spacing:.14em;vertical-align:middle;animation:newPulse 2s ease-in-out infinite}
+@keyframes newPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--acc) 60%,transparent)}50%{box-shadow:0 0 0 5px transparent}}
+.bp-body.clamped{max-height:9.5rem;overflow:hidden;position:relative;
+  -webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent)}
+.bp-more{background:transparent;border:0;color:var(--acc);font-size:.8rem;font-weight:600;letter-spacing:.12em;cursor:pointer;padding:.1rem 0 .6rem}
+.bp-more:hover{text-decoration:underline}
+
+/* 3) Tlačítko nahoru */
+#backTop{position:fixed;right:1.2rem;bottom:4.2rem;z-index:7000;width:2.8rem;height:2.8rem;border-radius:50%;
+  background:var(--acc);color:#080808;border:0;font-size:1.3rem;font-weight:700;cursor:pointer;
+  box-shadow:0 10px 24px -8px #000;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s,transform .25s}
+#backTop.on{opacity:.95;transform:none;pointer-events:auto}
+#backTop:hover{opacity:1;filter:brightness(1.1)}
+@media(max-width:700px){#backTop{bottom:calc(76px + env(safe-area-inset-bottom,0px));right:.8rem}}
+
+/* 4) Lišta při přepnutí záložky */
+#tabBar{position:fixed;top:0;left:0;height:3px;width:0;z-index:9999;pointer-events:none;
+  background:linear-gradient(90deg,var(--acc),color-mix(in srgb,var(--acc) 50%,#fff));box-shadow:0 0 12px var(--acc)}
+#tabBar.go{animation:tabBarGo .6s ease-out forwards}
+@keyframes tabBarGo{0%{width:0;opacity:1}80%{width:100%;opacity:1}100%{width:100%;opacity:0}}
+
+/* 5) Ripple na tlačítkách */
+.btn-acc,.btn-ghost,.f3-btn,.hub-card{position:relative;overflow:hidden}
+.rip{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.28;transform:scale(0);animation:ripGo .6s ease-out forwards}
+@keyframes ripGo{to{transform:scale(1);opacity:0}}
+
+/* 6) Toast s ubíhajícím časem */
+.toast{position:relative;overflow:hidden}
+.toast::after{content:'';position:absolute;left:0;bottom:0;height:2px;width:100%;background:var(--acc);transform-origin:left;animation:toastBar 3s linear forwards}
+.toast.success::after{background:var(--green)}.toast.error::after{background:var(--red)}
+@keyframes toastBar{to{transform:scaleX(0)}}
+
+/* 7) Nápověda kláves */
+.kb-list{display:grid;grid-template-columns:auto 1fr;gap:.55rem 1rem;align-items:center;margin-top:.4rem}
+.kb-list kbd{justify-self:start;padding:.2rem .6rem;background:var(--surf);border:1px solid var(--brite);border-bottom-width:2px;
+  border-radius:6px;font-family:ui-monospace,Menlo,Consolas,monospace!important;font-size:.8rem;color:var(--acc)}
+.kb-list span{color:var(--textb);font-size:.95rem}
+
+/* 8) Drobnosti: hezčí karty při najetí, plynulé scrollování */
+html{scroll-behavior:smooth}
+.board-post,.task-card,.heist-card,.ev-card{transition:border-color .2s,background .2s,transform .2s}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .new-tag,.toast::after,#tabBar.go,.rip{animation:none}
+}
