@@ -11140,3 +11140,123 @@ var _mt=window.mTab;window.mTab=function(){var r=_mt.apply(this,arguments);try{l
 var _at=window.aTab;window.aTab=function(){var r=_at.apply(this,arguments);try{layout('a');}catch(e){}return r;};
 setInterval(tick,1000);setTimeout(tick,300);
 })();
+
+/* ===== FINANCE: slučující (atomický) zápis, souběžné zápisy se neztratí ===== */
+(function(){
+'use strict';
+var KEYS=['finance','incomes','acctlog','drugsales','xtc_sales','moneyreq','vy_batches','vy_sales'];
+var pend={},Q=Promise.resolve();
+function copy(o){return o==null?o:JSON.parse(JSON.stringify(o));}
+function sig(x){return JSON.stringify(x===undefined?null:x);}
+function isArr(a){return Array.isArray(a);}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+/* ── rozdíl mezi starým a novým stavem (podle id záznamů) ── */
+function colsOf(v){
+  if(isArr(v))return {'':v};
+  var o={};
+  if(v&&typeof v==='object')Object.keys(v).forEach(function(k){if(isArr(v[k]))o[k]=v[k];});
+  return o;
+}
+function diff(prev,next){
+  var P=colsOf(prev),N=colsOf(next),d={cols:{},scal:{},ok:true};
+  Object.keys(N).forEach(function(p){
+    var pa=P[p]||[],na=N[p],pm={},nm={},c={add:[],del:[],mod:[]};
+    pa.forEach(function(x){if(!x||x.id==null)d.ok=false;else pm[x.id]=x;});
+    na.forEach(function(x){if(!x||x.id==null)d.ok=false;else nm[x.id]=x;});
+    na.forEach(function(x){
+      if(!x||x.id==null)return;
+      if(!pm[x.id])c.add.push(x);else if(sig(pm[x.id])!==sig(x))c.mod.push(x);
+    });
+    pa.forEach(function(x){if(x&&x.id!=null&&!nm[x.id])c.del.push(x.id);});
+    if(c.add.length||c.del.length||c.mod.length)d.cols[p]=c;
+  });
+  if(next&&typeof next==='object'&&!isArr(next)){
+    Object.keys(next).forEach(function(k){
+      if(!isArr(next[k])&&sig(next[k])!==sig((prev||{})[k]))d.scal[k]=next[k];
+    });
+  }
+  return d;
+}
+function apply(base,d,arrTop){
+  var out=base==null?(arrTop?[]:{}):copy(base);
+  Object.keys(d.cols).forEach(function(p){
+    var c=d.cols[p],arr=arrTop?out:(isArr(out[p])?out[p]:[]);
+    var delS={},modM={},have={};
+    c.del.forEach(function(id){delS[id]=1;});
+    c.mod.forEach(function(x){modM[x.id]=x;});
+    var res=arr.filter(function(x){return !(x&&delS[x.id]);}).map(function(x){
+      if(x&&x.id!=null)have[x.id]=1;
+      return (x&&modM[x.id])?modM[x.id]:x;
+    });
+    c.add.forEach(function(x){if(!have[x.id])res.push(x);});
+    if(arrTop)out=res;else out[p]=res;
+  });
+  if(!arrTop)Object.keys(d.scal).forEach(function(k){out[k]=d.scal[k];});
+  return out;
+}
+
+/* ── zápis s kontrolou verze (compare-and-swap) ── */
+async function cas(key,d,arrTop){
+  for(var n=0;n<10;n++){
+    var r=await sb.from(TABLE).select('value,updated_at').eq('key',key).maybeSingle();
+    if(r.error)throw r.error;
+    var next=apply(r.data?r.data.value:null,d,arrTop),now=new Date().toISOString(),res;
+    if(!r.data){
+      res=await sb.from(TABLE).insert({key:key,value:next,updated_at:now});
+      if(res.error){if(String(res.error.code)==='23505')continue;throw res.error;}
+    }else{
+      res=await sb.from(TABLE).update({value:next,updated_at:now}).eq('key',key).eq('updated_at',r.data.updated_at).select('key');
+      if(res.error)throw res.error;
+      if(!res.data||!res.data.length){await sleep(40+Math.random()*80);continue;}   // mezitím někdo zapsal → znovu
+    }
+    return next;
+  }
+  throw new Error('Konflikt zápisu');
+}
+async function resync(key){
+  try{
+    var r=await sb.from(TABLE).select('value').eq('key',key).maybeSingle();
+    if(r.data&&r.data.value!==undefined&&!pend[key]){DB.cache[key]=r.data.value;scheduleRefresh();}
+  }catch(e){}
+}
+
+/* ── obalení DB.set ── */
+var _set=DB.set;
+DB.set=function(k,v){
+  if(KEYS.indexOf(k)===-1||!sb||!tscToken||v==null)return _set.apply(this,arguments);
+  var prev=DB.cache[k],d=diff(prev,v);
+  if(!d.ok)return _set.apply(this,arguments);          // záznamy bez id → staré chování
+  /* smazané příjmy dál padají do koše */
+  if(k==='incomes'&&d.cols['']&&d.cols[''].del.length){
+    try{
+      var me=getMember(),tr=DB.get('trash');tr=isArr(tr)?tr:[];
+      (prev||[]).forEach(function(x){
+        if(x&&d.cols[''].del.indexOf(x.id)!==-1)tr.unshift({id:uid(),key:'incomes',item:x,by:me?me.displayName:'?',ts:Date.now()});
+      });
+      DB.set('trash',tr.slice(0,150));
+    }catch(e){console.error('trash',e);}
+  }
+  DB.cache[k]=copy(v);DB.lastWrite[k]=Date.now();      // okamžitě viditelné
+  if(!Object.keys(d.cols).length&&!Object.keys(d.scal).length)return;
+  var arrTop=isArr(v);
+  pend[k]=(pend[k]||0)+1;
+  var p=Q.then(function(){return cas(k,d,arrTop);});
+  Q=p.catch(function(){});
+  p.then(function(merged){
+    pend[k]--;
+    DB.lastWrite[k]=Date.now();
+    if(!pend[k]&&sig(merged)!==sig(DB.cache[k])){DB.cache[k]=merged;scheduleRefresh();}  // doplní záznamy od ostatních
+  },function(e){
+    pend[k]--;console.error('fin cas',k,e);
+    toast('Uložení se nepovedlo ('+k+') — data se znovu načítají','error',5000);
+    resync(k);
+  });
+};
+
+/* upozornění při zavření stránky, dokud něco neodešlo */
+window.addEventListener('beforeunload',function(e){
+  var n=0;Object.keys(pend).forEach(function(k){n+=pend[k]||0;});
+  if(n){e.preventDefault();e.returnValue='';}
+});
+})();
