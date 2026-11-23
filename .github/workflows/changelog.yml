@@ -2,6 +2,12 @@ name: Changelog na Discord
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Zpětně za kolik dní poslat changelog'
+        default: '14'
+        required: true
 
 jobs:
   changelog:
@@ -20,4 +26,5 @@ jobs:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
           REPO: ${{ github.repository }}
+          DAYS: ${{ github.event.inputs.days }}
         run: node .github/scripts/changelog.mjs
