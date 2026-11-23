@@ -10849,7 +10849,7 @@ function card(r,admin){
   var dec=r.status!=='pending'?'<div class="rq-dec">'+(r.status==='approved'?'Schválil':'Zamítl')+': '+E(r.by||'vedení')+' · '+fmt(r.decidedTs)+'</div>':'';
   var btn=admin&&r.status==='pending'?'<div class="rq-act"><button type="button" class="btn-micro rq-ok" data-rq="approved" data-id="'+E(r.id)+'">✓ SCHVÁLIT</button><button type="button" class="btn-micro del" data-rq="rejected" data-id="'+E(r.id)+'">✕ ZAMÍTNOUT</button></div>':'';
   return '<div class="inc-card rq-card '+CLS[r.status]+'"><div class="inc-card-top"><span class="inc-source">'+(admin?E(r.name):'ŽÁDOST')+'</span><span class="inc-amount">'+money(r.amount)+'</span></div>'+
-    '<div class="rq-reason">'+E(r.reason)+'</div><div class="inc-card-bot"><span class="inc-date">'+fmt(r.ts)+'</span><span class="inc-status '+CLS[r.status]+'">'+LBL[r.status]+'</span></div>'+dec+btn+'</div>';
+    '<div class="rq-reason">'+E(r.reason)+'</div><div class="inc-card-bot"><span class="inc-date">'+fmt(r.ts)+'</span><span class="inc-status '+CLS[r.status]+'">'+LBL[r.status]+'</span></div>'+dec+btn+'<div class="rq-act"><button type="button" class="btn-micro del" data-rqdel="'+E(r.id)+'">🗑 SMAZAT</button></div></div>';
 }
 
 /* ── ČLEN ── */
@@ -10945,6 +10945,22 @@ function notify(){
   });
   if(ch||first){try{localStorage.setItem(SEEN,JSON.stringify(seen));}catch(e){}}
 }
+
+/* ── mazání (člen jen své, vedení všechny) ── */
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('[data-rqdel]');if(!b)return;
+  var m=me();if(!m)return;
+  var id=b.getAttribute('data-rqdel'),r=all().filter(function(x){return x.id===id;})[0];
+  if(!r)return;
+  if(!(isAdmin()||r.memberId===m.id)){toast('Tuhle žádost nemůžeš smazat','error');return;}
+  function go(){
+    DB.set(KEY,all().filter(function(x){return x.id!==id;}));
+    addLog('req',m.displayName+' smazal žádost '+r.name+' o '+money(r.amount)+'.',{noDiscord:true});
+    toast('Žádost smazána','info');hm='';ha='';paintMember();paintAdmin();
+  }
+  if(typeof window.tscDialog==='function')window.tscDialog({title:'⚠ SMAZAT ŽÁDOST?',text:E(money(r.amount)+' — '+r.reason.slice(0,80))+'<div class="tsc-sub">Tuto akci nelze vrátit.</div>',ok:'SMAZAT',danger:true,cancel:'ZRUŠIT'},go);
+  else if(window.confirm('Smazat žádost?'))go();
+});
 
 if(typeof M_RENDER!=='undefined')M_RENDER.requests=function(){hm='';paintMember();};
 if(typeof A_RENDER!=='undefined')A_RENDER.requests=function(){ha='';paintAdmin();};
