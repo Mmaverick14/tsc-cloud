@@ -251,7 +251,7 @@ function addLog(type,text,opts){
   if(log.length>500)log=log.slice(0,500);
   DB.set('syslog',log);
   if(opts&&opts.noDiscord)return;
-  if(opts&&(opts.embedTitle||opts.embed)){sendToDiscord(type,opts.discordText||text,opts);return;}
+  if(opts&&(opts.embedTitle||opts.embed)){sendToDiscord(opts.hook||type,opts.discordText||text,opts);return;}
 
   var o=opts||{};
   var ic=o.icon||LOG_ICONS[type]||'';
@@ -3261,14 +3261,14 @@ function proposePromo(id){
   var note=(document.getElementById('rp-note-'+id).value||'').trim();
   t.m.promo={to:to,note:note,by:rosterWho(),date:nowStr()};
   DB.set('members',t.members);
-  addLog('roster',rosterWho()+' navrhl povýšení: '+t.m.displayName+' ('+t.m.position+' → '+to+')'+(note?' — '+note:'')+'.',{embed:rich(C_BLUE,'⬆️ NÁVRH NA POVÝŠENÍ','**'+t.m.displayName+'**',[
+  addLog('roster',rosterWho()+' navrhl povýšení: '+t.m.displayName+' ('+t.m.position+' → '+to+')'+(note?' — '+note:'')+'.',{hook:'promo',embed:rich(C_BLUE,'⬆️ NÁVRH NA POVÝŠENÍ','**'+t.m.displayName+'**',[
     ['🎖️ Nyní',t.m.position],['➡️ Navrženo',to],['📝 Důvod',note||'—',false]],{by:rosterWho()})});
   toast('Návrh na povýšení uložen','success');renderRoster(true);
 }
 function clearPromo(id){
   var t=rosterTarget(id);if(!t||!t.m.promo)return;
   delete t.m.promo;DB.set('members',t.members);
-  addLog('roster',rosterWho()+' zrušil návrh na povýšení člena '+t.m.displayName+'.',{embed:rich(C_GREY,'🚫 NÁVRH NA POVÝŠENÍ ZRUŠEN','**'+t.m.displayName+'**',[['🎖️ Hodnost',t.m.position]],{by:rosterWho()})});
+  addLog('roster',rosterWho()+' zrušil návrh na povýšení člena '+t.m.displayName+'.',{hook:'promo',embed:rich(C_GREY,'🚫 NÁVRH NA POVÝŠENÍ ZRUŠEN','**'+t.m.displayName+'**',[['🎖️ Hodnost',t.m.position]],{by:rosterWho()})});
   toast('Návrh zrušen','info');renderRoster(true);
 }
 function approvePromo(id){
@@ -3284,6 +3284,8 @@ function approvePromo(id){
 
 SECTIONS.push({key:'cal',label:'Kalendář akcí'});
 LOG_ICONS.cal='📅';LOG_LABELS.cal='KALENDÁŘ';
+SECTIONS.push({key:'promo',label:'Crew List — návrhy na povýšení a povýšení'});
+LOG_ICONS.promo='⬆️';
 
 function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
