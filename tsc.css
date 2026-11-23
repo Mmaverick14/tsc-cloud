@@ -2069,3 +2069,21 @@ html[data-mode=light] body .btn-acc:disabled{
   color:#7a7152!important;
   -webkit-text-fill-color:#7a7152!important;
 }
+
+/* ── HUB: karty nahoře, pod nimi čára a seznam „Název: popis“ ── */
+html body .hub-grid{display:block!important;padding:1.2rem 1.4rem 2.5rem}
+html body .hub-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.8rem}
+html body .hub-t small{display:none}
+html body .hub-line{height:2px;margin:2.2rem 0 1.4rem;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--acc),transparent)}
+html body .hub-guide{display:flex;flex-direction:column;gap:.55rem;max-width:62rem;margin:0 auto}
+html body .hub-gr{display:flex;gap:.9rem;align-items:baseline;cursor:pointer;padding:.15rem 0;
+  font-size:.92rem;line-height:1.5;color:var(--textb)}
+html body .hub-gr b{flex:0 0 9.5rem;text-align:right;font-style:italic;font-weight:700;color:var(--acc)}
+html body .hub-gr span{flex:1;min-width:0}
+html body .hub-gr:hover span{color:var(--acc)}
+@media(max-width:700px){
+  html body .hub-cards{grid-template-columns:1fr}
+  html body .hub-gr{flex-direction:column;gap:.1rem}
+  html body .hub-gr b{flex:none;text-align:left}
+}

@@ -11083,16 +11083,18 @@ function paint(scope){
   var cfg=HUBS[scope];
   cfg.hubs.forEach(function(h){
     var g=$('hubg_'+scope+'_'+h.k);if(!g)return;
-    var html='';
+    var cards='',guide='';
     Object.keys(h.items).forEach(function(k){
       var b=btnOf(cfg,k);if(!b||b.classList.contains('hidden'))return;
-      var ic=b.querySelector('.ni'),nl=b.querySelector('.nl');
-      html+='<button type="button" class="hub-card" data-k="'+k+'"><span class="hub-ic">'+(ic?ic.textContent:'•')+'</span>'+
-        '<span class="hub-t"><b>'+(nl?nl.textContent:k)+'</b><small>'+h.items[k]+'</small></span><span class="hub-go">→</span></button>';
+      var ic=b.querySelector('.ni'),nl=b.querySelector('.nl'),name=nl?nl.textContent:k;
+      cards+='<button type="button" class="hub-card" data-k="'+k+'"><span class="hub-ic">'+(ic?ic.textContent:'•')+'</span>'+
+        '<span class="hub-t"><b>'+name+'</b></span><span class="hub-go">→</span></button>';
+      guide+='<div class="hub-gr" data-k="'+k+'"><b>'+name+':</b><span>'+h.items[k]+'</span></div>';
     });
+    var html='<div class="hub-cards">'+cards+'</div>'+(guide?'<div class="hub-line"></div><div class="hub-guide">'+guide+'</div>':'');
     if(g.dataset.h!==html){g.dataset.h=html;g.innerHTML=html;}
     g.onclick=function(e){
-      var c=e.target.closest('.hub-card');if(!c)return;
+      var c=e.target.closest('.hub-card,.hub-gr');if(!c)return;
       goNav(scope,c.getAttribute('data-k'));
     };
   });
