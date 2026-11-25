@@ -11894,13 +11894,14 @@ function sendOne(id){
   var me=getMember(),m=(DB.get('members')||[]).filter(function(x){return x.id===id;})[0];
   if(!me||!canEdit()){toast('Ruční upozornění smí poslat jen vedení','error');return;}
   if(!m)return;
+  if(excused(m)){toast(m.displayName+' má schválenou omluvenku na dnešek — upozornění se neposílá','info',4500);return;}
   var c=cfg(),last=lastSeen(m,c),idle=Date.now()-last,seen=DB.cache['seen_'+m.id];
   var tag=m.discordId?'<@'+m.discordId+'>':'';
   var when=(typeof seen==='number')?(idle>=DAY?'bez aktivity **'+dText(idle)+'**':'naposledy aktivní **před '+Math.max(1,Math.round(idle/60000))+' min**'):'zatím **nezaznamenána žádná aktivita**';
   var em={
     author:{name:'🤖 Automatický Systém TSC'},
     title:'💤 UPOZORNĚNÍ NA NEAKTIVITU',
-    description:'**'+m.displayName+'**'+(tag?' ('+tag+')':'')+' — '+when+'.\n\nProsíme o aktivitu na webu. Pokud máš důvod, pošli **omluvenku** (záložka Omluvenky).',
+    description:'**'+m.displayName+'**'+(tag?' ('+tag+')':'')+' — '+when+'.\n\nProsíme o aktivitu. Pokud máš důvod, pošli **omluvenku** (záložka Omluvenky).',
     color:0xe67e22,
     footer:{text:'Ruční upozornění od '+me.displayName+' • '+nowStr()},
     timestamp:new Date().toISOString()
@@ -11984,7 +11985,7 @@ function renderPanel(){
     '<div class="fl" style="margin:.8rem 0 .3rem">POSLEDNÍ AKTIVITA ČLENŮ</div>'+
     (DB.get('members')||[]).filter(function(m){return !m.hidden;}).map(function(m){
       var ls=DB.cache['seen_'+m.id],idle=Date.now()-lastSeen(m,c),bad=idle>=c.days*DAY&&!excused(m);
-      return '<div class="prof-li" style="align-items:center"><span>'+esc(m.displayName)+'</span><span style="display:flex;gap:.6rem;align-items:center;color:'+(bad?'var(--red)':'var(--text)')+'">'+(typeof ls==='number'?ago(ls):'ještě nezaznamenáno')+(excused(m)?' · omluven':'')+'<button type="button" class="btn-micro" data-ip="'+esc(m.id)+'" title="Poslat upozornění na Discord tomuto členovi"'+(m.panic?' disabled':'')+'>📤 PING</button></span></div>';
+      return '<div class="prof-li" style="align-items:center"><span>'+esc(m.displayName)+'</span><span style="display:flex;gap:.6rem;align-items:center;color:'+(bad?'var(--red)':'var(--text)')+'">'+(typeof ls==='number'?ago(ls):'ještě nezaznamenáno')+(excused(m)?' · omluven':'')+'<button type="button" class="btn-micro" data-ip="'+esc(m.id)+'" title="'+(excused(m)?'Člen má schválenou omluvenku':'Poslat upozornění na Discord tomuto členovi')+'"'+(m.panic||excused(m)?' disabled':'')+'>📤 PING</button></span></div>';
     }).join('')+
     '<div class="rx-hint" style="margin:.6rem 0 0">Aktivita = člen má otevřený web. Kdo má schválenou omluvenku na dnešek, se nehlídá. Webhook a roli pro ping nastavíš v Discord po sekcích → „Neaktivita členů“ (prázdné = hlavní webhook). Kontrola běží, když je někdo přihlášený.</div>';
 }

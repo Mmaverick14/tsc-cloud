@@ -28,7 +28,7 @@ function cleanPing(v) {
 }
 const isEmbed = (e) => e && typeof e === 'object' && !Array.isArray(e);
 
-module.exports = async (req, res) => {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!SB_URL || !SERVICE) return res.status(500).json({ error: 'Server není nakonfigurován' });
 
@@ -94,9 +94,40 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const d = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    return res.status(d.ok ? 200 : 502).json({ ok: d.ok, status: d.status });
+    let d = await postHook(url, body);
+    /* rate limit Discordu: jednou počkat a zkusit znovu */
+    if (d.status === 429) {
+      let wait = 1000;
+      try {
+        const j = await d.json();
+        wait = Math.min(Math.ceil((Number(j.retry_after) || 1) * 1000), 4000);
+      } catch (e) {}
+      await new Promise((ok) => setTimeout(ok, wait));
+      d = await postHook(url, body);
+    }
+    if (!d.ok) {
+      let detail = '';
+      try { detail = (await d.text()).slice(0, 300); } catch (e) {}
+      console.error('discord webhook selhal', d.status, detail);
+      /* 200, aby klient nehlásil chybu v konzoli; výsledek je v těle odpovědi */
+      return res.status(200).json({ ok: false, status: d.status });
+    }
+    return res.status(200).json({ ok: true, status: d.status });
   } catch (e) {
-    return res.status(502).json({ error: 'Discord nedostupný' });
+    console.error('discord nedostupný', e);
+    return res.status(200).json({ ok: false, error: 'Discord nedostupný' });
+  }
+}
+
+function postHook(url, body) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+module.exports = async (req, res) => {
+  try {
+    return await handler(req, res);
+  } catch (e) {
+    console.error('api/discord', e);
+    if (!res.headersSent) return res.status(500).json({ error: 'Chyba serveru' });
   }
 };
