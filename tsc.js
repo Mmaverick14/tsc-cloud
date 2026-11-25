@@ -11999,7 +11999,9 @@ setInterval(paintInhNav,1500);
 
 var inhFilter='';
 function renderInh(){
-  var root=$('inhRoot');if(!root)return;
+  ['inhRoot','inhRootA'].forEach(function(id){var r=$(id);if(r)renderInhOne(r);});
+}
+function renderInhOne(root){
   if(!canView()){root.innerHTML='';return;}
   var hist=DB.get('inacthist');if(!Array.isArray(hist))hist=[];
   var members=(DB.get('members')||[]).filter(function(m){return !m.hidden;});
@@ -12057,6 +12059,19 @@ function renderInh(){
     });
   }
 }
+/* záložka i v Admin módu */
+(function injectAdmin(){
+  var an=document.querySelector('#adminScreen .sb-nav'),am=document.querySelector('#adminScreen .main');
+  if(!an||!am||$('at-inactivity'))return;
+  var b=document.createElement('button');b.className='nb';b.setAttribute('onclick',"aTab('inactivity',this)");
+  b.innerHTML='<span class="ni">💤</span><span class="nl">NEAKTIVITA</span>';
+  var af=an.querySelector('.nb[onclick*="\'excuses\'"]')||an.querySelector('.nb[onclick*="\'members\'"]');
+  if(af)af.insertAdjacentElement('afterend',b);else an.appendChild(b);
+  am.insertAdjacentHTML('beforeend','<div id="at-inactivity" class="at"><div class="ph"><div class="pt">💤 // NEAKTIVITA — HISTORIE UPOZORNĚNÍ</div></div><div id="inhRootA"></div></div>');
+  if(typeof A_RENDER!=='undefined')A_RENDER.inactivity=renderInh;
+})();
+var _atI=window.aTab;
+if(typeof _atI==='function')window.aTab=function(tab){var r=_atI.apply(this,arguments);if(tab==='inactivity')renderInh();return r;};
 var _mtI=window.mTab;
 if(typeof _mtI==='function')window.mTab=function(tab){var r=_mtI.apply(this,arguments);if(tab==='inactivity')renderInh();return r;};
 
