@@ -12000,6 +12000,7 @@ setInterval(paintInhNav,1500);
 var inhFilter='';
 function renderInh(){
   ['inhRoot','inhRootA'].forEach(function(id){var r=$(id);if(r)renderInhOne(r);});
+  try{renderPanel();}catch(e){console.error(e);}
 }
 function renderInhOne(root){
   if(!canView()){root.innerHTML='';return;}
@@ -12078,11 +12079,11 @@ if(typeof _mtI==='function')window.mTab=function(tab){var r=_mtI.apply(this,argu
 /* ── panel v Administraci → Nastavení ── */
 function ago(ts){return ts?dText(Date.now()-ts)+' zpět':'—';}
 function renderPanel(){
-  var host=$('at-settings');if(!host||!canEdit())return;
+  var host=$('at-inactivity');if(!host||!canEdit())return;
   var p=$('inactPanel');
   if(!p){
-    p=document.createElement('div');p.id='inactPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
-    host.appendChild(p);
+    p=document.createElement('div');p.id='inactPanel';p.className='form-panel';p.style.margin='1rem 1.2rem';
+    host.insertBefore(p,$('inhRootA')||null);
     p.addEventListener('change',function(e){
       var t=e.target,k=t.getAttribute('data-i');if(!k||!canEdit())return;
       var c=DB.get('inactcfg')||{};
@@ -12117,12 +12118,6 @@ function renderPanel(){
       var ls=DB.cache['seen_'+m.id],idle=Date.now()-lastSeen(m,c),bad=idle>=c.days*DAY&&!excused(m);
       return '<div class="prof-li" style="align-items:center"><span>'+esc(m.displayName)+'</span><span style="display:flex;gap:.6rem;align-items:center;color:'+(bad?'var(--red)':'var(--text)')+'">'+(typeof ls==='number'?ago(ls)+' ('+fmtTs(ls)+')':'ještě nezaznamenáno')+(excused(m)?' · omluven':'')+'<button type="button" class="btn-micro" data-ip="'+esc(m.id)+'" title="'+(excused(m)?'Člen má schválenou omluvenku':'Poslat upozornění na Discord tomuto členovi')+'"'+(m.panic||excused(m)?' disabled':'')+'>📤 PING</button></span></div>';
     }).join('')+
-    '<div class="rx-hint" style="margin:.6rem 0 0">Aktivita = člen má otevřený web. Kdo má schválenou omluvenku na dnešek, se nehlídá. Webhook a roli pro ping nastavíš v Discord po sekcích → „Neaktivita členů“ (prázdné = hlavní webhook). Kontrola běží, když je někdo přihlášený.</div>';
+    '<div class="rx-hint" style="margin:.6rem 0 0">Aktivita = člen má otevřený web. Kdo má schválenou omluvenku na dnešek, se nehlídá. Webhook a roli pro ping nastavíš v Nastavení → Discord po sekcích → „Neaktivita členů“ (prázdné = hlavní webhook). Kontrola běží, když je někdo přihlášený.</div>';
 }
-var _rs=window.renderSettings;
-if(typeof _rs==='function')window.renderSettings=function(){
-  var r=_rs.apply(this,arguments);
-  try{renderPanel();}catch(e){console.error(e);}
-  return r;
-};
 })();
