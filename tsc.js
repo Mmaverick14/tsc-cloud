@@ -11853,7 +11853,7 @@ function excused(m){
 /* poslední aktivita = poslední „seen“ (ping každé 2 min při otevřeném webu) */
 function lastSeen(m,c){
   var s=DB.cache['seen_'+m.id];
-  return Math.max(typeof s==='number'?s:0,c.since||0);
+  return typeof s==='number'?s:(c.since||Date.now());
 }
 function inactive(c){
   var now=Date.now(),lim=c.days*DAY;
@@ -11869,8 +11869,10 @@ function dText(ms){
 }
 
 /* ── odeslání ── */
-function send(list,c,manual){
+function send(list,c,manual,hbase){
   if(!list.length)return;
+  var meS=getMember();
+  histPush(list.map(function(x){return {ts:Date.now(),id:x.m.id,name:x.m.displayName,kind:manual?'manual':'auto',by:manual&&meS?meS.displayName:'',idle:x.idle};}),hbase);
   var lines=list.map(function(x){
     var tag=x.m.discordId?' (<@'+x.m.discordId+'>)':'';
     return '• **'+x.m.displayName+'**'+tag+' — bez aktivity **'+dText(x.idle)+'**';
@@ -11907,6 +11909,7 @@ function sendOne(id){
     timestamp:new Date().toISOString()
   };
   addLog('inactive',me.displayName+' ručně upozornil na neaktivitu člena '+m.displayName+'.',{embed:em,extraPing:tag});
+  histPush([{ts:Date.now(),id:m.id,name:m.displayName,kind:'manual',by:me.displayName,idle:(typeof seen==='number')?idle:null}]);
   /* ať ho automatika hned znovu nevaruje */
   var st=DB.get('inactstate')||{};st[m.id]=Date.now();DB.set('inactstate',st);
   toast(m.discordId?'Upozornění pro '+m.displayName+' odesláno ✓':'Odesláno bez označení — '+m.displayName+' nemá vyplněné Discord ID',m.discordId?'success':'info',4500);
@@ -11926,8 +11929,9 @@ async function tick(){
   busy=true;
   try{
     /* čerstvý stav z databáze, ať to neodešle víc přihlášených najednou */
-    var r=await sb.from(TABLE).select('value').eq('key','inactstate').maybeSingle();
-    var st=(r.data&&r.data.value)||DB.get('inactstate')||{},now=Date.now(),due=[];
+    var r=await sb.from(TABLE).select('key,value').in('key',['inactstate','inacthist']);
+    var fresh={};((r&&r.data)||[]).forEach(function(x){fresh[x.key]=x.value;});
+    var st=fresh.inactstate||DB.get('inactstate')||{},now=Date.now(),due=[];
     list.forEach(function(x){
       var w=st[x.m.id]||0;
       /* už varován po poslední aktivitě? */
@@ -11937,13 +11941,124 @@ async function tick(){
     if(due.length){
       due.forEach(function(x){st[x.m.id]=now;});
       DB.set('inactstate',st);await DB.flush();
-      send(due,c,false);
+      send(due,c,false,Array.isArray(fresh.inacthist)?fresh.inacthist:null);
     }
   }catch(e){console.error('inactive',e);}
   busy=false;
 }
 setInterval(function(){if(!document.hidden)tick();},10*60*1000);
 setTimeout(function(){tick();},20000);
+
+/* ── HISTORIE UPOZORNĚNÍ + záložka NEAKTIVITA (vedení + členové, které vedení přidá) ── */
+var HIST_MAX=500;
+function histPush(entries,base){
+  var h=Array.isArray(base)?base.slice():(DB.get('inacthist')||[]);
+  if(!Array.isArray(h))h=[];
+  entries.forEach(function(e){h.push(e);});
+  if(h.length>HIST_MAX)h=h.slice(h.length-HIST_MAX);
+  DB.set('inacthist',h);
+}
+function viewIds(){var v=DB.get('inactview');return (v&&Array.isArray(v.ids))?v.ids:[];}
+function alwaysView(m){return !!m&&(ADMIN_POS.indexOf(m.position)!==-1||!!m.adminAccess);}
+function canView(){var m=getMember();return !!m&&(alwaysView(m)||viewIds().indexOf(m.id)!==-1);}
+function fmtTs(ts){return new Date(ts).toLocaleString('cs-CZ',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+
+if(!$('inhCss')){
+  var st0=document.createElement('style');st0.id='inhCss';
+  st0.textContent=
+    '.inh-wrap{margin:0 1.2rem 1rem}'+
+    '.inh-sum{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.55rem .9rem;margin-bottom:1px;background:var(--card);border-left:3px solid var(--gdim)}'+
+    '.inh-sum b{min-width:140px;color:var(--textb)}.inh-sum .n{font-weight:700;color:var(--acc);min-width:60px}'+
+    '.inh-sum small,.inh-row small{color:var(--muted)}'+
+    '.inh-row{display:flex;gap:.8rem;flex-wrap:wrap;padding:.45rem .9rem;margin-bottom:1px;background:var(--card);font-size:.82rem;color:var(--text)}'+
+    '.inh-row .d{min-width:150px;color:var(--muted)}.inh-row b{color:var(--textb)}'+
+    '.inh-acc{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.3rem .8rem;margin:.5rem 0}'+
+    '@media(max-width:700px){.inh-wrap{margin-left:.7rem;margin-right:.7rem}}';
+  document.head.appendChild(st0);
+}
+
+(function inject(){
+  var nav=document.querySelector('#memberScreen .sb-nav'),main=document.querySelector('#memberScreen .main');
+  if(!nav||!main||$('mt-inactivity'))return;
+  var btn=document.createElement('button');btn.className='nb';btn.id='inactNavBtn';btn.style.display='none';
+  btn.setAttribute('onclick',"mTab('inactivity',this)");
+  btn.innerHTML='<span class="ni">💤</span><span class="nl">NEAKTIVITA</span>';
+  var after=nav.querySelector('.nb[onclick*="\'excuse\'"]');
+  if(after)after.insertAdjacentElement('afterend',btn);else nav.appendChild(btn);
+  main.insertAdjacentHTML('beforeend','<div id="mt-inactivity" class="mt"><div class="ph"><div class="pt">💤 // NEAKTIVITA — HISTORIE UPOZORNĚNÍ</div></div><div id="inhRoot"></div></div>');
+  if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.inactivity='D';
+  if(typeof M_RENDER!=='undefined')M_RENDER.inactivity=renderInh;
+})();
+function paintInhNav(){
+  var b=$('inactNavBtn');if(!b||!getMember())return;
+  var show=canView();
+  b.style.display=show?'':'none';
+  if(!show&&b.classList.contains('active')){var bb=document.querySelector('#memberScreen .sb-nav .nb');if(bb)bb.click();}
+}
+setInterval(paintInhNav,1500);
+
+var inhFilter='';
+function renderInh(){
+  var root=$('inhRoot');if(!root)return;
+  if(!canView()){root.innerHTML='';return;}
+  var hist=DB.get('inacthist');if(!Array.isArray(hist))hist=[];
+  var members=(DB.get('members')||[]).filter(function(m){return !m.hidden;});
+  var stat={};
+  hist.forEach(function(e){
+    var s=stat[e.id]||(stat[e.id]={name:e.name,n:0,auto:0,man:0,last:0});
+    s.n++;if(e.kind==='auto')s.auto++;else s.man++;
+    if(e.ts>s.last)s.last=e.ts;s.name=e.name||s.name;
+  });
+  var sum=Object.keys(stat).map(function(k){return stat[k];}).sort(function(a,b){return b.n-a.n||b.last-a.last;});
+  var h='<div class="inh-wrap"><div class="fl" style="margin:.2rem 0 .5rem">KOLIKRÁT KDO DOSTAL UPOZORNĚNÍ</div>'+
+    (sum.length?sum.map(function(s){
+      return '<div class="inh-sum"><b>'+esc(s.name||'?')+'</b><span class="n">'+s.n+'×</span><small>automaticky '+s.auto+' · ručně '+s.man+' · naposledy '+esc(fmtTs(s.last))+'</small></div>';
+    }).join(''):'<div class="empty-s">// Zatím nikdo žádné upozornění nedostal</div>')+'</div>';
+  var opts='<option value="">Všichni členové</option>'+members.map(function(m){return '<option value="'+esc(m.id)+'"'+(inhFilter===m.id?' selected':'')+'>'+esc(m.displayName)+'</option>';}).join('');
+  var list=hist.filter(function(e){return !inhFilter||e.id===inhFilter;}).slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,150);
+  h+='<div class="inh-wrap"><div style="display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;margin:.6rem 0 .5rem"><div class="fl" style="margin:0">HISTORIE (POSLEDNÍCH '+list.length+')</div>'+
+    '<div class="iw" style="max-width:260px"><select data-inh="filter">'+opts+'</select></div></div>'+
+    (list.length?list.map(function(e){
+      return '<div class="inh-row"><span class="d">'+esc(fmtTs(e.ts))+'</span><b>'+esc(e.name||'?')+'</b><span>'+(e.kind==='auto'?'🤖 automaticky':'✋ ručně — '+esc(e.by||''))+'</span>'+
+        (typeof e.idle==='number'?'<small>bez aktivity '+esc(dText(e.idle))+'</small>':'')+'</div>';
+    }).join(''):'<div class="empty-s">// Žádné záznamy</div>')+'</div>';
+  if(canEdit()){
+    var ids=viewIds();
+    h+='<div class="form-panel" style="margin:1rem 1.2rem"><div class="fp-title">// KDO TUTO ZÁLOŽKU VIDÍ</div>'+
+      '<div class="rx-hint" style="margin:0 0 .4rem">Vedení (Mastermind, Overseer, Counselor) a členové s admin přístupem ji vidí vždy. Zaškrtni další členy, kteří ji mají vidět.</div>'+
+      '<div class="inh-acc">'+members.map(function(m){
+        var fixed=alwaysView(m);
+        return '<label class="ping-chk"><input type="checkbox" data-inh="view" data-id="'+esc(m.id)+'"'+((fixed||ids.indexOf(m.id)!==-1)?' checked':'')+(fixed?' disabled':'')+'/><span>'+esc(m.displayName)+(fixed?' <small>(vždy)</small>':'')+'</span></label>';
+      }).join('')+'</div>'+
+      '<div class="fp-ftr"><button type="button" class="btn-micro" data-inh="clear">🗑 SMAZAT HISTORII</button></div></div>';
+  }
+  if(root.contains(document.activeElement)&&document.activeElement.tagName==='SELECT'&&root.dataset.h===h)return;
+  root.innerHTML=h;root.dataset.h=h;
+  if(!root.dataset.bound){
+    root.dataset.bound='1';
+    root.addEventListener('change',function(e){
+      var t=e.target,k=t.getAttribute&&t.getAttribute('data-inh');if(!k)return;
+      if(k==='filter'){inhFilter=t.value;renderInh();return;}
+      if(k==='view'&&canEdit()){
+        var set=viewIds().slice(),id=t.getAttribute('data-id'),i=set.indexOf(id);
+        if(t.checked&&i===-1)set.push(id);if(!t.checked&&i!==-1)set.splice(i,1);
+        DB.set('inactview',{ids:set});
+        var mm=(DB.get('members')||[]).filter(function(x){return x.id===id;})[0];
+        addLog('sys',getMember().displayName+(t.checked?' povolil ':' odebral ')+'členu '+(mm?mm.displayName:'?')+' přístup k historii neaktivity.',{noDiscord:true});
+        toast('Přístup uložen','success');renderInh();
+      }
+    });
+    root.addEventListener('click',function(e){
+      var b=e.target.closest('[data-inh="clear"]');if(!b||!canEdit())return;
+      if(!confirm('Opravdu smazat celou historii upozornění?'))return;
+      DB.set('inacthist',[]);
+      addLog('sys',getMember().displayName+' smazal historii upozornění na neaktivitu.',{noDiscord:true});
+      toast('Historie smazána','info');renderInh();
+    });
+  }
+}
+var _mtI=window.mTab;
+if(typeof _mtI==='function')window.mTab=function(tab){var r=_mtI.apply(this,arguments);if(tab==='inactivity')renderInh();return r;};
 
 /* ── panel v Administraci → Nastavení ── */
 function ago(ts){return ts?dText(Date.now()-ts)+' zpět':'—';}
@@ -11985,7 +12100,7 @@ function renderPanel(){
     '<div class="fl" style="margin:.8rem 0 .3rem">POSLEDNÍ AKTIVITA ČLENŮ</div>'+
     (DB.get('members')||[]).filter(function(m){return !m.hidden;}).map(function(m){
       var ls=DB.cache['seen_'+m.id],idle=Date.now()-lastSeen(m,c),bad=idle>=c.days*DAY&&!excused(m);
-      return '<div class="prof-li" style="align-items:center"><span>'+esc(m.displayName)+'</span><span style="display:flex;gap:.6rem;align-items:center;color:'+(bad?'var(--red)':'var(--text)')+'">'+(typeof ls==='number'?ago(ls):'ještě nezaznamenáno')+(excused(m)?' · omluven':'')+'<button type="button" class="btn-micro" data-ip="'+esc(m.id)+'" title="'+(excused(m)?'Člen má schválenou omluvenku':'Poslat upozornění na Discord tomuto členovi')+'"'+(m.panic||excused(m)?' disabled':'')+'>📤 PING</button></span></div>';
+      return '<div class="prof-li" style="align-items:center"><span>'+esc(m.displayName)+'</span><span style="display:flex;gap:.6rem;align-items:center;color:'+(bad?'var(--red)':'var(--text)')+'">'+(typeof ls==='number'?ago(ls)+' ('+fmtTs(ls)+')':'ještě nezaznamenáno')+(excused(m)?' · omluven':'')+'<button type="button" class="btn-micro" data-ip="'+esc(m.id)+'" title="'+(excused(m)?'Člen má schválenou omluvenku':'Poslat upozornění na Discord tomuto členovi')+'"'+(m.panic||excused(m)?' disabled':'')+'>📤 PING</button></span></div>';
     }).join('')+
     '<div class="rx-hint" style="margin:.6rem 0 0">Aktivita = člen má otevřený web. Kdo má schválenou omluvenku na dnešek, se nehlídá. Webhook a roli pro ping nastavíš v Discord po sekcích → „Neaktivita členů“ (prázdné = hlavní webhook). Kontrola běží, když je někdo přihlášený.</div>';
 }
