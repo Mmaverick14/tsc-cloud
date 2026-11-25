@@ -11822,3 +11822,85 @@ setInterval(function(){
   try{quick();posts();newsBtn();}catch(e){console.error('vylepseni3',e);}
 },1200);
 })();
+
+/* ===== NEAKTIVITA: automatická varování na Discord („Automatický Systém TSC“) ===== */
+(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function num(v,d){var n=parseFloat(v);return isNaN(n)||n<0?d:n;}
+var DAY=864e5;
+
+if(!SECTIONS.some(function(x){return x.key==='inactive';}))SECTIONS.push({key:'inactive',label:'Neaktivita členů (Automatický Systém TSC)'});
+LOG_ICONS.inactive='💤';LOG_LABELS.inactive='NEAKTIVITA';
+
+/* ── nastavení ── */
+function cfg(){
+  var c=DB.get('inactcfg')||{};
+  return {on:c.on!==false,days:Math.max(1,num(c.days,7)),repeat:num(c.repeat,3),ping:c.ping!==false,since:c.since||0};
+}
+function canEdit(){var m=getMember();return !!m&&ADMIN_POS.indexOf(m.position)!==-1;}
+function ready(){return !!currentMemberId&&!!sb&&!!DB.cache&&DB.cache.members!==undefined;}
+
+/* člen s přijatou omluvenkou, která pokrývá dnešek, se nehlídá */
+function excused(m){
+  var t=new Date(),today=new Date(t.getFullYear(),t.getMonth(),t.getDate(),12).getTime();
+  return (DB.get('excuses')||[]).some(function(e){
+    if(e.memberId!==m.id||e.status!=='accepted'||!e.date)return false;
+    var a=new Date(e.date+'T00:00:00').getTime(),b=new Date((e.dateTo||e.date)+'T23:59:59').getTime();
+    return !isNaN(a)&&!isNaN(b)&&today>=a&&today<=b;
+  });
+}
+/* poslední aktivita = poslední „seen“ (ping každé 2 min při otevřeném webu) */
+function lastSeen(m,c){
+  var s=DB.cache['seen_'+m.id];
+  return Math.max(typeof s==='number'?s:0,c.since||0);
+}
+function inactive(c){
+  var now=Date.now(),lim=c.days*DAY;
+  return (DB.get('members')||[]).filter(function(m){return !m.hidden&&!m.panic;}).map(function(m){
+    var last=lastSeen(m,c);return {m:m,last:last,idle:now-last};
+  }).filter(function(x){return x.idle>=lim&&!excused(x.m);})
+    .sort(function(a,b){return b.idle-a.idle;});
+}
+function dText(ms){
+  var d=Math.floor(ms/DAY);
+  return d+' '+(d===1?'den':(d>=2&&d<=4?'dny':'dní'));
+}
+
+/* ── odeslání ── */
+function send(list,c,manual){
+  if(!list.length)return;
+  var lines=list.map(function(x){
+    var tag=x.m.discordId?' (<@'+x.m.discordId+'>)':'';
+    return '• **'+x.m.displayName+'**'+tag+' — bez aktivity **'+dText(x.idle)+'**';
+  }).join('\n');
+  var em={
+    author:{name:'🤖 Automatický Systém TSC'},
+    title:'💤 UPOZORNĚNÍ NA NEAKTIVITU',
+    description:'Tito členové se na webu neobjevili déle než **'+c.days+' '+(c.days===1?'den':(c.days<5?'dny':'dní'))+'**:\n\n'+lines+
+      '\n\nPokud máš důvod, pošli **omluvenku** (záložka Omluvenky).',
+    color:0xe67e22,
+    footer:{text:'Automatický Systém TSC'+(manual?' • ruční odeslání • ':' • ')+nowStr()},
+    timestamp:new Date().toISOString()
+  };
+  var ping=c.ping?list.filter(function(x){return x.m.discordId;}).map(function(x){return '<@'+x.m.discordId+'>';}).join(' '):'';
+  addLog('inactive','Automatický Systém TSC: neaktivní — '+list.map(function(x){return x.m.displayName+' ('+dText(x.idle)+')';}).join(', ')+'.',
+    {embed:em,extraPing:ping});
+}
+
+var busy=false;
+async function tick(){
+  if(busy||!ready())return;
+  var c=cfg();if(!c.on)return;
+  /* první spuštění: nastaví se výchozí bod, ať nikdo nedostane varování hned */
+  if(!c.since){
+    var raw=DB.get('inactcfg')||{};raw.since=Date.now();
+    if(canEdit())DB.set('inactcfg',raw);
+    return;
+  }
+  var list=inactive(c);if(!list.length)return;
+  busy=true;
+  try{
+    /* čerstvý stav z databáze, ať to neodešle víc přihlášených najednou */
+    var r=await sb.from(TABLE).select('value').eq('key','inactstate').maybeSingle();
+    var st=(r.data&&r.data.value)||DB.get('inactstate')||{},now=Date.now(),due=[];
