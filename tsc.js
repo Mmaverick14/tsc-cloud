@@ -11904,3 +11904,69 @@ async function tick(){
     /* čerstvý stav z databáze, ať to neodešle víc přihlášených najednou */
     var r=await sb.from(TABLE).select('value').eq('key','inactstate').maybeSingle();
     var st=(r.data&&r.data.value)||DB.get('inactstate')||{},now=Date.now(),due=[];
+    list.forEach(function(x){
+      var w=st[x.m.id]||0;
+      /* už varován po poslední aktivitě? */
+      var warned=w>x.last;
+      if(!warned||(c.repeat>0&&now-w>=c.repeat*DAY))due.push(x);
+    });
+    if(due.length){
+      due.forEach(function(x){st[x.m.id]=now;});
+      DB.set('inactstate',st);await DB.flush();
+      send(due,c,false);
+    }
+  }catch(e){console.error('inactive',e);}
+  busy=false;
+}
+setInterval(function(){if(!document.hidden)tick();},10*60*1000);
+setTimeout(function(){tick();},20000);
+
+/* ── panel v Administraci → Nastavení ── */
+function ago(ts){return ts?dText(Date.now()-ts)+' zpět':'—';}
+function renderPanel(){
+  var host=$('at-settings');if(!host||!canEdit())return;
+  var p=$('inactPanel');
+  if(!p){
+    p=document.createElement('div');p.id='inactPanel';p.className='form-panel';p.style.margin='0 1.2rem 1rem';
+    host.appendChild(p);
+    p.addEventListener('change',function(e){
+      var t=e.target,k=t.getAttribute('data-i');if(!k||!canEdit())return;
+      var c=DB.get('inactcfg')||{};
+      if(k==='on'||k==='ping')c[k]=t.checked;
+      else c[k]=Math.max(k==='days'?1:0,num(t.value,k==='days'?7:3));
+      if(!c.since)c.since=Date.now();
+      DB.set('inactcfg',c);
+      addLog('sys',getMember().displayName+' upravil nastavení varování o neaktivitě.',{noDiscord:true});
+      toast('Nastavení uloženo','success');renderPanel();
+    });
+    p.addEventListener('click',function(e){
+      var b=e.target.closest('[data-ia]');if(!b)return;
+      var c=cfg(),l=inactive(c);
+      if(!l.length){toast('Nikdo teď není neaktivní','info');return;}
+      send(l,c,true);toast('Varování odesláno na Discord','success');
+    });
+  }
+  if(p.contains(document.activeElement))return;
+  var c=cfg(),l=inactive(c);
+  p.innerHTML='<div class="fp-title">// 💤 VAROVÁNÍ O NEAKTIVITĚ (Automatický Systém TSC)</div>'+
+    '<div class="iw" style="padding:.4rem .8rem;margin-bottom:.8rem"><label class="ping-chk"><input type="checkbox" data-i="on"'+(c.on?' checked':'')+'/><span><b>Posílat varování automaticky</b></span></label></div>'+
+    '<div class="form-grid">'+
+      '<div class="field-group"><label class="fl">VAROVAT PO (DNECH BEZ AKTIVITY)</label><div class="iw"><span class="ip">#</span><input type="number" data-i="days" min="1" step="1" value="'+c.days+'"/></div></div>'+
+      '<div class="field-group"><label class="fl">OPAKOVAT KAŽDÝCH (DNÍ, 0 = JEN JEDNOU)</label><div class="iw"><span class="ip">#</span><input type="number" data-i="repeat" min="0" step="1" value="'+c.repeat+'"/></div></div>'+
+    '</div>'+
+    '<div class="iw" style="padding:.4rem .8rem;margin-bottom:.6rem"><label class="ping-chk"><input type="checkbox" data-i="ping"'+(c.ping?' checked':'')+'/><span>🔔 Označit neaktivní členy na Discordu (mají-li vyplněné Discord ID)</span></label></div>'+
+    '<div class="fp-ftr"><button type="button" class="btn-acc small" data-ia="send">📤 POSLAT TEĎ (NEAKTIVNÍ: '+l.length+')</button></div>'+
+    '<div class="fl" style="margin:.8rem 0 .3rem">POSLEDNÍ AKTIVITA ČLENŮ</div>'+
+    (DB.get('members')||[]).filter(function(m){return !m.hidden;}).map(function(m){
+      var ls=DB.cache['seen_'+m.id],idle=Date.now()-lastSeen(m,c),bad=idle>=c.days*DAY&&!excused(m);
+      return '<div class="prof-li"><span>'+esc(m.displayName)+'</span><span style="color:'+(bad?'var(--red)':'var(--text)')+'">'+(typeof ls==='number'?ago(ls):'ještě nezaznamenáno')+(excused(m)?' · omluven':'')+'</span></div>';
+    }).join('')+
+    '<div class="rx-hint" style="margin:.6rem 0 0">Aktivita = člen má otevřený web. Kdo má schválenou omluvenku na dnešek, se nehlídá. Webhook a roli pro ping nastavíš v Discord po sekcích → „Neaktivita členů“ (prázdné = hlavní webhook). Kontrola běží, když je někdo přihlášený.</div>';
+}
+var _rs=window.renderSettings;
+if(typeof _rs==='function')window.renderSettings=function(){
+  var r=_rs.apply(this,arguments);
+  try{renderPanel();}catch(e){console.error(e);}
+  return r;
+};
+})();
