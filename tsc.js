@@ -11864,6 +11864,7 @@ function inactive(c){
 }
 function dText(ms){
   var d=Math.floor(ms/DAY);
+  if(d<1)return 'méně než den';
   return d+' '+(d===1?'den':(d>=2&&d<=4?'dny':'dní'));
 }
 
@@ -11886,6 +11887,28 @@ function send(list,c,manual){
   var ping=c.ping?list.filter(function(x){return x.m.discordId;}).map(function(x){return '<@'+x.m.discordId+'>';}).join(' '):'';
   addLog('inactive','Automatický Systém TSC: neaktivní — '+list.map(function(x){return x.m.displayName+' ('+dText(x.idle)+')';}).join(', ')+'.',
     {embed:em,extraPing:ping});
+}
+
+/* ruční upozornění jednoho člena (bez ohledu na limit dnů) */
+function sendOne(id){
+  var me=getMember(),m=(DB.get('members')||[]).filter(function(x){return x.id===id;})[0];
+  if(!me||!canEdit()){toast('Ruční upozornění smí poslat jen vedení','error');return;}
+  if(!m)return;
+  var c=cfg(),last=lastSeen(m,c),idle=Date.now()-last,seen=DB.cache['seen_'+m.id];
+  var tag=m.discordId?'<@'+m.discordId+'>':'';
+  var when=(typeof seen==='number')?(idle>=DAY?'bez aktivity **'+dText(idle)+'**':'naposledy aktivní **před '+Math.max(1,Math.round(idle/60000))+' min**'):'zatím **nezaznamenána žádná aktivita**';
+  var em={
+    author:{name:'🤖 Automatický Systém TSC'},
+    title:'💤 UPOZORNĚNÍ NA NEAKTIVITU',
+    description:'**'+m.displayName+'**'+(tag?' ('+tag+')':'')+' — '+when+'.\n\nProsíme o aktivitu na webu. Pokud máš důvod, pošli **omluvenku** (záložka Omluvenky).',
+    color:0xe67e22,
+    footer:{text:'Ruční upozornění od '+me.displayName+' • '+nowStr()},
+    timestamp:new Date().toISOString()
+  };
+  addLog('inactive',me.displayName+' ručně upozornil na neaktivitu člena '+m.displayName+'.',{embed:em,extraPing:tag});
+  /* ať ho automatika hned znovu nevaruje */
+  var st=DB.get('inactstate')||{};st[m.id]=Date.now();DB.set('inactstate',st);
+  toast(m.discordId?'Upozornění pro '+m.displayName+' odesláno ✓':'Odesláno bez označení — '+m.displayName+' nemá vyplněné Discord ID',m.discordId?'success':'info',4500);
 }
 
 var busy=false;
@@ -11940,6 +11963,8 @@ function renderPanel(){
       toast('Nastavení uloženo','success');renderPanel();
     });
     p.addEventListener('click',function(e){
+      var one=e.target.closest('[data-ip]');
+      if(one){sendOne(one.getAttribute('data-ip'));return;}
       var b=e.target.closest('[data-ia]');if(!b)return;
       var c=cfg(),l=inactive(c);
       if(!l.length){toast('Nikdo teď není neaktivní','info');return;}
@@ -11959,7 +11984,7 @@ function renderPanel(){
     '<div class="fl" style="margin:.8rem 0 .3rem">POSLEDNÍ AKTIVITA ČLENŮ</div>'+
     (DB.get('members')||[]).filter(function(m){return !m.hidden;}).map(function(m){
       var ls=DB.cache['seen_'+m.id],idle=Date.now()-lastSeen(m,c),bad=idle>=c.days*DAY&&!excused(m);
-      return '<div class="prof-li"><span>'+esc(m.displayName)+'</span><span style="color:'+(bad?'var(--red)':'var(--text)')+'">'+(typeof ls==='number'?ago(ls):'ještě nezaznamenáno')+(excused(m)?' · omluven':'')+'</span></div>';
+      return '<div class="prof-li" style="align-items:center"><span>'+esc(m.displayName)+'</span><span style="display:flex;gap:.6rem;align-items:center;color:'+(bad?'var(--red)':'var(--text)')+'">'+(typeof ls==='number'?ago(ls):'ještě nezaznamenáno')+(excused(m)?' · omluven':'')+'<button type="button" class="btn-micro" data-ip="'+esc(m.id)+'" title="Poslat upozornění na Discord tomuto členovi"'+(m.panic?' disabled':'')+'>📤 PING</button></span></div>';
     }).join('')+
     '<div class="rx-hint" style="margin:.6rem 0 0">Aktivita = člen má otevřený web. Kdo má schválenou omluvenku na dnešek, se nehlídá. Webhook a roli pro ping nastavíš v Discord po sekcích → „Neaktivita členů“ (prázdné = hlavní webhook). Kontrola běží, když je někdo přihlášený.</div>';
 }
