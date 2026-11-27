@@ -12122,60 +12122,8 @@ function renderPanel(){
 }
 })();
 
-/* ===== FINANCE: ignorovat platbu (nepočítá se do kasy) — jen vedení ===== */
-(function(){
-'use strict';
-
-window.payIgnore=function(id){
-  var me=getMember();
-  if(!me||!isAdmin()){toast('Platbu smí ignorovat jen vedení','error');return;}
-  var f=DB.get('finance')||{payments:[],expenses:[]};
-  var p=(f.payments||[]).filter(function(x){return x.id===id;})[0];
-  if(!p)return;
-  var ign=!p.ignored;
-  if(ign){
-    p.origAmount=Number(p.amount)||0;
-    p.amount=0;
-    p.ignored=true;
-    p.ignoredBy=me.displayName;
-  }else{
-    p.amount=Number(p.origAmount)||0;
-    delete p.origAmount;delete p.ignored;delete p.ignoredBy;
-  }
-  DB.set('finance',f);
-  addLog('fin',me.displayName+(ign?' ignoroval platbu ':' znovu započítal platbu ')+
-    '('+(p.memberName||'?')+', '+(p.note||'platba')+', $'+(ign?p.origAmount:p.amount)+', '+(p.weekKey||'')+').',{noDiscord:true});
-  toast(ign?'Platba ignorována — nepočítá se do kasy':'Platba znovu započítána','success');
-  try{renderAdminFinance();}catch(e){}
-};
-
-function decorate(){
-  if(!getMember()||!isAdmin())return;
-  var panel=document.getElementById('financeAdminPanel');if(!panel)return;
-  var f=DB.get('finance')||{payments:[]},map={};
-  (f.payments||[]).forEach(function(p){map[p.id]=p;});
-  panel.querySelectorAll('button[onclick^="delPayment("]').forEach(function(del){
-    var m=/delPayment\('([^']+)'/.exec(del.getAttribute('onclick')||'');
-    var p=m&&map[m[1]],row=del.closest('.fa-pay-row');
-    if(!p||!row||row.querySelector('.pi-btn'))return;
-    var b=document.createElement('button');
-    b.type='button';b.className='btn-micro pi-btn';
-    b.textContent=p.ignored?'↩ ZAPOČÍTAT':'🚫 IGNOROVAT';
-    b.title=p.ignored?'Vrátit platbu do kasy':'Platba zůstane zapsaná, ale nepočítá se do kasy';
-    b.onclick=function(){payIgnore(p.id);};
-    del.before(b);
-    if(p.ignored){
-      var a=row.querySelector('.fa-exp-amt');
-      if(a)a.textContent='🚫 IGNOROVÁNO (původně $'+(p.origAmount||0)+') · '+(p.date||'')+' ('+(p.weekKey||'')+')';
-      row.style.opacity='.7';
-    }
-  });
-}
-
-var _raf=window.renderAdminFinance;
-if(typeof _raf==='function')window.renderAdminFinance=function(){
-  var r=_raf.apply(this,arguments);
-  try{decorate();}catch(e){console.error('payIgnore',e);}
-  return r;
-};
-})();
+setInterval(function(){
+  if(document.hidden)return;
+  var t=document.getElementById('at-finance');
+  if(t&&t.classList.contains('active'))try{decorate();}catch(e){}
+},800);
